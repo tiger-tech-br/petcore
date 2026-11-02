@@ -21,7 +21,7 @@ Validação dos modais: `npm run build` passou para API e interface. Fluxos de c
 
 | Recurso | Situação atual |
 |---|---|
-| Login, logout, sessão persistida no PostgreSQL, hash Argon2id | Implementado no código; integração ainda não executada |
+| Login, logout, sessão persistida no PostgreSQL, hash Argon2id | Implementado; login e persistência de sessão exercitados nos testes locais de integração |
 | Recuperação de senha por e-mail com token de 30 min | Implementado; exige provedor Resend com credenciais |
 | Duas áreas, criação de empresa e convites | Implementado; admin gera e compartilha link de convite manualmente |
 | Isolamento por empresa, vínculos de usuário, permissões | Implementado na API e em FKs compostas no banco |
@@ -29,15 +29,43 @@ Validação dos modais: `npm run build` passou para API e interface. Fluxos de c
 | Agenda dia/semana/profissional, serviços múltiplos, estados | Implementado no código |
 | Concorrência, reagendamento, antecipação, faltas, histórico | Implementado na API com transações e restrição EXCLUDE |
 | Lista de espera, sugestões de vaga, registro de oferta e encaixe | Implementado; sem envio automático de oferta |
+| CRM: clientes, segmentos, contatos e tarefas de retorno | Implementado, com permissão `crm`; migration `005_crm.sql` aplicada no Neon de testes. Validação registrada na seção CRM abaixo |
 | Jobs de lembrete | Registros são atualizados/cancelados; **não existe worker de envio ainda** |
 | Upload e URL privada de foto de pet | Implementado; depende de bucket S3 compatível configurado |
 | Vendas, produtos, estoque, caixa, relatórios | **Não implementados** (Etapa 3) |
 | Planos, assinaturas, pagamentos, cobranças, webhooks | **Não implementados** (Etapa 4) |
-| Central de notificações, worker e-mail, suporte | **Não implementados** (Etapa 2/4) |
+| Notificações internas, e-mail e suporte | Central interna no AppShell e API implementada; código de simulação de lembretes existe. Envio automático de produção e suporte permanecem pendentes |
 | Backups automáticos, PITR, hospedagem ativa | **Não provisionados**; instruções de implantação/recuperação abaixo |
-| Testes de integração | Escritos, **não executados neste ambiente** |
+| Testes de integração | 19 testes passaram em PostgreSQL local exclusivo, incluindo 12 do CRM; isso não comprova operação completa em produção |
 
 Não registre clientes verdadeiros nem inicie cobrança até concluir os testes, segurança e publicação de produção.
+
+## CRM de relacionamento
+
+O item **CRM** acompanha os tutores já cadastrados. Exibe indicadores, pesquisa e paginação, ficha com pets e atendimentos, histórico de contatos manuais e tarefas de retorno. A lista diferencia clientes sem visita concluída de clientes sem retorno há 30, 60 ou 90 dias. Apenas atendimentos `done` com início no passado contam como visitas; os indicadores abrangem a empresa inteira, independentemente dos filtros da lista.
+
+Contatos por WhatsApp, telefone, e-mail, presencial ou outro canal registram data, descrição e autor. Não enviam mensagens nem modificam autorizações de lembrete. As tarefas têm vencimento, observações e estados pendente/concluída/cancelada, com opção de reabrir. São controles internos da equipe: não reservam a agenda e não enviam mensagens ao tutor. O CRM não calcula recebimentos nem substitui o futuro Financeiro.
+
+Administradores da empresa têm acesso. Funcionários precisam receber explicitamente a permissão `crm`, em Configurações, sem concessão automática. Essa permissão permite consultar o relacionamento da empresa, inclusive os resumos de atendimentos apresentados pela ficha. A API usa a empresa autenticada e FKs compostas para impedir vínculos cruzados entre pet shops. O fuso utilizado nos formulários e datas vem da empresa retornada pela API. A ficha é limitada a 10 atendimentos, 50 contatos e 50 tarefas, com pendentes primeiro; as listas principais são paginadas.
+
+Arquivos: `web/src/CrmPage.tsx`, `web/src/styles/_crm.scss`, `api/src/crmRoutes.ts`, `api/sql/005_crm.sql` e `api/tests/crm.integration.test.ts`. Integrações em `main.tsx`, `AppShell.tsx`, `TeamPage.tsx`, `styles/main.scss`, `api/src/server.ts` e `api/src/dataRoutes.ts`. O router deve ser montado em `/api/crm` antes dos routers genéricos de `/api` para preservar a independência da permissão `crm`.
+
+Rotas autenticadas:
+
+| Método e caminho | Finalidade |
+|---|---|
+| `GET /api/crm/clients` | Pesquisa, segmentos, indicadores e paginação (`q`, `segment`, `inactive_days`, `page`, `page_size`) |
+| `GET /api/crm/clients/:id` | Ficha do cliente da empresa atual |
+| `POST /api/crm/clients/:id/contacts` | Registrar contato com `channel`, `summary`, `occurred_at` |
+| `POST /api/crm/clients/:id/tasks` | Criar retorno interno com `title`, `notes`, `due_at` |
+| `GET /api/crm/tasks` | Listar tarefas com `filter`, `page`, `page_size` |
+| `PATCH /api/crm/tasks/:id` | Concluir, cancelar ou reabrir com `status` |
+
+A migration `005_crm.sql` é aditiva e cria `crm_contacts`, `crm_tasks` e índices. Não recria tutores nem modifica consentimentos ou migrations anteriores. Valide no banco exclusivo de testes antes de aplicá-la ao ambiente da aplicação pelo comando de migrations existente. Não execute seed em banco com dados reais. Os testes novos exigem `TEST_DATABASE_URL` apontando para um banco exclusivo terminado em `_test`; nunca usam `DATABASE_URL` como alternativa.
+
+**Validação específica do CRM em 02/11/2026:** `npm run build` passou para API e interface; 10 testes unitários e 19 de integração passaram em PostgreSQL local exclusivo, incluindo 12 do CRM. A interface foi conferida com dados fictícios em 1280×800, 360×670 e 320×568, cobrindo contatos, criação/conclusão/reabertura/cancelamento de tarefas, filtros, busca, paginação, Escape e modal único. Confirmada a posição original dos avisos gerais. A migration `005_crm.sql` foi aplicada e verificada no Neon atual após o usuário confirmar que é de testes. As fixtures visuais ficaram em um banco temporário local; não foram criados clientes, contatos ou tarefas de demonstração no Neon. Não houve publicação ou envio de mensagens. As alterações existentes de notificações, consentimento e `reminderWorker.ts` foram preservadas; a validação completa delas continua separada do CRM.
+
+Fichas e formulários seguem o `FormDialog` existente, com tela inteira no celular e modal centralizado no computador. Os avisos gerais mantêm a posição e o comportamento anteriores, conforme pedido do usuário. O prompt específico para continuar no ChatGPT gratuito está em [PROMPT-CRM-CHATGPT-GRATUITO.md](PROMPT-CRM-CHATGPT-GRATUITO.md); o contexto geral também foi atualizado.
 
 ## 1. Entenda o que será instalado
 
@@ -165,7 +193,7 @@ Verifique se o arquivo foi gerado, mantenha cópia **criptografada fora do servi
 
 ## 8. Ordem das próximas etapas
 
-- **Etapa 1 (base entregue para validação):** autenticação, gestão de empresas e convites, permissões, cadastros, fotos, jornada e agenda com movimentações/histórico, encaixe e espera. Faltam testes executados e ajustes identificados pela homologação.
+- **Etapa 1 (base entregue para validação):** autenticação, gestão de empresas e convites, permissões, cadastros, fotos, jornada e agenda com movimentações/histórico, encaixe e espera. Os testes locais de integração foram executados; a homologação completa do ambiente de publicação continua pendente.
 - **Etapa 2:** servidor de jobs (worker independente), notificações lidas/não lidas, deduplicação, e-mails antes dos agendamentos, alterações/cancelamentos, links de confirmação e suporte a falhas/retries. A tabela `reminder_jobs` já registra a intenção e reage a alterações, mas **não envia e-mails**.
 - **Etapa 3:** produtos, movimentos de estoque, vendas, caixa, despesas, conciliação, relatórios e testes transacionais.
 - **Etapa 4:** planos, assinaturas, cobranças em sandbox, webhooks com validação e idempotência, suspensão de acesso configurável, suporte, auditoria e integração fiscal separada. **Não existe cobrança real nesta entrega**.
@@ -194,4 +222,4 @@ petcore-saas/
 └── README.md
 ```
 
-**Limitações conhecidas:** sem exclusão de cadastros; sem envio de convites automático; sem worker; sem edição de todos os tipos de registros pela interface; sem renderização da foto na ficha além de link privado; sem cobrança/painel financeiro; não há exportação fiscal; sem integração automática de backup com provedor; o schema ainda não contém Row-Level Security; no protótipo, o fuso operacional está padronizado para `America/Sao_Paulo` na interface. Falta validar tipos completos, executar o build com as dependências instaladas e rodar a suíte integrada em PostgreSQL. Os testes unitários de horário passaram localmente.
+**Limitações conhecidas:** sem exclusão de cadastros; sem envio de convites automático; sem worker automático de produção; sem edição de todos os tipos de registros pela interface; sem renderização da foto na ficha além de link privado; sem cobrança/painel financeiro; não há exportação fiscal; sem integração automática de backup com provedor; o schema ainda não contém Row-Level Security; a agenda do protótipo usa `America/Sao_Paulo`, enquanto o CRM respeita o fuso retornado pela API. Build, 10 testes unitários e 19 de integração passaram localmente. A homologação de produção, envio real de lembretes, recuperação de senha por provedor e armazenamento externo precisam de validação específica.

@@ -160,6 +160,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   const detailsTitle = selected ? step==='move'
     ? `${move==='anticipate'?'Antecipar':'Reagendar'} atendimento de ${selected.pet_name}`
     : step==='history' ? `Histórico de ${selected.pet_name}` : `Atendimento de ${selected.pet_name}` : '';
+  const missingSetup=[!options.services.length?'serviços em Serviços':null,!options.professionals.length?'um profissional e sua jornada em Profissionais':null,!options.tutors.length?'o cliente em Clientes e pets':null,!options.pets.length?'o pet vinculado ao cliente em Clientes e pets':null].filter(Boolean);
 
   return <>
     <PageHeader eyebrow="ROTINA DE ATENDIMENTOS" title="Agenda de atendimentos"
@@ -172,11 +173,11 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
         <select aria-label="Filtrar por profissional" value={professionalFilter} onChange={event=>setProfessionalFilter(event.target.value)}><option value="">Todos os profissionais</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select>
         <button className="icon-button" onClick={load} title="Atualizar" aria-label="Atualizar"><RefreshCw size={18}/></button>
       </div>
-      {loading?<Empty label="Consultando a agenda..."/>:listed.length?<div className="appointment-list">{listed.map(item=><button key={item.id} className={`appointment-line ${selected?.id===item.id?'selected':''}`} onClick={()=>openDetails(item)} aria-haspopup="dialog">
+      {loading?<Empty label="Consultando a agenda..."/>:loadError?<div className="business-setup-hint"><p>Não foi possível consultar a agenda. Tente carregar novamente antes de criar um atendimento.</p><button type="button" className="text-link" onClick={()=>void load()}>Tentar novamente</button></div>:listed.length?<div className="appointment-list">{listed.map(item=><button key={item.id} className={`appointment-line ${selected?.id===item.id?'selected':''}`} onClick={()=>openDetails(item)} aria-haspopup="dialog">
         <div className="appointment-time"><Clock3 size={16}/>{new Date(item.starts_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})}</div>
         <div className="appointment-detail"><strong>{item.pet_name} <span className="subtle">· {item.tutor_name}</span></strong><small>{item.services.map(service=>service.name).join(' + ')} · {item.professional_name}</small></div>
         <Status status={item.status}/>
-      </button>)}</div>:<Empty label="Não há atendimentos no período selecionado."/>}
+      </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.join('; ')}.`:'Não há atendimentos no período selecionado. Use Novo agendamento para reservar um horário.'}/>}
     </div>
 
     {selected&&<FormDialog title={detailsTitle} description={`${selected.tutor_name} · ${selected.professional_name} · ${dateTime(selected.starts_at)}`} onClose={closeDetails} busy={saving} error={dialogError} wide>
@@ -214,11 +215,12 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     {showForm&&<FormDialog title="Novo agendamento" description="Preencha os dados do atendimento e confirme para reservar o horário." onClose={closeNew} busy={saving} error={dialogError||loadError} wide>
       {loading&&<p role="status" className="muted">Carregando opções do agendamento...</p>}
       <form className="form-grid" onSubmit={create} aria-busy={saving}>
+        {!loading&&!loadError&&missingSetup.length>0&&<div className="full-span business-setup-hint"><strong>Faltam alguns cadastros para agendar.</strong><p>Feche esta janela e cadastre {missingSetup.join('; ')}. Depois, volte a Novo agendamento.</p></div>}
         <label>Tutor<select required value={form.tutor_id} disabled={saving||loading} onChange={event=>setForm({...form,tutor_id:event.target.value,pet_id:''})}><option value="">Selecione um tutor</option>{options.tutors.map(tutor=><option key={tutor.id} value={tutor.id}>{tutor.name}</option>)}</select></label>
         <label>Pet<select required value={form.pet_id} disabled={saving||loading} onChange={event=>setForm({...form,pet_id:event.target.value})}><option value="">Selecione um pet</option>{pets.map(pet=><option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
         <label>Profissional<select required value={form.professional_id} disabled={saving||loading} onChange={event=>setForm({...form,professional_id:event.target.value})}><option value="">Selecione um profissional</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
         <label>Início (horário da empresa)<input required type="datetime-local" value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
-        <div className="full-span"><strong className="field-title">Serviços</strong><div className="checks">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/>{service.name} · {service.duration_minutes} min · {money(service.price_cents)}</label>)}</div><p className="muted">Tempo total: {duration} minutos. O horário de término é calculado pelo servidor.</p></div>
+        <div className="full-span"><strong className="field-title">Serviços</strong><div className="checks">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/>{service.name} · {service.duration_minutes} min · {money(service.price_cents)}</label>)}</div><p className="muted">Selecione os serviços. Tempo total: {duration} minutos.</p><p className="business-form-hint">O profissional precisa ter esses serviços habilitados e jornada disponível em Profissionais → Horários.</p></div>
         <label className="full-span">Observações<textarea value={form.notes} disabled={saving} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
         <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={closeNew}>Cancelar</button><button type="submit" className="primary-btn" disabled={saving||loading||!form.service_ids.length}>{saving?'Agendando...':'Confirmar agendamento'}</button></div>
       </form>

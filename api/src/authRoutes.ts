@@ -2,6 +2,8 @@ import { Router } from 'express';
 import argon2 from 'argon2';
 import { z } from 'zod';
 import { pool, tx, normEmail, sha, token, hashPassword, error, ensure, auth, tenant, platform, permit } from './core.js';
+import {settings,subscription} from './commercialService.js';
+import {recordAudit} from './audit.js';
 const router=Router();
 const credentials=z.object({email:z.email().max(255),password:z.string().min(8).max(200)});
 const passRule=z.string().min(12).max(200);
@@ -30,7 +32,10 @@ router.post('/login',throttle,async(req,res)=>{
 router.post('/logout',async(req,res)=>{await new Promise<void>((resolve,reject)=>req.session.destroy(e=>e?reject(e):resolve()));res.clearCookie('petcore.sid',{path:'/'});res.json({ok:true});});
 router.get('/me',auth,async(req,res)=>{
  const a=req.access!;const memberships=await pool.query(`SELECT t.id,t.name,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=$1 AND m.active=true AND t.active=true ORDER BY t.name`,[a.userId]);
- res.json({user:{id:a.userId,name:a.name,role:a.role,permissions:a.permissions,scopeProfessionalId:a.scopeProfessionalId,tenantId:a.tenantId,companyName:a.companyName},companies:memberships.rows});
+ const config=await settings();
+ const acceptance=config.published?await pool.query('SELECT 1 FROM terms_acceptances WHERE user_id=$1 AND version=$2',[a.userId,config.legal_version]):{rowCount:1};
+ res.json({user:{id:a.userId,name:a.name,role:a.role,permissions:a.permissions,scopeProfessionalId:a.scopeProfessionalId,tenantId:a.tenantId,companyName:a.companyName},companies:memberships.rows,
+  legal:{required:config.published&&!acceptance.rowCount,version:config.legal_version},subscription:a.tenantId?await subscription(a.tenantId):null});
 });
 router.post('/select-company',auth,async(req,res)=>{
  const id=z.uuid().parse(req.body.tenantId);
@@ -50,6 +55,7 @@ router.post('/platform/companies',auth,platform,async(req,res)=>{
  try{new Intl.DateTimeFormat('en-US',{timeZone:input.timezone});}catch{error(422,'Fuso horário inválido.');}
  const result=await tx(async c=>{
   const company=await c.query('INSERT INTO tenants(name,timezone) VALUES($1,$2) RETURNING *',[input.name,input.timezone]);
+  await subscription(company.rows[0].id,c);
   const raw=token();await c.query(`INSERT INTO invitations(tenant_id,email,role,token_hash,expires_at,created_by)
    VALUES($1,$2,'admin',$3,now()+interval '7 days',$4)`,[company.rows[0].id,normEmail(input.email),sha(raw),req.access!.userId]);
   return {company:company.rows[0],inviteToken:raw};
@@ -68,7 +74,7 @@ router.get('/invite/:token',async(req,res)=>{
  ensure(r.rowCount,404,'Convite inválido ou expirado.');res.json(r.rows[0]);
 });
 router.post('/invite/accept',async(req,res)=>{
- const {inviteToken,name,password}=z.object({inviteToken:z.string().length(64),name:z.string().trim().min(2),password:passRule}).parse(req.body);
+ const {inviteToken,name,password,accepted_terms,terms_version}=z.object({inviteToken:z.string().length(64),name:z.string().trim().min(2).max(160),password:passRule,accepted_terms:z.boolean().optional(),terms_version:z.string().max(100).optional()}).parse(req.body);
  await tx(async c=>{
   const inv=await c.query(`SELECT * FROM invitations WHERE token_hash=$1 AND redeemed_at IS NULL AND expires_at>now() FOR UPDATE`,[sha(inviteToken)]);
   ensure(inv.rowCount,410,'Convite expirado ou já utilizado.');
@@ -77,8 +83,11 @@ router.post('/invite/accept',async(req,res)=>{
   if(found.rowCount){error(409,'Esta conta já existe. Entre com sua conta e solicite vinculação à empresa.');}
   const user=await c.query('INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id',[name,inv.rows[0].email,await hashPassword(password)]);
   userId=user.rows[0].id;
+  const legal=await settings(c);
+  if(legal.published){ensure(accepted_terms===true&&terms_version===legal.legal_version,422,'Leia e aceite os Termos de Uso atuais antes de ativar a conta.');await c.query('INSERT INTO terms_acceptances(user_id,version) VALUES($1,$2)',[userId,legal.legal_version]);}
   await c.query('INSERT INTO memberships(tenant_id,user_id,role,permissions) VALUES($1,$2,$3,$4)',[inv.rows[0].tenant_id,userId,inv.rows[0].role,inv.rows[0].role==='employee'?['appointments','tutors','pets','waitlist']:[]]);
   await c.query('UPDATE invitations SET redeemed_at=now() WHERE id=$1',[inv.rows[0].id]);
+  await recordAudit(c,{tenantId:inv.rows[0].tenant_id,userId,action:'account.invitation_accepted',entityType:'user',entityId:userId});
  });res.status(201).json({ok:true});
 });
 // A recuperação exige serviço de e-mail real configurado; sem API KEY não afirma envio.

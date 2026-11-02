@@ -9,6 +9,10 @@ import authRoutes from './authRoutes.js';
 import dataRoutes from './dataRoutes.js';
 import calendarRoutes from './calendarRoutes.js';
 import fileRoutes from './fileRoutes.js';
+import crmRoutes from './crmRoutes.js';
+import businessRoutes from './businessRoutes.js';
+import privacyRoutes from './privacyRoutes.js';
+import commercialRoutes,{publicCommercial} from './commercialRoutes.js';
 import {createOriginGuard} from './originGuard.js';
 
 export function createApp(){
@@ -24,6 +28,11 @@ export function createApp(){
  app.use('/api',createOriginGuard(process.env.APP_ORIGIN,process.env.APP_ALLOWED_ORIGINS));
  app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({ok:true,database:true});});
  app.use('/api/auth',authRoutes);
+ app.use('/api/public',publicCommercial);
+ app.use('/api/commercial',commercialRoutes);
+ app.use('/api/privacy',privacyRoutes);
+ app.use('/api/business',businessRoutes);
+ app.use('/api/crm',crmRoutes);
  app.use('/api',dataRoutes);
  app.use('/api',calendarRoutes);
  app.use('/api',fileRoutes);

@@ -1,8 +1,11 @@
 import {useEffect, useMemo, useState} from 'react';
-import {AlertCircle, ArrowRight, CalendarCheck2, CalendarDays, CheckCircle2, Clock3, PawPrint, Plus, Scissors, Stethoscope, UsersRound, Wallet} from 'lucide-react';
+import {AlertCircle, ArrowRight, CalendarCheck2, CalendarDays, CheckCircle2, Clock3, Package, PawPrint, Plus, Scissors, Stethoscope, UsersRound, Wallet} from 'lucide-react';
 import {api, endIso, money, startIso, today} from './api';
+import {useBusinessQuery} from './businessUi';
+import FirstSteps from './FirstSteps';
+import type {MenuKey} from './AppShell';
 
-type Target = 'calendar'|'tutors'|'pets'|'waitlist';
+type Target = MenuKey;
 type Appointment = {id:string;pet_name:string;tutor_name:string;professional_id:string;professional_name:string;starts_at:string;status:string;services:{name:string;price_cents:number}[]};
 const labels:Record<string,string> = {pending:'A confirmar',confirmed:'Confirmado',in_progress:'Em atendimento',done:'Concluído',cancelled:'Cancelado',no_show:'Cliente faltou'};
 const statusIcons = {pending:Clock3,confirmed:CalendarCheck2,in_progress:Stethoscope,done:CheckCircle2,cancelled:AlertCircle,no_show:AlertCircle};
@@ -14,9 +17,11 @@ function AppointmentStatus({status}:{status:string}) {
 function Metric({label,value,icon:Icon,tone='teal',className=''}:{label:string;value:string|number;icon:typeof CalendarDays;tone?:string;className?:string}) {
   return <div className={`overview-stat ${tone} ${className}`}><span className="overview-stat-icon"><Icon size={29} strokeWidth={1.7}/></span><div><strong>{value}</strong><span>{label}</span></div></div>;
 }
-export default function Overview({go,can,onNew,query=''}:{go:(target:Target)=>void;can:(permission?:string)=>boolean;onNew:()=>void;query?:string}) {
+export default function Overview({go,can,onNew,query='',isAdmin=false}:{go:(target:Target)=>void;can:(permission?:string)=>boolean;onNew:()=>void;query?:string;isAdmin?:boolean}) {
   const [appointments,setAppointments] = useState<Appointment[]>([]), [tutors,setTutors] = useState<any[]>([]), [pets,setPets] = useState<any[]>([]);
   const [loading,setLoading] = useState(true), [error,setError] = useState(''), [professional,setProfessional] = useState('');
+  const finance=useBusinessQuery<{totals:{receipts_cents:number;refunds_cents:number;expenses_cents:number;expense_refunds_cents:number;net_cents:number}}>(can('finance')?`/business/summary?from=${today()}&to=${today()}`:null,setError);
+  const stock=useBusinessQuery<{items:{id:string;name:string;stock_quantity:number;unit:string}[];summary:{products:number;lowStock:number}}>(can('inventory')?'/business/products?low_stock=true&page=1&page_size=3':null,setError);
   useEffect(()=>{
     let active = true;
     const from = encodeURIComponent(startIso(today())), to = encodeURIComponent(endIso(today()));
@@ -39,6 +44,7 @@ export default function Overview({go,can,onNew,query=''}:{go:(target:Target)=>vo
   return <div className="overview-page">
     <div className="page-header overview-heading"><div><h1><span className="desktop-heading">Visão geral</span><span className="mobile-heading">Hoje</span></h1><p>{date.charAt(0).toUpperCase()+date.slice(1)}</p></div>{can('appointments')&&<button className="primary-btn new-appointment" onClick={onNew} aria-label="Novo agendamento"><Plus size={23}/><span>Novo agendamento</span></button>}</div>
     {error&&<div className="alert danger" role="alert"><AlertCircle size={18}/>{error}</div>}
+    {isAdmin&&<FirstSteps go={go} can={can}/>}
     <div className="overview-stats">
       {can('appointments')&&<><Metric label="atendimentos hoje" value={value(appointments.length)} icon={CalendarDays}/><Metric label="em atendimento" value={value(ongoing.length)} icon={Stethoscope}/><Metric label="a confirmar" value={value(pending.length)} icon={Clock3} tone="amber" className="secondary-metric"/></>}
       {can('pets')&&<Metric label="pets cadastrados" value={value(pets.length)} icon={PawPrint} className="secondary-metric"/>}
@@ -61,6 +67,8 @@ export default function Overview({go,can,onNew,query=''}:{go:(target:Target)=>vo
       </div>
     </div>
     <div className="overview-bottom">
+      {can('finance')&&<section className="panel service-summary"><div className="panel-head"><h2><Wallet size={24}/>Movimento de hoje</h2><button className="text-link" onClick={()=>go('finance')}>Ver Financeiro <ArrowRight size={15}/></button></div>{finance.error?<div className="business-overview-retry"><p>Não foi possível consultar o movimento.</p><button className="text-link" onClick={finance.refresh}>Tentar novamente</button></div>:<div className="summary-values"><div><span>Entradas</span><strong>{finance.loading?'—':money((finance.data?.totals.receipts_cents??0)+(finance.data?.totals.expense_refunds_cents??0))}</strong></div><div><span>Saídas</span><strong>{finance.loading?'—':money((finance.data?.totals.expenses_cents??0)+(finance.data?.totals.refunds_cents??0))}</strong></div><div><span>Saldo</span><strong>{finance.loading?'—':money(finance.data?.totals.net_cents??0)}</strong></div></div>}<small className="summary-note">Movimentos registrados hoje, incluindo compensações. Não é o saldo bancário.</small></section>}
+      {can('inventory')&&<section className="panel records-summary"><div className="panel-head"><h2><Package size={24}/>Estoque em atenção</h2><button className="text-link" onClick={()=>go('inventory')}>Ver estoque <ArrowRight size={15}/></button></div>{stock.loading?<p className="business-overview-note">Consultando produtos...</p>:stock.error?<div className="business-overview-retry"><p>Não foi possível consultar o estoque.</p><button className="text-link" onClick={stock.refresh}>Tentar novamente</button></div>:stock.data?.items.length?<>{stock.data.items.map(product=><button key={product.id} className="record-summary-row" onClick={()=>go('inventory')}><span><span className="record-dot"/>{product.name}</span><strong>{product.stock_quantity} {product.unit}</strong><ArrowRight size={16}/></button>)}{stock.data.summary.lowStock>3&&<small className="summary-note">{stock.data.summary.lowStock} produtos precisam de reposição.</small>}</>:<p className="business-overview-note">{stock.data?.summary.products?'Estoque dentro dos limites configurados.':'Cadastre produtos para acompanhar a reposição.'}</p>}</section>}
       {can('appointments')&&<section className="panel service-summary"><div className="panel-head"><h2><Wallet size={24}/>Serviços de hoje</h2><button className="text-link" onClick={()=>go('calendar')}>Ver agenda <ArrowRight size={15}/></button></div><div className="summary-values"><div><span>Valor agendado</span><strong>{loading?'—':money(appointments.filter(a=>!['cancelled','no_show'].includes(a.status)).reduce((sum,a)=>sum+a.services.reduce((n,s)=>n+s.price_cents,0),0))}</strong></div><div><span>Concluídos</span><strong>{value(completed.length)}</strong></div><div><span>Em andamento</span><strong>{value(ongoing.length)}</strong></div></div><small className="summary-note">Valores dos serviços agendados; não representam recebimentos.</small></section>}
       {(can('tutors')||can('pets'))&&<section className="panel records-summary"><div className="panel-head"><h2><UsersRound size={24}/>Clientes e pets</h2><button className="text-link" onClick={()=>go(can('tutors')?'tutors':'pets')}>Ver cadastros <ArrowRight size={15}/></button></div>{can('tutors')&&<button className="record-summary-row" onClick={()=>go('tutors')}><span><span className="record-dot"/>Clientes cadastrados</span><strong>{value(tutors.length)}</strong><ArrowRight size={16}/></button>}{can('pets')&&<button className="record-summary-row" onClick={()=>go('pets')}><span><span className="record-dot teal"/>Pets cadastrados</span><strong>{value(pets.length)}</strong><ArrowRight size={16}/></button>}</section>}
     </div>

@@ -23,7 +23,7 @@ export async function tx<T>(run:(db:PoolClient)=>Promise<T>):Promise<T>{
  catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
 }
 declare module 'express-session' {interface SessionData {userId?:string;tenantId?:string;sessionVersion?:number}}
-declare global {namespace Express {interface Request {access?:Access}}}
+declare global {namespace Express {interface Request {access?:Access;requestId?:string}}}
 export type Access={userId:string;tenantId:string|null;role:'platform'|'admin'|'employee';permissions:string[];scopeProfessionalId:string|null;name:string;companyName?:string};
 export async function auth(req:Request,_res:Response,next:NextFunction){
  try{
@@ -48,6 +48,11 @@ export function permit(permission:string){return (req:Request,_res:Response,next
 };}
 export function platform(req:Request,_res:Response,next:NextFunction){try{ensure(req.access?.role==='platform',403,'Área exclusiva da plataforma.');next();}catch(e){next(e);}}
 export function tenant(req:Request){ensure(req.access?.tenantId,403,'Selecione uma empresa.');return req.access.tenantId;}
+export async function lockTutor(db:Db,company:string,id:string,missingStatus=404) {
+ const row=await db.query('SELECT id,anonymized_at FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);
+ ensure(row.rowCount,missingStatus,'Cliente não encontrado.');
+ ensure(!row.rows[0].anonymized_at,409,'Este cadastro foi anonimizado e não pode receber novos dados pessoais.');
+}
 export function allowProfessional(req:Request, professionalId:string){const a=req.access!;
  ensure(a.role==='admin'||a.permissions.includes('agenda:all')||a.scopeProfessionalId===professionalId,403,'Você só pode acessar sua própria agenda.');}
 export async function syncReminder(db:Db,companyId:string,appointmentId:string,status:string,start:string,minutes=60){
@@ -56,9 +61,22 @@ export async function syncReminder(db:Db,companyId:string,appointmentId:string,s
  }
  const settings=await db.query('SELECT reminder_minutes_before FROM tenants WHERE id=$1',[companyId]);
  minutes=settings.rows[0]?.reminder_minutes_before??minutes;
+ // Somente lembretes ainda nao processados podem ter o horario atualizado.
+ // Nao reabrir lembretes enviados, falhos ou com tentativas iniciadas.
  await db.query(`INSERT INTO reminder_jobs(tenant_id,appointment_id,scheduled_for,state)
   VALUES($1,$2,$3::timestamptz - ($4::int * interval '1 minute'),'queued')
-  ON CONFLICT(tenant_id,appointment_id) DO UPDATE SET scheduled_for=excluded.scheduled_for,state='queued'`,[companyId,appointmentId,start,minutes]);
+  ON CONFLICT(tenant_id,appointment_id) DO UPDATE
+  SET scheduled_for=EXCLUDED.scheduled_for, next_attempt_at=NULL
+  WHERE reminder_jobs.state='queued'
+    AND reminder_jobs.claimed_by IS NULL
+    AND reminder_jobs.attempt_count=0
+    AND reminder_jobs.sent_at IS NULL
+    AND reminder_jobs.provider_message_id IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM reminder_delivery_attempts d
+      WHERE d.tenant_id=reminder_jobs.tenant_id
+        AND d.appointment_id=reminder_jobs.appointment_id
+    )`,[companyId,appointmentId,start,minutes]);
 }
 export async function validateAvailability(db:Db,companyId:string,profId:string,start:Date,end:Date,serviceIds:string[]){
  ensure(Number.isFinite(start.valueOf())&&Number.isFinite(end.valueOf())&&end>start,422,'Data inválida.');
@@ -83,6 +101,9 @@ export function sendError(err:unknown,_req:Request,res:Response,_next:NextFuncti
  if(e.code==='23P01') return res.status(409).json({error:'Este horário acabou de ser reservado por outro atendimento.'});
  if(e.code==='23503'||e.code==='23514'||e.code==='23505'||e.code==='22P02')return res.status(422).json({error:'Referência inválida, registro duplicado ou dados incompatíveis com esta empresa.'});
  if(e.issues)return res.status(422).json({error:'Verifique os dados informados.',details:e.issues});
- if(!e.status || e.status>=500)console.error('PetCore API:',e);
+ if(e.code==='LIMIT_FILE_SIZE')return res.status(413).json({error:'A foto deve ter até 5 MB.'});
+ if(e.code==='40P01'||e.code==='55P03'||e.code==='57014')return res.status(409).json({error:'Outra operação está em andamento. Atualize a tela e tente novamente.'});
+ if(e.status===400)return res.status(400).json({error:'O conteúdo enviado não é válido.'});
+ if(!e.status || e.status>=500)console.error('PetCore API:',{code:e.code??'INTERNAL',status:e.status??500,requestId:_req.requestId});
  return res.status(e.status||500).json({error:e.status?e.message:'Erro interno no servidor.'});
 }

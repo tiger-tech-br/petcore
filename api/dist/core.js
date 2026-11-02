@@ -89,9 +89,22 @@ export async function syncReminder(db, companyId, appointmentId, status, start, 
     }
     const settings = await db.query('SELECT reminder_minutes_before FROM tenants WHERE id=$1', [companyId]);
     minutes = settings.rows[0]?.reminder_minutes_before ?? minutes;
+    // Somente lembretes ainda nao processados podem ter o horario atualizado.
+    // Nao reabrir lembretes enviados, falhos ou com tentativas iniciadas.
     await db.query(`INSERT INTO reminder_jobs(tenant_id,appointment_id,scheduled_for,state)
   VALUES($1,$2,$3::timestamptz - ($4::int * interval '1 minute'),'queued')
-  ON CONFLICT(tenant_id,appointment_id) DO UPDATE SET scheduled_for=excluded.scheduled_for,state='queued'`, [companyId, appointmentId, start, minutes]);
+  ON CONFLICT(tenant_id,appointment_id) DO UPDATE
+  SET scheduled_for=EXCLUDED.scheduled_for, next_attempt_at=NULL
+  WHERE reminder_jobs.state='queued'
+    AND reminder_jobs.claimed_by IS NULL
+    AND reminder_jobs.attempt_count=0
+    AND reminder_jobs.sent_at IS NULL
+    AND reminder_jobs.provider_message_id IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM reminder_delivery_attempts d
+      WHERE d.tenant_id=reminder_jobs.tenant_id
+        AND d.appointment_id=reminder_jobs.appointment_id
+    )`, [companyId, appointmentId, start, minutes]);
 }
 export async function validateAvailability(db, companyId, profId, start, end, serviceIds) {
     ensure(Number.isFinite(start.valueOf()) && Number.isFinite(end.valueOf()) && end > start, 422, 'Data inválida.');

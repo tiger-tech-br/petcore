@@ -1,0 +1,121 @@
+# Operação, backup e recuperação do PetCore
+
+Este roteiro é destinado à pessoa responsável pelo serviço. Comandos de restauração nunca apontam para o banco ativo. Não compartilhe `.env`, endereços com senha, chaves ou arquivos de backup em chats ou chamados.
+
+## Ambientes e responsáveis
+
+Mantenha desenvolvimento, testes e produção identificados e separados. Defina quem acompanha disponibilidade, suporte, cobrança, e-mails, backup, privacidade e incidentes, com um contato alternativo. A troca de administrador ou a venda do projeto precisa transferir os procedimentos e acessos autorizados, não apenas o código.
+
+Na produção, mantenha usuários individuais, menor privilégio, segredos fora do repositório e cookies protegidos por HTTPS. Revogue vínculos e credenciais de pessoas ou serviços que deixarem de precisar de acesso. O papel da aplicação no banco não precisa ser um superusuário do servidor.
+
+## Rotina de acompanhamento
+
+| Frequência definida pela operação | Conferência |
+|---|---|
+| Em cada implantação | Construção, migrations, saúde, login e erro de aplicação |
+| Durante o atendimento | Chamados, falhas de mensagens, filas de exclusão, confirmações de pagamento |
+| Em cada backup agendado | Estado final, tamanho, checksum e ausência de falha |
+| Periodicamente e após mudanças relevantes | Restauração isolada, acessos, fornecedores, retenção e capacidade |
+| Em cada encerramento ou solicitação de dados | Exportação, resposta ao titular, conservação fundamentada e acompanhamento das cópias |
+
+O retorno `/api/health` comprova uma resposta da aplicação e do banco naquele momento. Não comprova integridade de todas as rotas, entrega de e-mail, adequação jurídica nem recuperação dos backups.
+
+## Criptografia dos backups
+
+O formato `petcore.backup.v1` contém dois arquivos: `*.dump.enc` e `*.manifest.enc`. O primeiro guarda o dump custom do PostgreSQL; o segundo contém origem identificada por fingerprint, versão, hashes e contagens de tabelas. Ambos usam AES-256-GCM, nonce aleatório por arquivo e autenticação do cabeçalho. Um conteúdo, nonce ou tag alterado, chave errada ou envelope truncado deve falhar antes de qualquer restauração.
+
+`BACKUP_ENCRYPTION_KEY` precisa ter 64 caracteres hexadecimais aleatórios. Gere e armazene a chave em um gerenciador de segredos e mantenha uma cópia protegida para desastre. A chave não deve ficar junto dos arquivos cifrados. Rotacionar a chave exige manter as antigas para os backups ainda válidos ou recifrar e verificar as cópias; apagar a única chave equivale a perder a capacidade de recuperação.
+
+A implementação usa streams, para não carregar um dump inteiro em memória. Arquivos temporários em claro ficam em diretório privado e são removidos ao final normal ou com erro tratado. Um encerramento abrupto da máquina pode interromper a limpeza; controle o acesso ao disco e o ciclo do ambiente temporário. A imagem usa usuário sem privilégios de root.
+
+## Executar backup
+
+Na imagem já compilada e com `DATABASE_DIRECT_URL` ou `DATABASE_URL`, chave e `BACKUP_STORAGE_*` configurados:
+
+```text
+node api/scripts/backup.mjs
+```
+
+O comando exige cliente `pg_dump` 18, impede duas execuções simultâneas e não começa um dump durante uma migration com a mesma trava. Usa um snapshot consistente para o dump e as contagens. As credenciais são fornecidas ao programa PostgreSQL por ambiente; a senha não vai na linha de comando.
+
+O envio inclui dump e manifesto cifrados em um bucket privado. Configure o bucket separado das fotos e limite as credenciais à finalidade de backup. Monitore objetos incompletos de execuções que falharam e aplique lifecycle aprovado para versões e expiração. O script não define por conta própria uma retenção jurídica nem apaga cópias antigas de clientes.
+
+O registro em `backup_runs` usa:
+
+- `started`: execução iniciada; não representa cópia concluída.
+- `uploaded`: os arquivos foram criados/enviados; restauração ainda não verificada.
+- `verified`: o ensaio de restauração e as contagens passaram e foram registrados na origem.
+- `failed`: a execução falhou; o código indica a etapa sem expor credenciais.
+
+O dump lógico cobre o banco, não os arquivos do bucket, papéis globais do servidor, DNS, variáveis ou chaves. Complemente com política de recuperação pontual do provedor, cópias dos objetos e registro protegido da configuração necessária. [Escopo e consistência do pg_dump](https://www.postgresql.org/docs/18/app-pgdump.html), [sincronização de snapshots](https://www.postgresql.org/docs/18/functions-admin.html).
+
+## Ensaio local sem armazenamento em nuvem
+
+Somente em banco de testes cujo nome termine em `_test`, configure as variáveis no terminal e execute:
+
+```text
+node api/scripts/backup.mjs --local --output <pasta-absoluta-exclusiva-de-teste>
+```
+
+Esse modo exige o destino explícito e não envia arquivos ao bucket. A pasta recebe apenas dump e manifesto cifrados. Não use essa opção para fazer cópias de clientes reais em pastas compartilhadas. Nunca execute o comando apontando para a base de produção por conveniência.
+
+No Windows, se os clientes PostgreSQL não estiverem no PATH, configure `PG_DUMP_PATH` e `PG_RESTORE_PATH` com os caminhos dos executáveis oficiais instalados. Não use comandos obtidos de fonte desconhecida. Na imagem, ambos já apontam para os executáveis PGDG 18.
+
+## Verificar restauração em banco novo e vazio
+
+1. Crie manualmente um banco isolado, vazio e com nome terminado em `_restore_test`, usando credenciais destinadas ao ensaio. Não copie a conexão de produção para o destino.
+2. Defina `RESTORE_DATABASE_URL` com esse banco. Ele precisa ser diferente da origem identificada no manifesto.
+3. Disponibilize a chave correspondente à cópia e os dois arquivos cifrados; ou configure acesso de leitura ao bucket privado.
+4. Execute uma das opções:
+
+```text
+node api/scripts/restore-check.mjs --file <arquivo.dump.enc> --manifest <arquivo.manifest.enc>
+```
+
+```text
+node api/scripts/restore-check.mjs --object-key <prefixo/arquivo.dump.enc>
+```
+
+O manifesto pode ser inferido quando os nomes terminam em `.dump.enc` e `.manifest.enc` com o mesmo prefixo. O modo de bucket só aceita a chave dentro do prefixo de backups configurado.
+
+O comando recusa destino com tabelas, sequências, visões ou funções de usuário; não usa `DROP`, `--clean` ou sobrescrita. Confere os hashes, autentica os dois arquivos, usa `pg_restore` 18 em uma transação e compara o inventário e as contagens das tabelas. Falhas não autorizam tentar novamente contra o banco ativo. Se a restauração foi executada e uma conferência posterior falhou, analise o banco isolado; ele não é apagado automaticamente.
+
+Para registrar a verificação em `backup_runs` na origem, use também `--record`, com a conexão da origem configurada. O fingerprint e o checksum precisam coincidir com o manifesto e o registro existente. Isso altera somente o estado do backup na origem; não restaura dados nela.
+
+```text
+node api/scripts/restore-check.mjs --file <arquivo.dump.enc> --record
+```
+
+Contagens iguais não substituem a conferência funcional: teste autenticação, permissões por empresa, amostras de cadastros, agenda, estoque e saldos. Mantenha o ambiente restaurado sem exposição pública e sem envios de e-mail ou cobranças. Se a cópia tiver dados reais, a proteção e os acessos desse ambiente também precisam atender à política de privacidade.
+
+## Retomar serviço após um desastre
+
+Um ensaio aprovado não troca automaticamente o banco da aplicação. A pessoa autorizada precisa coordenar a recuperação:
+
+1. Contenha o incidente e preserve evidências necessárias, com canais e responsáveis definidos.
+2. Escolha uma cópia e o ponto de recuperação conforme a avaliação operacional. Confira perdas e mudanças posteriores à cópia.
+3. Restaure em destino separado e valide dados e aplicação.
+4. Recupere as fotos e outras dependências pela política de objetos. Uma referência no banco não repõe o arquivo ausente.
+5. Reaplique exclusões, desidentificações e revogações já atendidas após a data da cópia. Não reative consentimentos antigos ao restaurar.
+6. Invalide sessões antigas e rotacione os segredos envolvidos quando pertinente. Reavalie credenciais que possam ter sido comprometidas.
+7. Confira conciliações do provedor para evitar duplicar pagamentos, estornos ou lembretes. Um banco restaurado não cancela uma cobrança que já aconteceu fora dele.
+8. Só altere a conexão da aplicação e reabra o acesso após aprovação da validação. Registre decisões, responsáveis e comunicações aplicáveis.
+
+Não há neste roteiro um comando genérico para apagar e substituir produção. Uma mudança desse porte deve ser avaliada no contexto do incidente, com destino e impacto concretos.
+
+## Manutenção
+
+O comando `node api/dist/maintenance.js --once` executa um ciclo. `--loop` mantém o processo ativo com intervalo configurável. `--prune-only` limita a limpeza e `--files-only` limita a fila de fotos. Configure uma tarefa separada no Railway, sem exigir health check HTTP e sem fazer seed ou migration a cada ciclo.
+
+A limpeza alcança apenas sessões expiradas, contadores antigos de tentativas, tokens de redefinição usados/expirados e convites expirados. Não elimina auditoria, pedidos de titulares, dados operacionais ou documentos financeiros por um prazo inventado. A fila de fotos utiliza lotes, travas e tentativas idempotentes; falhas precisam de acompanhamento. Sem armazenamento configurado, a rotina informa que essa parte não está habilitada.
+
+## Limites e pendências externas
+
+- O operador precisa confirmar privacidade do bucket, permissões, região, lifecycle e credenciais. A existência de variáveis no servidor não comprova a configuração correta do provedor.
+- Recovery/PITR e backups do banco no provedor dependem do serviço contratado. A chave de cifra e os objetos precisam de proteção separada.
+- O fluxo de e-mail de produção exige remetente habilitado, entrega conferida e tratamento de falhas.
+- Dados jurídicos, contatos e procedimentos da Tiger Tech precisam ser reais e aprovados antes da oferta comercial.
+- Os links e o procedimento de cobrança do PagBank devem ser conferidos no próprio provedor; o registro do sistema não substitui essa conciliação.
+- Uma imagem ainda não construída em Docker/Railway e uma restauração ainda não executada devem continuar registradas como pendentes.
+
+Referências técnicas: [TLS e validação de certificado no PostgreSQL](https://www.postgresql.org/docs/18/libpq-ssl.html), [cripto autenticada no Node.js 22](https://nodejs.org/download/release/v22.15.1/docs/api/crypto.html), [configuração e implantação no Railway](https://docs.railway.com/config-as-code/reference). A análise de incidentes, retenção e direitos dos titulares está em [PRIVACIDADE-LGPD.md](PRIVACIDADE-LGPD.md).

@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { pool,tx,auth,permit,tenant,ensure,allowProfessional,validateAvailability,syncReminder, error } from './core.js';
+import { pool,tx,auth,permit,tenant,ensure,allowProfessional,validateAvailability,syncReminder,error,lockTutor } from './core.js';
 import type { PoolClient } from 'pg';
-const r=Router();r.use(auth);
+import {requireSubscriptionWrite} from './commercialService.js';
+const r=Router();r.use(auth,requireSubscriptionWrite);
 const datetime=z.iso.datetime({offset:true});
 const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default('')});
 const activeStatuses=['pending','confirmed','in_progress'];
@@ -88,8 +89,8 @@ r.get('/calendar/options',permit('appointments'),async(req,res)=>{
  const c=tenant(req),scoped=req.access!.role==='employee'&&!req.access!.permissions.includes('agenda:all');
  if(scoped)ensure(req.access!.scopeProfessionalId,403,'Vincule sua conta a um profissional.');
  const [tutors,pets,professionals,services]=await Promise.all([
-  pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 ORDER BY name',[c]),
-  pool.query('SELECT id,name,tutor_id FROM pets WHERE tenant_id=$1 ORDER BY name',[c]),
+  pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 AND anonymized_at IS NULL ORDER BY name',[c]),
+  pool.query('SELECT p.id,p.name,p.tutor_id FROM pets p JOIN tutors t ON t.tenant_id=p.tenant_id AND t.id=p.tutor_id WHERE p.tenant_id=$1 AND t.anonymized_at IS NULL ORDER BY p.name',[c]),
   pool.query('SELECT id,name FROM professionals WHERE tenant_id=$1 AND active=true AND ($2::uuid IS NULL OR id=$2) ORDER BY name',[c,scoped?req.access!.scopeProfessionalId:null]),
   pool.query('SELECT id,name,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND active=true ORDER BY name',[c])
  ]);res.json({tutors:tutors.rows,pets:pets.rows,professionals:professionals.rows,services:services.rows});
@@ -102,6 +103,7 @@ async function servicesFor(db:PoolClient,company:string,ids:string[]){
  return ids.map((id,index)=>({...(services.rows.find(s=>s.id===id)),position:index+1}));
 }
 async function putAppointment(db:PoolClient,req:import('express').Request,company:string,data:z.infer<typeof createInput>,kind:string){
+ await lockTutor(db,company,data.tutor_id,422);
  allowProfessional(req,data.professional_id);
  const svcs=await servicesFor(db,company,data.service_ids);const total=svcs.reduce((n,s)=>n+s.duration_minutes,0);
  const start=new Date(data.starts_at),end=new Date(start.getTime()+total*60000);
@@ -151,6 +153,7 @@ r.post('/calendar/appointments/:id/move',permit('appointments'),async(req,res)=>
  const data=z.object({starts_at:datetime,professional_id:z.uuid(),reason:z.string().trim().min(3).max(1000),mode:z.enum(['reschedule','anticipate']),tutor_consent:z.boolean().default(false)}).parse(req.body);
  if(data.mode==='anticipate')ensure(data.tutor_consent,422,'Registre a concordância do tutor.');
  const changed=await tx(async db=>{
+  const target=(await db.query('SELECT tutor_id FROM appointments WHERE tenant_id=$1 AND id=$2',[c,id])).rows[0];ensure(target,404,'Agendamento não encontrado.');await lockTutor(db,c,target.tutor_id);
   const old=await db.query('SELECT * FROM appointments WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[c,id]);ensure(old.rowCount,404,'Agendamento não encontrado.');
   const before=old.rows[0];allowProfessional(req,before.professional_id);allowProfessional(req,data.professional_id);
   ensure(['pending','confirmed'].includes(before.status),409,'Este atendimento não pode mais ser reagendado.');
@@ -170,6 +173,7 @@ r.post('/calendar/appointments/:id/status',permit('appointments'),async(req,res)
  const {status,reason}=z.object({status:z.enum(['confirmed','in_progress','done','cancelled','no_show']),reason:z.string().max(1000).default('')}).parse(req.body);
  const transitions:Record<string,string[]>={pending:['confirmed','cancelled','no_show'],confirmed:['in_progress','cancelled','no_show'],in_progress:['done','cancelled'],done:[],cancelled:[],no_show:[]};
  const row=await tx(async db=>{
+  const target=(await db.query('SELECT tutor_id FROM appointments WHERE tenant_id=$1 AND id=$2',[c,id])).rows[0];ensure(target,404,'Agendamento não encontrado.');await lockTutor(db,c,target.tutor_id);
   const old=await db.query('SELECT * FROM appointments WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[c,id]);ensure(old.rowCount,404,'Agendamento não encontrado.');
   allowProfessional(req,old.rows[0].professional_id);
   ensure(transitions[old.rows[0].status]?.includes(status),409,'Mudança de situação não permitida.');
@@ -195,8 +199,8 @@ r.get('/calendar/waitlist',permit('waitlist'),async(req,res)=>{
 r.post('/calendar/waitlist',permit('waitlist'),async(req,res)=>{
  const c=tenant(req),i=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),service_id:z.uuid(),professional_id:z.uuid().nullable().optional(),earliest_at:datetime,latest_at:datetime,notes:z.string().max(1000).default('')}).parse(req.body);
  ensure(new Date(i.latest_at)>new Date(i.earliest_at),422,'Período inválido.');
- const row=await pool.query(`INSERT INTO waitlist(tenant_id,tutor_id,pet_id,service_id,professional_id,earliest_at,latest_at,notes)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[c,i.tutor_id,i.pet_id,i.service_id,i.professional_id??null,i.earliest_at,i.latest_at,i.notes]);res.status(201).json(row.rows[0]);
+ const row=await tx(async db=>{await lockTutor(db,c,i.tutor_id,422);return db.query(`INSERT INTO waitlist(tenant_id,tutor_id,pet_id,service_id,professional_id,earliest_at,latest_at,notes)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[c,i.tutor_id,i.pet_id,i.service_id,i.professional_id??null,i.earliest_at,i.latest_at,i.notes]);});res.status(201).json(row.rows[0]);
 });
 r.get('/calendar/waitlist/:id/opportunities',permit('waitlist'),async(req,res)=>{
  const c=tenant(req),id=z.uuid().parse(req.params.id);
@@ -234,6 +238,7 @@ r.post('/calendar/waitlist/:id/book',permit('waitlist'),async(req,res)=>{
  const c=tenant(req),id=z.uuid().parse(req.params.id);
  const {starts_at,professional_id,tutor_consent}=z.object({starts_at:datetime,professional_id:z.uuid(),tutor_consent:z.literal(true)}).parse(req.body);
  const result=await tx(async db=>{
+  const target=(await db.query('SELECT tutor_id FROM waitlist WHERE tenant_id=$1 AND id=$2',[c,id])).rows[0];ensure(target,404,'Pedido de encaixe não encontrado.');await lockTutor(db,c,target.tutor_id);
   const item=await db.query("SELECT * FROM waitlist WHERE tenant_id=$1 AND id=$2 AND status IN ('waiting','offered') FOR UPDATE",[c,id]);ensure(item.rowCount,409,'Esta oportunidade já foi utilizada.');
   const w=item.rows[0],start=new Date(starts_at);ensure(start>=new Date(w.earliest_at)&&start<new Date(w.latest_at),422,'Fora da disponibilidade informada.');
   if(w.professional_id)ensure(w.professional_id===professional_id,422,'Profissional diferente do solicitado.');

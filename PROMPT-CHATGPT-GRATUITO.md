@@ -54,4 +54,33 @@ O comando `npm run build` passou para API e frontend após as alterações. O lo
 
 Nesta rodada, `npm run build` passou para API e interface. Os modais foram verificados no navegador em 320×568, 360×670 e 1280×800 px com dados fictícios temporários: criação/edição de cliente, novo agendamento, erro com preenchimento preservado, salvamento, reagendamento, histórico, jornada/folgas, encaixe, convites, permissões e configurações. Também foram conferidos foco por teclado, Escape, restauração da posição da lista e avisos gerais na posição original. A página temporária de testes foi removida. Nenhum cadastro real foi criado ou alterado no Neon; estes testes não comprovam operação completa em produção.
 
+## Atualização: CRM de relacionamento implementado
+
+O projeto agora inclui **CRM**, integrado ao menu, à navegação e às permissões. O módulo reaproveita os tutores já cadastrados; não recrie uma tabela de clientes nem duplique seus cadastros.
+
+`web/src/CrmPage.tsx` e `web/src/styles/_crm.scss` implementam pesquisa por nome/telefone/e-mail, paginação, indicadores, filtros de clientes e tarefas, ficha do cliente e registro manual de contatos. A ficha reúne pets, dados existentes do tutor, visitas, próximo agendamento, contatos e tarefas de retorno. Ela mostra até 10 atendimentos, 50 contatos e 50 tarefas, com pendentes primeiro; as listas principais são paginadas. Datas usam o fuso da empresa retornado pela API.
+
+Os segmentos diferenciam **sem atendimento concluído** de **sem retorno há 30, 60 ou 90 dias**. Visita conta apenas atendimento `done` com início no passado; faltas, cancelamentos e registros futuros não contam como visitas realizadas. Os indicadores representam a empresa inteira, mesmo com pesquisa ou segmento ativos.
+
+Contatos são registros manuais por WhatsApp, telefone, e-mail, presencial ou outro canal. Eles não enviam mensagens e não alteram o consentimento do tutor para lembretes. Tarefas têm título, observações, vencimento e estados `open`, `done` e `cancelled`; podem ser concluídas, canceladas ou reabertas. São tarefas internas, não reservas da agenda nem lembretes automáticos ao tutor. Não representam recebimentos financeiros.
+
+A API está em `api/src/crmRoutes.ts`, montada em `/api/crm` em `server.ts` antes dos routers genéricos. As rotas são:
+
+- `GET /clients` com `q`, `segment=all|inactive|without_visits`, `inactive_days=30|60|90`, `page` e `page_size`.
+- `GET /clients/:id`.
+- `POST /clients/:id/contacts` com `channel`, `summary` e `occurred_at`.
+- `POST /clients/:id/tasks` com `title`, `notes` e `due_at`.
+- `GET /tasks` com `filter=open|overdue|done|cancelled|all`, `page` e `page_size`.
+- `PATCH /tasks/:id` com `status`.
+
+Todos os caminhos acima têm prefixo `/api/crm`, exigem autenticação e isolamento por empresa. Administradores têm acesso; funcionários precisam receber a nova permissão **`crm`** explicitamente em Configurações. Ela foi adicionada à interface `TeamPage.tsx` e à validação de `dataRoutes.ts`; nenhuma conta de funcionário recebe CRM automaticamente. Conceder CRM permite consultar os dados de relacionamento da empresa e os resumos de atendimentos da ficha.
+
+A migration **aditiva** `api/sql/005_crm.sql` cria `crm_contacts` e `crm_tasks`, com FKs compostas empresa/tutor e empresa/usuário criador, validações e índices. Não modifica as migrations anteriores nem consentimentos. Precisa ser aplicada ao banco do ambiente pelo fluxo de migrations existente, após validação em banco de testes. `api/tests/crm.integration.test.ts` contém testes de permissões, isolamento, métricas, filtros, contatos, tarefas e validação; usa exclusivamente um `TEST_DATABASE_URL` terminado em `_test`.
+
+Preserve as alterações posteriores já existentes: central de notificações no `AppShell.tsx`, migrations `002` a `004`, campos e histórico de autorização de lembretes nos tutores, e o código atual de `api/src/reminderWorker.ts`. A existência desse arquivo não comprova um disparador automático de produção; o CRM não ativa nem altera envio de e-mail.
+
+O CRM usa o `FormDialog` compartilhado, em tela inteira no celular e centralizado no computador. **Não mude a posição nem o comportamento dos avisos gerais de sucesso e erro.** Não limpe avisos ao abrir fichas; não coloque formulários escondidos abaixo das listas. Antes de mudar código, peça os arquivos atuais e preserve alterações posteriores, em vez de substituir versões completas antigas.
+
+**Validação específica do CRM em 02/11/2026:** build completo aprovado, 10 testes unitários e 19 de integração aprovados em PostgreSQL local exclusivo (12 específicos do CRM). Interface conferida com dados fictícios em 1280×800, 360×670 e 320×568, incluindo contatos, ciclo de tarefas, filtros, busca, paginação, Escape e modais; os avisos gerais continuam na posição original. A migration `005_crm.sql` foi aplicada e verificada no Neon atual, confirmado por mim como ambiente de testes. Os registros fictícios da conferência ficaram em um banco temporário local, sem criar clientes, contatos ou tarefas nesse Neon. Não houve publicação nem validação completa em produção. O prompt específico está em `PROMPT-CRM-CHATGPT-GRATUITO.md`.
+
 **Considere este o visual oficial do PetCore e aguarde minha próxima solicitação.**

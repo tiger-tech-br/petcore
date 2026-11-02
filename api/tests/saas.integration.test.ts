@@ -39,6 +39,7 @@ before(async()=>{
  await db.query('INSERT INTO professional_services(tenant_id,professional_id,service_id) VALUES($1,$2,$3)',[tenantA,profA,serviceA]);
  for(let d=1;d<=7;d++)await db.query("INSERT INTO professional_shifts(tenant_id,professional_id,weekday,start_time,end_time) VALUES($1,$2,$3,'08:00','18:00')",[tenantA,profA,d]);
  cookieA=await login(ownerEmail,password);cookieB=await login(`b-${uniq}@example.test`,password);
+ assert.equal((await call('/commercial/onboarding','POST',{plan:'free'},cookieA)).code,200);assert.equal((await call('/commercial/onboarding','POST',{plan:'free'},cookieB)).code,200);
  const staff=await db.query('INSERT INTO users(name,email,password_hash) VALUES($1,$2,$3) RETURNING id',['Funcionário A',`staff-${uniq}@example.test`,hash]);employeeId=staff.rows[0].id;
  await db.query("INSERT INTO memberships(tenant_id,user_id,role,permissions) VALUES($1,$2,'employee',ARRAY['appointments'])",[tenantA,employeeId]);
  employeeProf=(await db.query("INSERT INTO professionals(tenant_id,name,user_id) VALUES($1,'Prof Staff',$2) RETURNING id",[tenantA,employeeId])).rows[0].id;

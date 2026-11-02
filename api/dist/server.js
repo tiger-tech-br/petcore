@@ -9,6 +9,7 @@ import authRoutes from './authRoutes.js';
 import dataRoutes from './dataRoutes.js';
 import calendarRoutes from './calendarRoutes.js';
 import fileRoutes from './fileRoutes.js';
+import crmRoutes from './crmRoutes.js';
 import { createOriginGuard } from './originGuard.js';
 export function createApp() {
     const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
     app.use('/api', createOriginGuard(process.env.APP_ORIGIN, process.env.APP_ALLOWED_ORIGINS));
     app.get('/api/health', async (_req, res) => { await pool.query('SELECT 1'); res.json({ ok: true, database: true }); });
     app.use('/api/auth', authRoutes);
+    app.use('/api/crm', crmRoutes);
     app.use('/api', dataRoutes);
     app.use('/api', calendarRoutes);
     app.use('/api', fileRoutes);

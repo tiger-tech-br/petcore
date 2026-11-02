@@ -24,4 +24,4 @@ export function zonedToISO(wall:string,zone='America/Sao_Paulo'){
 }
 export const startIso=(date:string)=>zonedToISO(date+'T00:00');
 export const endIso=(date:string,days=1)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return startIso(d.toISOString().slice(0,10));};
-export type Session={user:{id:string;name:string;role:'platform'|'admin'|'employee';tenantId:string|null;companyName?:string;scopeProfessionalId:string|null;permissions:string[]};companies:{id:string;name:string;role:string}[]};
+export type Session={user:{id:string;name:string;role:'platform'|'admin'|'employee';tenantId:string|null;companyName?:string;scopeProfessionalId:string|null;permissions:string[]};companies:{id:string;name:string;role:string}[];legal?:{required:boolean;version:string};subscription?:{writable:boolean;access_until:string|null;trial_ends_at:string|null;paid_through:string|null;status:string;onboarding_completed_at:string|null;trial_started_at:string|null;onboarding_plan:string|null;trial_days?:number}|null};

@@ -3,13 +3,21 @@ import { z } from 'zod';
 import { pool, tx, auth, tenant, permit, ensure, validateAvailability } from './core.js';
 const r = Router();
 r.use(auth);
-const tutor = z.object({ name: z.string().trim().min(2).max(160), phone: z.string().max(40).default(''), email: z.union([z.email(), z.literal(''), z.null()]).optional(), notes: z.string().max(3000).default('') });
+const tutor = z.object({ name: z.string().trim().min(2).max(160), phone: z.string().max(40).default(''), email: z.union([z.email(), z.literal(''), z.null()]).optional(), notes: z.string().max(3000).default(''), email_reminders_opt_in: z.boolean().default(false) });
 const pet = z.object({ name: z.string().trim().min(1).max(160), tutor_id: z.uuid(), species: z.string().trim().min(2), breed: z.string().nullable().optional(), size: z.enum(['pequeno', 'medio', 'grande']), birth_date: z.iso.date().nullable().optional(), notes: z.string().max(3000).default('') });
 const professional = z.object({ name: z.string().trim().min(2).max(160), user_id: z.uuid().nullable().optional(), active: z.boolean().default(true) });
 const service = z.object({ name: z.string().trim().min(2).max(160), description: z.string().max(2000).default(''), price_cents: z.number().int().min(0).max(999999999), duration_minutes: z.number().int().min(5).max(1440), active: z.boolean().default(true) });
 const defs = { tutors: { schema: tutor, permission: 'tutors', columns: ['name', 'phone', 'email', 'notes'] }, pets: { schema: pet, permission: 'pets', columns: ['name', 'tutor_id', 'species', 'breed', 'size', 'birth_date', 'notes'] }, professionals: { schema: professional, permission: 'professionals', columns: ['name', 'user_id', 'active'] }, services: { schema: service, permission: 'services', columns: ['name', 'description', 'price_cents', 'duration_minutes', 'active'] } };
 function getResource(raw) { ensure(raw in defs, 404, 'Recurso não encontrado.'); return raw; }
 function allowed(req, permission) { const a = req.access; ensure(a.role === 'admin' || a.permissions.includes(permission), 403, 'Sem permissão.'); }
+// Apenas para lembretes reais: enderecos de exemplo/teste nao sao destinatarios.
+function eligibleReminderEmail(value) {
+    if (typeof value !== 'string' || !z.email().safeParse(value).success)
+        return false;
+    const domain = value.trim().split('@')[1]?.toLowerCase() ?? '';
+    return !(/(^|\.)example\.(com|net|org)$/.test(domain) || /\.(test|invalid|localhost)$/.test(domain) || domain === 'localhost');
+}
+function hasOwn(record, key) { return Object.hasOwn(record, key); }
 // Identificador da empresa nunca é fornecido pelo cliente nestas operações.
 r.get('/data/:resource', async (req, res) => {
     const key = getResource(req.params.resource), id = tenant(req);
@@ -24,6 +32,21 @@ r.post('/data/:resource', async (req, res) => {
     allowed(req, defs[key].permission);
     const def = defs[key];
     const data = def.schema.parse(req.body);
+    if (key === 'tutors') {
+        const optIn = data.email_reminders_opt_in === true;
+        if (optIn)
+            ensure(eligibleReminderEmail(data.email), 422, 'Informe um e-mail real e valide a autorizacao do tutor antes de ativar lembretes.');
+        const created = await tx(async (db) => {
+            const row = await db.query(`INSERT INTO tutors
+    (tenant_id,name,phone,email,notes,email_reminders_opt_in,email_reminders_opt_in_at,email_reminders_opt_in_by)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, [id, data.name, data.phone, data.email ?? null, data.notes, optIn, optIn ? new Date() : null, optIn ? req.access.userId : null]);
+            if (optIn)
+                await db.query(`INSERT INTO tutor_email_reminder_consent_events
+    (tenant_id,tutor_id,actor_user_id,email,action) VALUES($1,$2,$3,$4,'granted')`, [id, row.rows[0].id, req.access.userId, data.email]);
+            return row.rows[0];
+        });
+        return res.status(201).json(created);
+    }
     const columns = [...def.columns];
     const sql = `INSERT INTO ${key}(tenant_id,${columns.join(',')}) VALUES($1,${columns.map((_, i) => '$' + (i + 2)).join(',')}) RETURNING *`;
     const row = await pool.query(sql, [id, ...columns.map(c => data[c] ?? null)]);
@@ -34,6 +57,40 @@ r.patch('/data/:resource/:id', async (req, res) => {
     allowed(req, defs[key].permission);
     const def = defs[key];
     const data = def.schema.partial().strict().parse(req.body);
+    if (key === 'tutors') {
+        ensure(Object.keys(data).length > 0, 422, 'Nenhum campo para atualizar.');
+        const updated = await tx(async (db) => {
+            const previous = await db.query('SELECT email,email_reminders_opt_in,email_reminders_opt_in_at,email_reminders_opt_in_by FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE', [id, recordId]);
+            ensure(previous.rowCount, 404, 'Tutor nao encontrado.');
+            const before = previous.rows[0];
+            const email = hasOwn(data, 'email') ? data.email : before.email;
+            const emailChanged = String(before.email ?? '').trim().toLowerCase() !== String(email ?? '').trim().toLowerCase();
+            const oldOptIn = before.email_reminders_opt_in === true;
+            // Trocar e-mail jamais herda automaticamente a autorizacao do endereco anterior.
+            const optIn = hasOwn(data, 'email_reminders_opt_in') ? data.email_reminders_opt_in === true : (emailChanged ? false : oldOptIn);
+            if (optIn)
+                ensure(eligibleReminderEmail(email), 422, 'Informe um e-mail real e valide a autorizacao do tutor antes de ativar lembretes.');
+            const newGrant = optIn && (!oldOptIn || emailChanged);
+            const revoke = oldOptIn && (!optIn || emailChanged);
+            const changes = {};
+            for (const field of ['name', 'phone', 'email', 'notes'])
+                if (hasOwn(data, field))
+                    changes[field] = data[field];
+            changes.email_reminders_opt_in = optIn;
+            changes.email_reminders_opt_in_at = optIn ? (newGrant ? new Date() : before.email_reminders_opt_in_at) : null;
+            changes.email_reminders_opt_in_by = optIn ? (newGrant ? req.access.userId : before.email_reminders_opt_in_by) : null;
+            const fields = Object.keys(changes);
+            const row = await db.query(`UPDATE tutors SET ${fields.map((field, index) => `${field}=$${index + 3}`).join(',')} WHERE tenant_id=$1 AND id=$2 RETURNING *`, [id, recordId, ...fields.map(field => changes[field])]);
+            if (revoke)
+                await db.query(`INSERT INTO tutor_email_reminder_consent_events
+    (tenant_id,tutor_id,actor_user_id,email,action) VALUES($1,$2,$3,$4,'revoked')`, [id, recordId, req.access.userId, before.email]);
+            if (newGrant)
+                await db.query(`INSERT INTO tutor_email_reminder_consent_events
+    (tenant_id,tutor_id,actor_user_id,email,action) VALUES($1,$2,$3,$4,'granted')`, [id, recordId, req.access.userId, email]);
+            return row.rows[0];
+        });
+        return res.json(updated);
+    }
     const columns = def.columns.filter(c => Object.hasOwn(data, c));
     ensure(columns.length, 422, 'Nenhum campo para atualizar.');
     const sql = `UPDATE ${key} SET ${columns.map((c, i) => `${c}=$${i + 3}`).join(',')} WHERE tenant_id=$1 AND id=$2 RETURNING *`;
@@ -111,7 +168,7 @@ r.get('/team', permit('team'), async (req, res) => {
 r.patch('/team/:id', async (req, res) => {
     ensure(req.access?.role === 'admin', 403, 'Somente o administrador pode alterar permissões.');
     const id = z.uuid().parse(req.params.id);
-    const data = z.object({ permissions: z.array(z.enum(['appointments', 'agenda:all', 'tutors', 'pets', 'waitlist', 'services', 'professionals', 'team', 'finance'])), active: z.boolean() }).parse(req.body);
+    const data = z.object({ permissions: z.array(z.enum(['appointments', 'agenda:all', 'tutors', 'pets', 'crm', 'waitlist', 'services', 'professionals', 'team', 'finance'])), active: z.boolean() }).parse(req.body);
     const row = await pool.query("UPDATE memberships SET permissions=$3,active=$4 WHERE tenant_id=$1 AND user_id=$2 AND role='employee' RETURNING user_id", [tenant(req), id, data.permissions, data.active]);
     ensure(row.rowCount, 404, 'Funcionário não encontrado.');
     res.json({ ok: true });

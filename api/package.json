@@ -11,7 +11,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "node --experimental-strip-types --test tests/scheduling.unit.test.ts tests/originGuard.unit.test.ts",
-    "test:integration": "node --import tsx --test tests/saas.integration.test.ts"
+    "test:integration": "node --import tsx --test tests/saas.integration.test.ts tests/crm.integration.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.900.0",
@@ -25,6 +25,7 @@
     "multer": "^2.0.2",
     "pg": "^8.16.3",
     "resend": "^6.37.0",
+    "sharp": "^0.35.5",
     "zod": "^4.1.5"
   },
   "devDependencies": {

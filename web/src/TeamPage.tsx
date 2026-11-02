@@ -5,7 +5,7 @@ import FormDialog from './FormDialog';
 import {Empty,PageHeader} from './ui';
 
 type Props={setMessage:(value:string)=>void;setError:(value:string)=>void};
-const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['waitlist','Lista de espera'],['services','Serviços'],['professionals','Profissionais'],['finance','Financeiro (em breve)']];
+const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['crm','CRM e relacionamento com clientes'],['waitlist','Lista de espera'],['services','Serviços'],['professionals','Profissionais'],['inventory','Produtos e estoque'],['finance','Financeiro, vendas, caixa e relatórios']];
 
 export default function TeamPage({setMessage,setError}:Props) {
   const [rows,setRows]=useState<any[]>([]),[loading,setLoading]=useState(true),[dialog,setDialog]=useState<'invite'|'permissions'|'settings'|null>(null);
