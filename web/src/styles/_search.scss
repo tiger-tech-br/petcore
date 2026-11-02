@@ -1,0 +1,52 @@
+@use 'tokens' as *;
+
+.global-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 0 1 440px;
+  min-width: 150px;
+  height: 43px;
+  padding: 0 13px;
+  gap: 10px;
+  color: #7c88b6;
+  background: #fff;
+  border: 1px solid #d9e2f1;
+  border-radius: 7px;
+
+  > svg {flex: none;}
+  > input {
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    color: $ink;
+    font-size: 13px;
+    &::placeholder {color: #8995bf; opacity: 1;}
+    &::-webkit-search-cancel-button {display: none;}
+    &:focus-visible {outline: none;}
+  }
+  &:focus-within {border-color: $green; box-shadow: 0 0 0 3px #00979c12;}
+}
+.global-search-clear {display: grid; place-items: center; flex: none; padding: 3px; border: 0; border-radius: 4px; color: $muted; background: transparent;}
+.global-search-dropdown {position: absolute; z-index: 12; top: calc(100% + 9px); left: 0; right: 0; max-height: min(65vh, 500px); overflow-y: auto; padding: 8px; background: #fff; border: 1px solid $border; border-radius: 10px; box-shadow: 0 12px 40px #0b174c18;}
+.global-search-message {display: flex; gap: 8px; align-items: center; padding: 13px 10px; margin: 0; color: $muted; font-size: 12px;}
+.global-search-error {padding: 10px; margin: 0 0 4px; color: #b44a40; background: #fff5f2; border-radius: 6px; font-size: 12px;}
+.global-search-group {padding: 9px 10px 5px; margin: 0; color: $muted; font-size: 11px; font-weight: 600;}
+.global-search-result {display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 6px; color: $ink; background: #fff; text-align: left;
+  &.selected, &:hover {background: #effbfb;}
+  > span:nth-child(2) {flex: 1; min-width: 0;}
+  strong, small {display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+  strong {font-size: 13px;}
+  small {margin-top: 2px; color: $muted; font-size: 11px;}
+  > svg {color: $green; flex: none;}
+}
+.global-search-result-icon {display: grid; place-items: center; width: 33px; height: 33px; flex: none; border-radius: 50%; background: #e8f8fa; color: $green;}
+.global-search-spinner {animation: global-search-spin .8s linear infinite;}
+@keyframes global-search-spin {to {transform: rotate(360deg);}}
+@media (max-width: 899px) {.global-search {display: none;}}
+@media (prefers-reduced-motion: reduce) {.global-search-spinner {animation: none;}}

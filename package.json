@@ -1,0 +1,22 @@
+{
+  "name": "petcore-saas",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm run dev -w api\" \"npm run dev -w web\"",
+    "build": "npm run build --workspace api && npm run build --workspace web",
+    "test": "npm run test --workspace api",
+    "db:migrate": "npm run db:migrate --workspace api",
+    "db:seed": "npm run db:seed --workspace api"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

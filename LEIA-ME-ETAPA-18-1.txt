@@ -1,0 +1,68 @@
+PetCore SaaS — Etapa 18.1: notificações internas (somente API + banco)
+===================================================================
+
+O QUE ESTA ETAPA FAZ
+- Grava uma notificação por usuário autorizado quando ocorre um evento de agenda:
+  criação, encaixe, mudança de horário, confirmação, cancelamento, falta,
+  início ou conclusão.
+- Usa PostgreSQL Neon, respeitando tenant_id, memberships e o escopo
+  do profissional. Cada evento e suas notificações são gravados na mesma transação.
+- Permite consultar notificações e marcar individualmente como lidas.
+- Não envia e-mails nem push, não instala worker e ainda não altera o sino
+  ou outros componentes da interface. Não cria notificações retroativas.
+
+ARQUIVOS
+1. api/sql/002_notifications.sql (NOVO)
+2. api/src/calendarRoutes.ts (SUBSTITUIR pelo arquivo completo)
+
+ANTES DE ALTERAR
+- Faça uma cópia de api/src/calendarRoutes.ts.
+- Confirme se sua versão é a mesma enviada ao ChatGPT, e se não houve
+  outras mudanças recentes nesse arquivo.
+- Execute em ambiente de desenvolvimento, não em produção com clientes reais.
+- Tenha backup/restauração do banco ou snapshot anterior, se aplicável.
+
+INSTALAÇÃO NO WINDOWS / VS CODE
+1. Abra a pasta petcore-saas no VS Code.
+2. Copie os arquivos para os caminhos acima.
+3. No terminal PowerShell na raiz, execute:
+     npm run db:migrate
+     npm run build
+4. Se a migração e o build passaram, reinicie o servidor local (npm run dev).
+
+TESTE DE CONSULTA (CONSOLE DO NAVEGADOR, SESSÃO DO ADMIN DA EMPRESA)
+  fetch('/api/notifications', {
+    credentials: 'include',
+    headers: {'X-PetCore-Request':'1'}
+  }).then(async r => console.log(r.status, await r.json()));
+
+O retorno é {items:[...],unreadCount:0}. Antes de novos eventos, estará vazio.
+Realize uma mudança REAL de teste em um atendimento demonstrativo da MESMA empresa
+(por exemplo, confirmar um agendamento pendente), depois execute a consulta acima.
+O endpoint retorna no máximo os 50 mais recentes. O evento é mostrado em PT-BR
+no campo 'title'.
+
+Para marcar uma notificação como lida, use o id de UMA notificação retornada
+pela própria conta atual (NÃO envie esse ID ao chat):
+  fetch('/api/notifications/COLE_ID_DA_NOTIFICACAO/read', {
+    method:'PATCH', credentials:'include',
+    headers: {'X-PetCore-Request':'1'}
+  }).then(async r=>console.log(r.status,await r.json()));
+
+ISOLAMENTO
+- Repetir a consulta em outra empresa deve mostrar apenas os itens dessa empresa.
+- Sem permissão 'appointments', a leitura e marcação devem ser negadas.
+- Tentativa de alterar o status de leitura de notificação de outro usuário
+  deve retornar 404 (sem expor existência).
+
+LIMITAÇÕES
+- Ainda não há central visual com lidas/não lidas.
+- Não foi configurado e-mail, envio de lembrete, processos de background ou push.
+- Requer a nova migration antes de ativar a versão de calendarRoutes.ts.
+- Não foi possível executar testes integrados contra seu Neon neste ambiente.
+- Não mexa no arquivo 001_core.sql nem repita migrations antigas manualmente.
+
+PRÓXIMA ETAPA
+Validar os endpoints no Neon de desenvolvimento e depois integrar a central
+na interface com o AppShell.tsx e SCSS atuais, sem substituir o botão de pendências
+existente nem redesenhar o layout.

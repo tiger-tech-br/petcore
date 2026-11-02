@@ -1,0 +1,156 @@
+@use 'tokens' as *;
+
+.page-header-actions {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.form-dialog {
+  position:fixed;
+  inset:0;
+  display:none;
+  flex-direction:column;
+  width:min(640px, calc(100% - 48px));
+  max-width:none;
+  max-height:calc(100dvh - 48px);
+  margin:auto;
+  padding:0;
+  overflow:hidden;
+  color:$ink;
+  background:#fff;
+  border:1px solid #dce9f0;
+  border-radius:16px;
+  box-shadow:0 24px 90px #071c3940;
+
+  &[open] {display:flex}
+  &--wide {width:min(860px, calc(100% - 48px))}
+  &::backdrop {background:#061b3b8f;backdrop-filter:blur(3px)}
+
+  &__header {
+    position:sticky;
+    top:0;
+    z-index:3;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    flex-shrink:0;
+    gap:20px;
+    padding:21px 24px;
+    background:#fff;
+    border-bottom:1px solid $border;
+    h2 {margin:0;font-size:22px;font-weight:750;line-height:1.25;letter-spacing:-.6px;outline:none}
+    p {margin:6px 0 0;color:$muted;font-size:13px;line-height:1.5}
+    >div {min-width:0}
+  }
+
+  &__close {
+    display:grid;
+    place-items:center;
+    width:40px;
+    height:40px;
+    flex-shrink:0;
+    margin:-4px -6px -4px 0;
+    padding:7px;
+    color:$ink;
+    background:#eff7fa;
+    border:1px solid #e5eff4;
+    border-radius:10px;
+    &:hover:not(:disabled) {background:#e0f3f6}
+  }
+
+  &__message {
+    flex-shrink:0;
+    padding:12px 24px;
+    border-bottom:1px solid transparent;
+    font-size:13px;
+    line-height:1.5;
+    overflow-wrap:anywhere;
+    &--error {background:#fff0f1;color:#a43448;border-color:#f8d9df}
+    &--notice {background:#ebfaf4;color:#08775f;border-color:#d0f0e4}
+  }
+
+  &__content {
+    min-height:0;
+    padding:22px 24px 24px;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .form-panel {margin-top:0;border:0;box-shadow:none;padding:0}
+  .form-grid,.stack-form {gap:18px}
+  .form-actions {
+    position:sticky;
+    bottom:-24px;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:4px -24px -24px;
+    padding:16px 24px;
+    background:#fff;
+    border-top:1px solid $border;
+    box-shadow:0 -5px 14px #0b174c04;
+    button {min-height:43px}
+  }
+  .stack-form .form-actions {margin-top:0}
+  .form-grid>label,.stack-form>label {font-size:13px}
+  .form-grid input:not([type='checkbox']),.form-grid select,.form-grid textarea,.stack-form input:not([type='checkbox']),.stack-form select,.stack-form textarea {font-size:14px;min-height:44px}
+  .form-grid textarea,.stack-form textarea {min-height:98px}
+  .history {margin-top:14px}
+  .action-row {gap:10px}
+}
+
+@media(max-width:780px) {
+  .page-header-actions {
+    width:100%;
+    justify-content:flex-start;
+    >button {flex:1;min-height:44px}
+  }
+
+  .form-dialog,.form-dialog--wide {
+    width:100%;
+    height:100dvh;
+    max-height:100dvh;
+    margin:0;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+  }
+
+  .form-dialog {
+    &__header {
+      align-items:center;
+      gap:12px;
+      padding:calc(15px + env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 15px max(18px, env(safe-area-inset-left));
+      h2 {font-size:21px;letter-spacing:-.5px}
+      p {font-size:12px;margin-top:5px}
+    }
+    &__close {width:44px;height:44px;margin:0 -4px 0 0;border-radius:11px}
+    &__content {flex:1;padding:20px max(18px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left))}
+    &__message {padding:12px 18px;font-size:13px}
+    .form-grid,.shifts-grid {grid-template-columns:minmax(0,1fr)}
+    .form-grid,.stack-form {gap:18px}
+    .form-actions {
+      bottom:calc(-1 * max(20px, env(safe-area-inset-bottom)));
+      gap:10px;
+      margin:4px -18px calc(-1 * max(20px, env(safe-area-inset-bottom)));
+      padding:14px max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+      >button {flex:1;min-height:46px;min-width:110px}
+    }
+    .form-grid input:not([type='checkbox']),.form-grid select,.form-grid textarea,.stack-form input:not([type='checkbox']),.stack-form select,.stack-form textarea {font-size:16px;min-height:46px}
+    .action-row>button {min-height:44px;flex:1}
+    .segmented {max-width:100%}
+    .segmented button {flex:1;min-width:0}
+    .shift-line {justify-content:space-between}
+    .shift-line label {flex:none}
+    .shift-line input[type='time'] {flex:1;width:0;min-width:0;max-width:130px;font-size:16px}
+    .photo-control {overflow-wrap:anywhere}
+    .photo-control input {max-width:100%}
+  }
+}
