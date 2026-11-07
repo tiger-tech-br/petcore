@@ -64,6 +64,10 @@ try{
   await client.query("INSERT INTO memberships(tenant_id,user_id,role,permissions) VALUES($1,$2,'admin','{}'),($3,$4,'admin','{}'),($1,$5,'employee',ARRAY['pets'])",[ids.a,ids.owner,ids.b,ids.other,ids.staff]);await client.query('COMMIT');created=true;result.fixturesCreated=true;
  }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
  stage='login';await login('owner');await login('other');await login('staff');checked('secure_httponly_samesite_cookies');
+ stage='recovery_configuration';const unknown='unknown-'+randomUUID()+'@example.test';
+ assert.equal((await db.query('SELECT 1 FROM users WHERE email=$1',[unknown])).rowCount,0);
+ const recovery=status(await api('/auth/password/forgot','POST',{email:unknown},'anonymous'),200);
+ assert.equal(recovery.data.message,'Se a conta existir, você receberá orientações por e-mail.');checked('recovery_configured_without_sending_email');
  stage='onboarding';for(const person of ['owner','other'])status(await api('/commercial/onboarding','POST',{plan:'free'},person),200);
  const me=status(await api('/auth/me'),200).data;assert.equal(me.user.tenantId,ids.a);assert.equal(me.subscription.writable,true);assert.ok(Math.abs(Date.parse(me.subscription.trial_ends_at)-Date.parse(me.subscription.trial_started_at)-30*86400000)<2000);checked('free_30_days');
  stage='origin';status(await api('/commercial/choose-plan','POST',{plan_id:'monthly'},'owner','https://origem-nao-autorizada.example.test'),403);checked('foreign_origin_rejected');

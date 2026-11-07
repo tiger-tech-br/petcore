@@ -6,7 +6,7 @@
 - Um único teste de entrega foi aceito pela API do Resend. O usuário confirmou o recebimento na pasta Spam. Não foram enviados novos e-mails neste diagnóstico.
 - A imagem do painel enviada pelo usuário confirmou `tigertech.dev.br` como **Verified** no Resend. A leitura automatizada dos detalhes foi interrompida porque o navegador não pôde confirmar o endereço da janela; nenhum DNS foi alterado. Ainda faltam os detalhes de SPF/DKIM e os cabeçalhos da mensagem para determinar sua autenticação efetiva.
 - Aceitação pelo provedor e recebimento no Spam não comprovam entrega regular na Caixa de Entrada nem a conclusão da recuperação no aplicativo publicado.
-- Variáveis de recuperação foram configuradas sem disparar deploy e aguardam a revisão final. O serviço de lembretes foi criado/configurado para cada cinco minutos, mas sua ativação e execução ainda precisam ser confirmadas após concluir código de lote e testes. O usuário autorizou lembretes apenas a tutores com opt-in registrado.
+- A revisão `434a341f` está publicada com as variáveis de recuperação; a configuração foi exercitada pelo endereço público com conta inexistente, sem enviar e-mail. O serviço de lembretes está ativado a cada cinco minutos, limitado a 20 por execução e 10s por envio. A primeira execução confirmada não encontrou lembretes autorizados devidos e não enviou mensagens. O usuário autorizou somente tutores com opt-in registrado.
 
 ## DNS público consultado
 
@@ -39,7 +39,7 @@ Não compartilhe links de recuperação, tokens ou o corpo completo de uma mensa
 
 ## Operação e controles
 
-- Recuperação: `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY`, `EMAIL_FROM`. A revisão em preparação possui prazo máximo de envio, respostas sem detalhes internos e testes com provedor simulado; a publicação final precisa levar esses ajustes ao endereço público.
+- Recuperação: `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY`, `EMAIL_FROM`. A revisão publicada possui prazo máximo de envio, respostas sem detalhes internos e testes com provedor simulado. A configuração foi exercitada no endereço público sem mensagem real; o fluxo de e-mail de ponta a ponta continua dependente da entrega do provedor.
 - Lembretes: processo separado com `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `REMINDER_EMAILS_ENABLED=true` e `REMINDER_EMAILS_CONFIRM_SEND=YES`. Cron ou variáveis preparados não provam ativação/execução.
 - A chave atual permite envio e respondeu `restricted_api_key` à consulta de domínios; esse resultado não demonstra chave inválida para enviar nem domínio não verificado. Confira os registros/status no painel autorizado, sem ampliar permissões só para esta consulta.
 - Preserve opt-in, revogação, elegibilidade, idempotência e tratamento de tentativas incertas. Não ative destinatários fictícios, não use contatos do CRM como autorização e não envie novos testes sem autorização.

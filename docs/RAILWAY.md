@@ -1,6 +1,6 @@
 # Publicar o PetCore no Railway
 
-O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `b23f40a5-9c42-4710-9c2a-cb0668a7d04e` terminaram com `SUCCESS` na revisão `4d5ffe41`. O ensaio remoto aprovou 11 verificações. Ajustes posteriores ainda aguardam publicação e conferência; a abertura comercial também depende da aprovação operacional/jurídica.
+O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5` terminaram com `SUCCESS` na revisão `434a341f`. O ensaio remoto aprovou 12 verificações. A manutenção e os lembretes usam essa mesma revisão. A abertura comercial ainda depende das pendências operacionais e jurídicas registradas no checklist.
 
 | Recurso preparado | Identificação |
 |---|---|
@@ -106,7 +106,7 @@ Antes de alterar uma base de produção, valide as migrations em ambiente isolad
 
 O ensaio hospedado aprovou fotos privadas, leitura autorizada e exclusão com dados fictícios. Configure e acompanhe versões e retenção separadamente; excluir o objeto ativo não comprova apagar versões anteriores ou backups. Não torne o bucket público para corrigir uma URL.
 
-Um teste de e-mail foi aceito pelo Resend e confirmado pelo usuário na pasta Spam. As variáveis de recuperação foram configuradas sem deploy e aguardam a revisão final. Isso não comprova entrega regular na Caixa de Entrada nem a conclusão da recuperação pelo aplicativo publicado. O diagnóstico e as verificações de remetente estão em [EMAIL.md](EMAIL.md).
+Um teste de e-mail foi aceito pelo Resend e confirmado pelo usuário na pasta Spam. As variáveis de recuperação foram aplicadas na revisão 434a341f e conferidas sem mensagem real. Isso não comprova entrega regular na Caixa de Entrada nem a conclusão da recuperação pelo aplicativo publicado. O diagnóstico e as verificações de remetente estão em [EMAIL.md](EMAIL.md).
 
 No painel da plataforma, preencha identificação e contatos reais da operação, documentos jurídicos, fornecedores/regiões e condições comerciais. Publique os documentos somente após revisão. Confira nome do produto, preço, periodicidade e cancelamento dos links do PagBank. O recebimento confirmado no provedor deve corresponder à conciliação que libera a assinatura; o retorno do navegador não é prova de pagamento.
 
@@ -135,11 +135,11 @@ Serviços de operação e estado observado:
 |---|---|---|
 | `petcore-maintenance` | `*/15 * * * *` — a cada 15 minutos | Execução confirmada; `node api/dist/maintenance.js --once` |
 | `petcore-backup` | `0 6 * * *` — diariamente às 03h de Brasília | Execução confirmada; `node api/scripts/backup.mjs` |
-| Lembretes | `*/5 * * * *` — a cada cinco minutos | Criado/configurado; código de lote e testes em conclusão. Ativação e execução ainda precisam ser confirmadas |
+| Lembretes | `*/5 * * * *` — a cada cinco minutos | Ativo na revisão 434a341f; até 20 por execução e 10s por envio. Primeira execução sem lembretes autorizados devidos, zero mensagens |
 
 Manutenção e backup usam Dockerfile, uma réplica em `us-east4-eqdc4a`, 1 vCPU, 0,5 GB e reinício `NEVER`. Não possuem domínio, proxy TCP, health check HTTP ou pré-deploy. Mantenha cada serviço na revisão aprovada para seu comando. Não execute migrations ou seed nesses crons.
 
-As conexões de manutenção/backup referenciam `petcore.DATABASE_DIRECT_URL`. A manutenção usa referências ao segredo de sessão e às variáveis de fotos; o backup usa referências à chave/destino de backup e aos identificadores do destino de fotos. Segredos não constam desta documentação. Novas variáveis de e-mail foram gravadas sem deploy e precisam da implantação final. O usuário autorizou lembretes somente com opt-in registrado; não declare o serviço ativo antes de confirmar sua revisão e execução.
+As conexões de manutenção/backup referenciam `petcore.DATABASE_DIRECT_URL`. A manutenção usa referências ao segredo de sessão e às variáveis de fotos; o backup usa referências à chave/destino de backup e aos identificadores do destino de fotos. Segredos não constam desta documentação. As variáveis de e-mail foram aplicadas na revisão 434a341f. O usuário autorizou lembretes somente com opt-in registrado; não declare o serviço ativo antes de confirmar sua revisão e execução.
 
 A manutenção e o backup já tiveram execução acompanhada. A restauração remota conferiu 46 tabelas e registrou `verified` no backup com prefixo `ff3dc3a4`. Continue verificando resultados de cada ciclo e falhas; uma execução aprovada não comprova que todos os ciclos futuros ocorrerão.
 

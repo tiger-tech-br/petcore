@@ -1,6 +1,6 @@
 # PetCore — gestão para pet shops
 
-Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). A revisão HTTPS conferida é `4d5ffe41`, implantação `b23f40a5-9c42-4710-9c2a-cb0668a7d04e`, concluída com sucesso. Ajustes posteriores ainda precisam da publicação e validação final; este registro não declara prontidão comercial.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). A revisão atual é `434a341f`, implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5`, concluída com sucesso e conferida por 12 verificações HTTPS. Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
@@ -75,7 +75,7 @@ Evidências registradas nesta preparação:
 - Rodada completa de 103 testes aprovada: 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload.
 - Restauração local de backup criptografado conferiu 46 tabelas, contagens e proteções contra chave incorreta, destino ocupado e uso da origem. O ensaio não inclui as fotos.
 - Compilação da revisão publicada aprovada. Cadastro de serviço, profissional/jornada, cliente, pet e agendamento percorridos com dados fictícios. Agenda com novos espaçamentos conferida em computador/celular; após agendar, a data resultante fica visível.
-- Ensaio HTTPS com 11 verificações aprovado: sessão segura, Free, origens, isolamento, permissões mínimas, fotos privadas, substituição/exclusão, exportação e anonimização. Todos os registros e objetos fictícios desse ensaio foram removidos.
+- Ensaio HTTPS atual com 12 verificações aprovado: sessão segura, configuração de recuperação sem envio, Free, origens, isolamento, permissões mínimas, fotos privadas, substituição/exclusão, exportação e anonimização. Todos os registros e objetos fictícios desse ensaio foram removidos.
 - Recuperação invalida também os links anteriores da mesma conta. Os lembretes preservam a autorização em edições parciais e usam ordem sequencial dos eventos de consentimento. Os testes usam provedor simulado, sem e-mails reais.
 
 Construção Docker, HTTPS e controles remotos de fotos já tiveram conferência. Isso não comprova adequação jurídica nem entrega regular de e-mails na Caixa de Entrada.
@@ -84,7 +84,7 @@ Construção Docker, HTTPS e controles remotos de fotos já tiveram conferência
 
 Fotos dependem de `OBJECT_STORAGE_*`. A API normaliza a imagem, remove metadados e fornece leitura temporária autorizada. Upload real, recusa de leitura anônima e exclusão foram conferidos. A retenção de versões e a recuperação dos objetos continuam sendo procedimentos próprios do armazenamento.
 
-Recuperação usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`; as variáveis foram configuradas sem disparar deploy e aguardam a revisão final. Lembretes usam outro processo, `RESEND_*` e liberação explícita. O serviço de lembretes foi preparado para cada cinco minutos, mas sua ativação ainda precisa ser confirmada após concluir o código e os testes. Somente tutores com autorização registrada podem receber. Contatos do CRM não disparam mensagens nem concedem consentimento.
+Recuperação usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`, aplicadas na revisão `434a341f` e conferidas sem mensagem real. Lembretes usam outro processo, `RESEND_*` e duas liberações explícitas. O serviço está ativo a cada cinco minutos, com até 20 mensagens por execução e 10s por envio. A primeira execução não encontrou lembretes autorizados devidos. Somente tutores com autorização registrada podem receber; contatos do CRM não disparam mensagens nem concedem consentimento.
 
 Um único teste de e-mail foi aceito pelo Resend e o usuário confirmou o recebimento na pasta Spam. Isso comprova aquele recebimento, sem garantir entrega na Caixa de Entrada. O diagnóstico DNS e as verificações restantes estão em [EMAIL.md](docs/EMAIL.md).
 

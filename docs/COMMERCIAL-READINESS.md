@@ -26,7 +26,7 @@ Registro de evidências e pendências da preparação comercial. A homologação
 ## Evidências locais registradas
 
 - [x] Rodada completa atual: 103 testes aprovados, sendo 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload. As integrações são executadas em série no banco exclusivo para evitar sobreposição das configurações globais usadas pela suíte comercial.
-- [x] Rodada específica atual da autenticação: 10 testes aprovados.
+- [x] Autenticação: 11 testes aprovados; lembretes: 8 testes aprovados. Incluídos nos 103 da rodada completa, sem duplicar a contagem.
 - [ ] Executar e registrar a suíte completa após os ajustes mais recentes de autenticação e lembretes; não somar rodadas para inventar um total final.
 - [x] Backup local AES-256-GCM e restauração em banco isolado: 46 tabelas e contagens conferidas; chave errada, destino ocupado e origem recusados. Não inclui fotos.
 - [x] Verificações locais anteriores de login, CRM e modais em computador/celular com dados fictícios.
@@ -39,20 +39,20 @@ Não somar execuções sobrepostas. Resultados locais não comprovam entrega de 
 
 ## Evidências da homologação externa
 
-- [x] Imagem Docker construída e serviço HTTPS publicado: implantação `b23f40a5-9c42-4710-9c2a-cb0668a7d04e`, revisão `4d5ffe41`, estado `SUCCESS`.
+- [x] Imagem Docker construída e serviço HTTPS publicado: implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5`, revisão `434a341f`, estado `SUCCESS`.
 - [x] Branch Neon de homologação separado: `petcore-homologacao-20261106`.
 - [x] Destinos separados para fotos e backups criados; variáveis de referência configuradas.
 - [x] Configurações diretas do serviço definidas para Dockerfile, início, pré-deploy e saúde.
-- [x] Ensaio HTTPS de 11 verificações: saúde/banco, contato público, cookie seguro, Free, origens, isolamento/permissões, fotos privadas normalizadas, substituição/exclusão, exportação e anonimização.
+- [x] Ensaio HTTPS de 12 verificações: saúde/banco, contato público, cookie seguro, configuração de recuperação sem envio, Free, origens, isolamento/permissões, fotos privadas normalizadas, substituição/exclusão, exportação e anonimização.
 - [x] Todos os registros e objetos fictícios desse ensaio foram removidos; nenhuma cobrança ou mensagem foi enviada por ele.
 - [x] Migrations 001–013 presentes na homologação e no banco original, confirmado como somente testes. Atualizações após a cópia de preservação `br-quiet-mountain-b62dyl9j`.
 - [x] Manutenção a cada 15 minutos e backup diário às 03h de Brasília executados com confirmação.
 - [x] Backup remoto e restauração isolada conferiram 46 tabelas; registro do backup com prefixo `ff3dc3a4` ficou `verified`. O dump não inclui fotos.
 - [x] Um teste de e-mail aceito pelo Resend; usuário confirmou recebimento na pasta Spam.
-- [x] Variáveis de recuperação configuradas sem disparar deploy; aguardam a revisão final.
+- [x] Variáveis de recuperação aplicadas na revisão publicada; configuração conferida sem enviar mensagem real.
 - [x] Serviço de lembretes criado/configurado para cada cinco minutos; autorização do usuário limitada a tutores com opt-in.
-- [ ] Publicar a revisão final com os ajustes posteriores a `4d5ffe41` e repetir as verificações afetadas.
-- [ ] Confirmar ativação e execução do serviço de lembretes após concluir código de lote e testes.
+- [x] Revisão `434a341f` publicada na aplicação, manutenção e lembretes. Ensaio atual com 12 verificações HTTPS aprovado, incluindo configuração de recuperação sem enviar e-mail; dados e fotos fictícios removidos.
+- [x] Lembretes ativados por autorização expressa, cron de cinco minutos, até 20 por execução e prazo de 10s por envio. Execução em 06/11/2026 às 22h55 de Brasília: nenhum lembrete autorizado devido, zero mensagens enviadas.
 - [ ] Confirmar registros do remetente no painel Resend e resultados SPF/DKIM/DMARC do e-mail recebido; acompanhar entrega. Ver [EMAIL.md](EMAIL.md).
 - [ ] Conferir retenção, alertas, guarda da chave e recuperação dos objetos de fotos.
 
