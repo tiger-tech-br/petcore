@@ -1,86 +1,78 @@
 # Prompt para continuar o PetCore no ChatGPT gratuito
 
-Copie o texto abaixo para uma nova conversa. Se quiser discutir a aparência, anexe também as imagens de referência.
+Copie o texto abaixo para a conversa em que o projeto está sendo construído. Anexe os arquivos atuais solicitados; o chat não consegue ler caminhos locais sozinho.
 
 ---
 
-Estou desenvolvendo o **PetCore**, um sistema de gestão para pet shops. Quero que você continue me ajudando a partir do estado atual descrito aqui, sem recriar o projeto do zero.
+Estou desenvolvendo o **PetCore**, SaaS de gestão interna de pet shops da **Tiger Tech**, na pasta `C:\Users\andre\Desktop\petcore-saas`. Continue a partir dos arquivos atuais, sem recriar o projeto e sem substituir alterações recentes por versões antigas.
 
-## Projeto e referências
+## Estado atual
 
-O projeto está no meu computador, em `C:\Users\andre\Desktop\petcore-saas`. O frontend usa React 19, TypeScript, Vite e Sass/SCSS. A API usa Node.js, Express e PostgreSQL, com autenticação por sessão no servidor.
+A interface usa React 19, TypeScript, Vite e SCSS; a API usa Node.js 22.12+, Express 5 e PostgreSQL. O banco está no Neon. Autenticação por sessão no servidor, senhas Argon2id, vínculos e permissões por empresa. A sessão usa cookie de oito horas renovável; não acrescente “Manter conectado” sem implementar o comportamento.
 
-O layout já foi alterado com base nas imagens `painel-petcore.png` e `pet-core-login.png`. A identidade visual oficial combina azul-marinho, turquesa, fundos claros, cartões brancos e a marca PetCore com uma pata e coração. Quero manter o cachorro da referência: pequeno, peludo, marrom/preto, sentado, com laço verde e gravata amarela do Brasil. Ele aparece no login e no cartão de lembrete do painel.
+Já existem:
 
-No login responsivo, preserve o cachorro inteiro — cabeça, corpo e patas — sem cortar nem encobrir as patas com o formulário. Mantenha logo, títulos, campos e links centralizados, com espaço entre o cachorro inteiro, o título do cartão e os campos. O login adapta a imagem e os espaçamentos à altura útil do navegador, incluindo notebooks; a tela inicial foi verificada sem rolagem em 1366×607 e 320×568 px. Ajuda expandida, mensagens de erro e etapas extras de autenticação podem aumentar a altura para manter os controles acessíveis.
+- Clientes/tutores, pets, serviços, profissionais, jornadas, pausas e folgas.
+- Agenda, reagendamento, antecipação, faltas, histórico e lista de espera/encaixes.
+- **CRM:** carteira dos tutores já cadastrados, pesquisa, segmentos sem visita/sem retorno há 30, 60 ou 90 dias, ficha com pets e atendimentos, contatos manuais e tarefas internas. Não duplique clientes. Contatos não enviam mensagens; tarefas não reservam agenda. Funcionário precisa da permissão `crm`. Cadastro anonimizado não recebe novos contatos nem reabertura de tarefas.
+- **Produtos e estoque:** cadastro, custo/preço, estoque mínimo, movimentos e histórico.
+- **Financeiro:** vendas/comandas internas de produtos e serviços, importação de atendimento concluído, recebimentos parciais, despesas e caixa com fechamento. Agendamento e venda aberta não são recebimentos. Registrar cartão significa informar como a equipe recebeu, sem capturar dados do cartão ou acessar banco do pet shop.
+- **Relatórios:** indicadores, gráficos e CSV baseados nos registros da empresa.
+- **Suporte:** chamados e respostas no painel.
+- **Privacidade:** pedidos, verificação de identidade, exportação, anonimização e auditoria; documentos jurídicos em rascunho até revisão/publicação.
+- Manutenção, fotos privadas e scripts de backup criptografado/restauração.
 
-## Arquivos da interface
+Produtos e estoque atendem ao balcão e à operação interna. **Não existem loja virtual, compras públicas, táxi dog, entregas ou status de pedidos de comércio eletrônico. Não adicione esses módulos sem solicitação minha.** Emissão fiscal e integração bancária também não foram implementadas.
 
-- `web/src/AuthScreen.tsx`: login, convite, recuperação e redefinição de senha; composição para computador e celular.
-- `web/src/AppShell.tsx`: menu lateral, empresa selecionada, perfil, busca e navegação inferior no celular.
-- `web/src/Overview.tsx`: visão geral, indicadores, agenda de hoje, pendências e resumos.
-- `web/src/Brand.tsx`: marca reutilizável do sistema.
-- `web/src/GlobalSearch.tsx`: busca de clientes, pets e atendimentos de hoje, respeitando permissões.
-- `web/src/main.tsx`: sessão, navegação e importação das páginas separadas; `ui.tsx` reúne cabeçalho, estado vazio e situação.
-- `web/src/CalendarPage.tsx`: agenda, novo atendimento, detalhes, reagendamento, antecipação e histórico.
-- `web/src/DataPage.tsx`: cadastros e editor de jornada, serviços e folgas dos profissionais.
-- `web/src/WaitlistPage.tsx`, `TeamPage.tsx` e `PlatformPage.tsx`: lista de espera/encaixes, equipe/configurações e empresas/convites.
-- `web/src/FormDialog.tsx` e `web/src/styles/_dialog.scss`: janela nativa compartilhada e estilos dos formulários.
-- `web/src/styles/_auth.scss`, `_tokens.scss`, `_petcore.scss`, `_search.scss` e `main.scss`: identidade visual, login, painel, busca e responsividade. Também existem os estilos anteriores `_base.scss`, `_app.scss` e `_responsive.scss`.
-- `web/public/favicon.svg`: ícone da aplicação.
-- `web/public/images/petcore-dog.png`: cachorro preparado a partir da referência. A origem e preparação estão documentadas em `petcore-dog-provenance.md`, na mesma pasta.
+## Planos confirmados
 
-## Comportamento que deve ser preservado
+Os preços finais são **R$ 35 mensais e R$ 350 anuais**. Desconsidere os valores antigos de R$ 40/R$ 400.
 
-Os formulários agora abrem em `FormDialog`, usando `<dialog>` nativo: tela inteira até 780 px e janela centralizada no computador. Cabeçalho e botão de fechar ficam visíveis; cancelar/salvar e mensagens locais de erro/sucesso pertencem à janela. A página de fundo fica bloqueada para rolagem, o foco retorna ao acionador ao fechar e mudanças de etapa/título retornam ao início do conteúdo.
+No primeiro acesso do responsável, abre um modal com **Plano Free, Plano Mensal e Plano Anual**. O **Free vem marcado**, dura 30 dias e começa quando confirmado. Não é um plano gratuito permanente. Ele termina no vencimento; a tolerância configurada para regularizar plano pago não estende o teste.
 
-Esse padrão cobre cadastros, jornada/folgas, agendamento/detalhes/reagendamento/antecipação/histórico, pedidos e encaixes da lista de espera, convites, permissões, configurações e criação de empresas. Por pedido do usuário, **os avisos gerais mantêm sua posição e seu comportamento originais na página**; esta mudança se limita aos formulários e detalhes. A validação local aparece também na janela para que o erro seja visível durante o preenchimento. **Não volte a acrescentar formulários ou detalhes invisíveis no fim da página.** Preserve APIs, permissões por empresa, fuso horário, valores em centavos e fotos no armazenamento do servidor.
+O cliente pode escolher um plano pago imediatamente, sem testar nem aguardar 30 dias. Paga no checkout externo do PagBank. Minha conta PagBank é PF; o fluxo atual usa links recorrentes e conciliação manual pela plataforma. Não precisa colocar tokens de produção no projeto para esse fluxo.
 
-Os fluxos de autenticação existentes foram mantidos. Não existe suporte a uma opção personalizada “Manter conectado”: a sessão usa um cookie com duração de oito horas, renovável pelo servidor. Não acrescente um checkbox sem implementar corretamente o comportamento necessário. A ajuda de acesso é exibida na própria interface; não existe um provedor real de suporte integrado.
+Selecionar plano ou voltar do checkout não ativa assinatura paga. A Tiger Tech confere o recebimento no PagBank e registra a conciliação. No vencimento, consultas, assinatura, suporte e os canais próprios de privacidade continuam disponíveis.
 
-O acesso pelo celular na rede local usa `APP_ALLOWED_ORIGINS`, uma lista explícita de endereços adicionais separada por vírgulas; `APP_ORIGIN` continua sendo o endereço principal. A validação está em `api/src/originGuard.ts`, com testes HTTP sem banco. Preserve a lista de origens e o cabeçalho obrigatório `X-PetCore-Request`; não libere todas as origens para corrigir problemas de acesso.
+Links fornecidos: mensal `https://pag.ae/82ixDFWsJ` e anual `https://pag.ae/82ixDhLCJ`. Os valores conferidos eram R$ 35/R$ 350, mas o nome ainda era “sistema de demandas”. Continuam sem revisão aprovada e não devem ser liberados antes de conferir a identificação PetCore, periodicidade e cancelamento.
 
-O painel consulta a API e mostra dados reais da empresa autorizada: atendimentos de hoje, em andamento, aguardando confirmação e pets cadastrados. A agenda permite filtrar por profissional. Há busca global, menu adaptado para celular e acesso ao novo agendamento.
+## Visual e usabilidade que devem ser preservados
 
-O resumo de valores corresponde aos serviços agendados; **não representa caixa nem recebimentos**. Estoque, vendas, caixa, relatórios, planos e assinaturas ainda são módulos futuros, identificados como “Em breve”. Não invente movimentações financeiras, estoque baixo, notificações ou registros para copiar os números fictícios das imagens.
+O visual oficial segue `painel-petcore.png` e `pet-core-login.png`: azul-marinho, turquesa, fundos claros, cartões e marca com pata/coração.
 
-Na API, `api/src/fileRoutes.ts` recebeu uma correção de tipos: os IDs das duas rotas de foto são validados com `z.uuid().parse(req.params.id)`. Preserve o isolamento entre empresas, as permissões, os vínculos e a persistência no PostgreSQL.
+Preserve **o mesmo cachorro** de `web/public/images/petcore-dog.png`, com laço verde e gravata amarela do Brasil. No login responsivo, ele precisa aparecer inteiro, incluindo as patas. Mantenha logo, títulos, campos e links centralizados, com espaços adequados. A tela inicial adapta imagem e espaçamento à altura disponível; mensagens e etapas extras podem precisar de rolagem para manter controles acessíveis.
 
-## Como continuar me ajudando
+Formulários e detalhes abrem em `FormDialog` nativo: tela inteira no celular até 780 px, modal centralizado no computador, foco controlado e fundo sem rolagem. Não deixe formulários escondidos abaixo das listas nem empilhe janelas.
 
-Você não consegue ler os caminhos `C:\...` do meu computador por conta própria. Quando precisar analisar código, peça somente os arquivos ou trechos relevantes, para eu colar ou anexar. Nunca solicite o conteúdo do `.env`, senhas, tokens ou chaves privadas.
+**Não mude a posição nem o comportamento dos avisos gerais de sucesso e erro.** A validação local do formulário pode aparecer também dentro do modal.
 
-O comando `npm run build` passou para API e frontend após as alterações. O login foi conferido no navegador em desktop e em telas de 320 e 390 px; o cachorro aparece inteiro. Busca, filtro por profissional e abertura de agendamento foram verificados com dados temporários de teste, removidos antes da entrega. As verificações de compilação e interface não comprovam publicação nem testes completos em produção. Não afirme que o sistema foi publicado ou está pronto para produção sem evidências. Explique as mudanças propostas, preserve as funções existentes e indique a validação necessária para cada alteração.
+Há um guia de primeiros passos: serviços → profissional/jornada/serviços habilitados → cliente e pet → agendamento → recebimento. Quando falta pré-requisito, a tela explica o que fazer e oferece atalho somente a quem tem permissão. Preserve isso e as orientações para procurar o responsável quando faltar acesso.
 
-Nesta rodada, `npm run build` passou para API e interface. Os modais foram verificados no navegador em 320×568, 360×670 e 1280×800 px com dados fictícios temporários: criação/edição de cliente, novo agendamento, erro com preenchimento preservado, salvamento, reagendamento, histórico, jornada/folgas, encaixe, convites, permissões e configurações. Também foram conferidos foco por teclado, Escape, restauração da posição da lista e avisos gerais na posição original. A página temporária de testes foi removida. Nenhum cadastro real foi criado ou alterado no Neon; estes testes não comprovam operação completa em produção.
+## Arquivos principais
 
-## Atualização: CRM de relacionamento implementado
+- `web/src/AuthScreen.tsx`, `AppShell.tsx`, `Overview.tsx`, `Brand.tsx` e `GlobalSearch.tsx`.
+- `web/src/CalendarPage.tsx`, `DataPage.tsx`, `WaitlistPage.tsx`, `TeamPage.tsx` e `PlatformPage.tsx`.
+- `web/src/CrmPage.tsx`, `InventoryPage.tsx`, `FinancePage.tsx`, `ReportsPage.tsx`, `PrivacyPage.tsx`, `LegalScreen.tsx` e `CommercialPages.tsx`.
+- `web/src/FirstSteps.tsx`, `FormDialog.tsx`, `businessUi.tsx`, `api.ts` e `main.tsx`.
+- `api/src/crmRoutes.ts`, `businessRoutes.ts`, `businessService.ts`, `privacyRoutes.ts`, `privacyService.ts`, `commercialRoutes.ts` e `commercialService.ts`.
+- `api/src/core.ts`, `server.ts`, `originGuard.ts`, `fileRoutes.ts`, `petPhoto.ts`, `maintenance.ts` e processos de lembrete existentes.
+- `api/sql/` e `api/scripts/migrate.mjs`, `backup.mjs`, `restore-check.mjs`.
+- Estilos em `web/src/styles/`; preserve os módulos existentes.
 
-O projeto agora inclui **CRM**, integrado ao menu, à navegação e às permissões. O módulo reaproveita os tutores já cadastrados; não recrie uma tabela de clientes nem duplique seus cadastros.
+Preserve a empresa autenticada em toda consulta, permissões próprias, valores em centavos, transações, idempotência, fuso da empresa e FKs compostas. Os seletores mínimos de tutores/serviços/contas não concedem acesso ao cadastro completo. Preserve o cabeçalho `X-PetCore-Request` e origens explícitas; nunca use `*` para resolver login pelo celular.
 
-`web/src/CrmPage.tsx` e `web/src/styles/_crm.scss` implementam pesquisa por nome/telefone/e-mail, paginação, indicadores, filtros de clientes e tarefas, ficha do cliente e registro manual de contatos. A ficha reúne pets, dados existentes do tutor, visitas, próximo agendamento, contatos e tarefas de retorno. Ela mostra até 10 atendimentos, 50 contatos e 50 tarefas, com pendentes primeiro; as listas principais são paginadas. Datas usam o fuso da empresa retornado pela API.
+## Contato, privacidade e serviços externos
 
-Os segmentos diferenciam **sem atendimento concluído** de **sem retorno há 30, 60 ou 90 dias**. Visita conta apenas atendimento `done` com início no passado; faltas, cancelamentos e registros futuros não contam como visitas realizadas. Os indicadores representam a empresa inteira, mesmo com pesquisa ou segmento ativos.
+Suporte e privacidade: **tigertechbr@outlook.com**, autorizado como contato público. Não invente nome jurídico, endereço ou fornecedores. Recursos de privacidade implementados não significam que a operação já esteja legalmente aprovada. Identificação real, revisão de documentos, subprocessadores/regiões, retenção e procedimentos ainda precisam ser concluídos.
 
-Contatos são registros manuais por WhatsApp, telefone, e-mail, presencial ou outro canal. Eles não enviam mensagens e não alteram o consentimento do tutor para lembretes. Tarefas têm título, observações, vencimento e estados `open`, `done` e `cancelled`; podem ser concluídas, canceladas ou reabertas. São tarefas internas, não reservas da agenda nem lembretes automáticos ao tutor. Não representam recebimentos financeiros.
+Recuperação usa `EMAIL_PROVIDER`, `EMAIL_API_KEY`, `EMAIL_FROM`. Lembretes usam `RESEND_API_KEY`, `RESEND_FROM_EMAIL` e duas liberações explícitas, mantidas desabilitadas durante homologação. O endereço Outlook de contato não comprova remetente validado no provedor. Não envie e-mails ou faça cobranças reais durante testes.
 
-A API está em `api/src/crmRoutes.ts`, montada em `/api/crm` em `server.ts` antes dos routers genéricos. As rotas são:
+Foi preparado um projeto isolado de homologação no Railway, com branch separado do Neon e buckets separados para fotos/backups. Domínio reservado: `https://petcore-homologacao.up.railway.app`. Neste registro, construção Docker, implantação e conferência HTTPS ainda estavam pendentes. Verifique o estado atual antes de afirmar que foi publicado. O serviço usa configurações diretas do Railway, não `railway.json`/`railway.toml`.
 
-- `GET /clients` com `q`, `segment=all|inactive|without_visits`, `inactive_days=30|60|90`, `page` e `page_size`.
-- `GET /clients/:id`.
-- `POST /clients/:id/contacts` com `channel`, `summary` e `occurred_at`.
-- `POST /clients/:id/tasks` com `title`, `notes` e `due_at`.
-- `GET /tasks` com `filter=open|overdue|done|cancelled|all`, `page` e `page_size`.
-- `PATCH /tasks/:id` com `status`.
+Houve uma rodada completa de **84 testes locais aprovados: 18 unitários e 66 de integração**, incluindo comercial **19/19** e regressões de upload. Compilação final aprovada. O ensaio local de backup criptografado restaurou **46 tabelas** e conferiu as contagens e recusas de uso inseguro; não inclui fotos. A jornada de cadastros até o agendamento foi percorrida na interface. A agenda agora tem filtros com rótulos separados e cartões com horário, situação, pet, cliente, serviços e profissional em linhas distintas. Ao criar, reagendar ou antecipar, ela mostra a data resultante e limpa filtros de busca que esconderiam o atendimento. Preserve esse espaçamento em computador, tablet e celular. A homologação externa ainda precisa ser registrada. Não some execuções sobrepostas nem afirme prontidão comercial por causa desses números.
 
-Todos os caminhos acima têm prefixo `/api/crm`, exigem autenticação e isolamento por empresa. Administradores têm acesso; funcionários precisam receber a nova permissão **`crm`** explicitamente em Configurações. Ela foi adicionada à interface `TeamPage.tsx` e à validação de `dataRoutes.ts`; nenhuma conta de funcionário recebe CRM automaticamente. Conceder CRM permite consultar os dados de relacionamento da empresa e os resumos de atendimentos da ficha.
+## Como continuar
 
-A migration **aditiva** `api/sql/005_crm.sql` cria `crm_contacts` e `crm_tasks`, com FKs compostas empresa/tutor e empresa/usuário criador, validações e índices. Não modifica as migrations anteriores nem consentimentos. Precisa ser aplicada ao banco do ambiente pelo fluxo de migrations existente, após validação em banco de testes. `api/tests/crm.integration.test.ts` contém testes de permissões, isolamento, métricas, filtros, contatos, tarefas e validação; usa exclusivamente um `TEST_DATABASE_URL` terminado em `_test`.
+Antes de alterar código, peça somente os arquivos atuais relevantes. Não peça `.env`, senhas, tokens, chaves ou conexões com senha. Não consegue acessar minha pasta por conta própria.
 
-Preserve as alterações posteriores já existentes: central de notificações no `AppShell.tsx`, migrations `002` a `004`, campos e histórico de autorização de lembretes nos tutores, e o código atual de `api/src/reminderWorker.ts`. A existência desse arquivo não comprova um disparador automático de produção; o CRM não ativa nem altera envio de e-mail.
-
-O CRM usa o `FormDialog` compartilhado, em tela inteira no celular e centralizado no computador. **Não mude a posição nem o comportamento dos avisos gerais de sucesso e erro.** Não limpe avisos ao abrir fichas; não coloque formulários escondidos abaixo das listas. Antes de mudar código, peça os arquivos atuais e preserve alterações posteriores, em vez de substituir versões completas antigas.
-
-**Validação específica do CRM em 02/11/2026:** build completo aprovado, 10 testes unitários e 19 de integração aprovados em PostgreSQL local exclusivo (12 específicos do CRM). Interface conferida com dados fictícios em 1280×800, 360×670 e 320×568, incluindo contatos, ciclo de tarefas, filtros, busca, paginação, Escape e modais; os avisos gerais continuam na posição original. A migration `005_crm.sql` foi aplicada e verificada no Neon atual, confirmado por mim como ambiente de testes. Os registros fictícios da conferência ficaram em um banco temporário local, sem criar clientes, contatos ou tarefas nesse Neon. Não houve publicação nem validação completa em produção. O prompt específico está em `PROMPT-CRM-CHATGPT-GRATUITO.md`.
-
-**Considere este o visual oficial do PetCore e aguarde minha próxima solicitação.**
+O objetivo é concluir um sistema simples para clientes sem conhecimento técnico e prepará-lo para comercialização. Explique o impacto da mudança e como validar. Não afirme conformidade jurídica, envio automático, backup remoto verificado ou publicação sem evidência. Consulte `README.md`, `docs/COMMERCIAL-READINESS.md`, `docs/RAILWAY.md` e `docs/OPERACAO.md` atualizados antes de propor outra arquitetura.

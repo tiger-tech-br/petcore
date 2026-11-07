@@ -29,14 +29,15 @@ const historyKindLabels:Record<string,string> = {
 const historyKindLabel = (kind:string):string => historyKindLabels[kind] ?? 'Alteração registrada';
 type Move = 'reschedule'|'anticipate';
 type Step = 'details'|'move'|'history';
-type Props = {setMessage:(value:string)=>void; setError:(value:string)=>void; initialNew?:boolean; searchQuery?:string};
+export type SetupTarget = 'services'|'professionals'|'tutors'|'pets';
+type Props = {setMessage:(value:string)=>void; setError:(value:string)=>void; initialNew?:boolean; searchQuery?:string; onSetup?:(target:SetupTarget)=>void; canSetup?:(target:SetupTarget)=>boolean; onSaved?:()=>void};
 const blankOptions:Options = {tutors:[], pets:[], professionals:[], services:[]};
 const newForm = (date:string):AppointmentForm => ({tutor_id:'', pet_id:'', professional_id:'', service_ids:[], starts_at:`${date}T09:00`, notes:''});
 const wallTime = (date:string) => new Date(date).toLocaleString('sv-SE', {
   timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
 }).replace(' ', 'T');
 
-export default function CalendarPage({setMessage, setError, initialNew=false, searchQuery=''}:Props) {
+export default function CalendarPage({setMessage, setError, initialNew=false, searchQuery='', onSetup, canSetup, onSaved}:Props) {
   const [date,setDate] = useState(today());
   const [mode,setMode] = useState<'day'|'week'>('day');
   const [professionalFilter,setProfessionalFilter] = useState('');
@@ -100,6 +101,11 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     setShowForm(false); setSelected(item); setStep('details'); setHistoryRows([]); setDialogError('');
   }
   function closeNew() {if(!saving){setShowForm(false); setDialogError('');}}
+  function prepareSetup(target:SetupTarget) {
+    if(saving||!onSetup||!canSetup?.(target)) return;
+    closeNew();
+    onSetup(target);
+  }
   function closeDetails() {
     if(saving) return;
     historyRequest.current++;
@@ -109,13 +115,28 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     historyRequest.current++;
     setStep('details'); setDialogError(''); setHistoryLoading(false);
   }
+  async function showSavedAppointment(wall:string,professionalId:string) {
+    const savedDate=wall.slice(0,10);
+    setProfessionalFilter(current=>current&&current!==professionalId?'':current);
+    if(savedDate===date) {
+      await load();
+      return;
+    }
+    // Invalida imediatamente a consulta do período anterior. O efeito da nova
+    // data carrega a lista correta sem reutilizar o fechamento da data antiga.
+    loadRequest.current++;
+    setRows([]); setLoading(true); setLoadError('');
+    setDate(savedDate);
+  }
 
   async function create(event:FormEvent) {
     event.preventDefault(); if(saving) return;
     setSaving(true); setDialogError('');
     try {
       await api('/calendar/appointments','POST',{...form,starts_at:zonedToISO(form.starts_at)});
-      setMessage('Atendimento agendado e gravado no banco.'); setShowForm(false); await load();
+      setMessage('Atendimento agendado e gravado no banco.'); setShowForm(false);
+      onSaved?.();
+      await showSavedAppointment(form.starts_at,form.professional_id);
     } catch (error) {setDialogError((error as Error).message);} finally {setSaving(false);}
   }
   async function changeStatus(id:string,next:string) {
@@ -140,7 +161,8 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
       });
       setSelected(null); setStep('details');
       setMessage(move==='anticipate'?'Atendimento antecipado com autorização registrada.':'Agendamento reagendado; horário anterior liberado.');
-      await load();
+      onSaved?.();
+      await showSavedAppointment(newTime,newProfessional);
     } catch (error) {setDialogError((error as Error).message);} finally {setSaving(false);}
   }
   async function showHistory() {
@@ -160,24 +182,31 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   const detailsTitle = selected ? step==='move'
     ? `${move==='anticipate'?'Antecipar':'Reagendar'} atendimento de ${selected.pet_name}`
     : step==='history' ? `Histórico de ${selected.pet_name}` : `Atendimento de ${selected.pet_name}` : '';
-  const missingSetup=[!options.services.length?'serviços em Serviços':null,!options.professionals.length?'um profissional e sua jornada em Profissionais':null,!options.tutors.length?'o cliente em Clientes e pets':null,!options.pets.length?'o pet vinculado ao cliente em Clientes e pets':null].filter(Boolean);
+  const setupNeeds:{target:SetupTarget;missing:boolean;description:string;button:string}[]=[
+    {target:'services',missing:!options.services.length,description:'serviços com preço e duração',button:'Ir para Serviços'},
+    {target:'professionals',missing:!options.professionals.length,description:'um profissional com jornada e serviços habilitados',button:'Ir para Profissionais'},
+    {target:'tutors',missing:!options.tutors.length,description:'o cliente (tutor responsável)',button:'Ir para Clientes'},
+    {target:'pets',missing:!options.pets.length,description:'o pet vinculado ao cliente',button:'Ir para Pets'}
+  ];
+  const missingSetup=setupNeeds.filter(item=>item.missing);
+  const nextSetup=missingSetup[0];
 
-  return <>
+  return <div className="calendar-page">
     <PageHeader eyebrow="ROTINA DE ATENDIMENTOS" title="Agenda de atendimentos"
       subtitle="Organize horários, serviços e profissionais sem conflitos de reserva."
       action={<button className="primary-btn" onClick={openNew} aria-haspopup="dialog"><Plus size={17}/>Novo agendamento</button>}/>
-    <div className="panel">
+    <div className="panel calendar-panel">
       <div className="list-tools calendar-tools">
-        <div className="segmented"><button className={mode==='day'?'chosen':''} onClick={()=>setMode('day')}>Dia</button><button className={mode==='week'?'chosen':''} onClick={()=>setMode('week')}>Semana</button></div>
+        <div className="calendar-period-filter"><span>Visualização</span><div className="segmented" aria-label="Período da agenda"><button className={mode==='day'?'chosen':''} aria-pressed={mode==='day'} onClick={()=>setMode('day')}>Dia</button><button className={mode==='week'?'chosen':''} aria-pressed={mode==='week'} onClick={()=>setMode('week')}>Semana</button></div></div>
         <label className="date-select">Data <input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label>
-        <select aria-label="Filtrar por profissional" value={professionalFilter} onChange={event=>setProfessionalFilter(event.target.value)}><option value="">Todos os profissionais</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select>
-        <button className="icon-button" onClick={load} title="Atualizar" aria-label="Atualizar"><RefreshCw size={18}/></button>
+        <label className="calendar-professional-filter">Profissional<select aria-label="Filtrar por profissional" value={professionalFilter} onChange={event=>setProfessionalFilter(event.target.value)}><option value="">Todos os profissionais</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
+        <button className="icon-button calendar-refresh" onClick={load} title="Atualizar agenda" aria-label="Atualizar agenda" disabled={loading}><RefreshCw size={18}/></button>
       </div>
       {loading?<Empty label="Consultando a agenda..."/>:loadError?<div className="business-setup-hint"><p>Não foi possível consultar a agenda. Tente carregar novamente antes de criar um atendimento.</p><button type="button" className="text-link" onClick={()=>void load()}>Tentar novamente</button></div>:listed.length?<div className="appointment-list">{listed.map(item=><button key={item.id} className={`appointment-line ${selected?.id===item.id?'selected':''}`} onClick={()=>openDetails(item)} aria-haspopup="dialog">
         <div className="appointment-time"><Clock3 size={16}/>{new Date(item.starts_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})}</div>
-        <div className="appointment-detail"><strong>{item.pet_name} <span className="subtle">· {item.tutor_name}</span></strong><small>{item.services.map(service=>service.name).join(' + ')} · {item.professional_name}</small></div>
+        <div className="appointment-detail"><strong>{item.pet_name}</strong><span className="calendar-client"><span className="calendar-detail-label">Cliente:</span> {item.tutor_name}</span><small><span className="calendar-detail-label">Serviços:</span> {item.services.map(service=>service.name).join(' + ')}</small><small><span className="calendar-detail-label">Profissional:</span> {item.professional_name}</small></div>
         <Status status={item.status}/>
-      </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.join('; ')}.`:'Não há atendimentos no período selecionado. Use Novo agendamento para reservar um horário.'}/>}
+      </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.map(item=>item.description).join('; ')}. Abra Novo agendamento para ver por onde começar.`:'Não há atendimentos no período selecionado. Use Novo agendamento para reservar um horário.'}/>}
     </div>
 
     {selected&&<FormDialog title={detailsTitle} description={`${selected.tutor_name} · ${selected.professional_name} · ${dateTime(selected.starts_at)}`} onClose={closeDetails} busy={saving} error={dialogError} wide>
@@ -212,18 +241,21 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
       </>}
     </FormDialog>}
 
-    {showForm&&<FormDialog title="Novo agendamento" description="Preencha os dados do atendimento e confirme para reservar o horário." onClose={closeNew} busy={saving} error={dialogError||loadError} wide>
+    {showForm&&<FormDialog title="Novo agendamento" description={!loading&&nextSetup?'Prepare os cadastros abaixo para começar a reservar os horários.':'Preencha os dados do atendimento e confirme para reservar o horário.'} onClose={closeNew} busy={saving} error={dialogError||loadError} wide>
       {loading&&<p role="status" className="muted">Carregando opções do agendamento...</p>}
       <form className="form-grid" onSubmit={create} aria-busy={saving}>
-        {!loading&&!loadError&&missingSetup.length>0&&<div className="full-span business-setup-hint"><strong>Faltam alguns cadastros para agendar.</strong><p>Feche esta janela e cadastre {missingSetup.join('; ')}. Depois, volte a Novo agendamento.</p></div>}
-        <label>Tutor<select required value={form.tutor_id} disabled={saving||loading} onChange={event=>setForm({...form,tutor_id:event.target.value,pet_id:''})}><option value="">Selecione um tutor</option>{options.tutors.map(tutor=><option key={tutor.id} value={tutor.id}>{tutor.name}</option>)}</select></label>
+        {!loading&&!loadError&&nextSetup&&<div className="full-span business-setup-hint calendar-setup-guide"><strong>Vamos preparar sua agenda.</strong><p>Para reservar um horário, ainda é preciso cadastrar:</p><ul>{missingSetup.map(item=><li key={item.target}>{item.description}</li>)}</ul><p>Comece pelo cadastro indicado abaixo. Depois, volte à Agenda e escolha Novo agendamento.</p>{onSetup&&canSetup?.(nextSetup.target)?<button type="button" className="primary-btn" disabled={saving} onClick={()=>prepareSetup(nextSetup.target)}>{nextSetup.button}</button>:<p>Peça ao responsável pelo pet shop para preparar o cadastro de {nextSetup.description} ou liberar o acesso necessário.</p>}</div>}
+        {!loading&&!loadError&&!missingSetup.length&&<>
+        <label>Cliente (tutor)<select required value={form.tutor_id} disabled={saving||loading} onChange={event=>setForm({...form,tutor_id:event.target.value,pet_id:''})}><option value="">Selecione um cliente</option>{options.tutors.map(tutor=><option key={tutor.id} value={tutor.id}>{tutor.name}</option>)}</select></label>
         <label>Pet<select required value={form.pet_id} disabled={saving||loading} onChange={event=>setForm({...form,pet_id:event.target.value})}><option value="">Selecione um pet</option>{pets.map(pet=><option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
+        {!loading&&!loadError&&form.tutor_id&&!pets.length&&options.pets.length>0&&<div className="full-span business-setup-hint"><p>Este cliente ainda não tem um pet cadastrado. Cadastre o animal e vincule-o ao cliente antes de agendar.</p>{onSetup&&canSetup?.('pets')?<button type="button" className="text-link" disabled={saving} onClick={()=>prepareSetup('pets')}>Ir para Pets</button>:<p>Peça ao responsável pelo pet shop para cadastrar o pet.</p>}</div>}
         <label>Profissional<select required value={form.professional_id} disabled={saving||loading} onChange={event=>setForm({...form,professional_id:event.target.value})}><option value="">Selecione um profissional</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
         <label>Início (horário da empresa)<input required type="datetime-local" value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
         <div className="full-span"><strong className="field-title">Serviços</strong><div className="checks">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/>{service.name} · {service.duration_minutes} min · {money(service.price_cents)}</label>)}</div><p className="muted">Selecione os serviços. Tempo total: {duration} minutos.</p><p className="business-form-hint">O profissional precisa ter esses serviços habilitados e jornada disponível em Profissionais → Horários.</p></div>
         <label className="full-span">Observações<textarea value={form.notes} disabled={saving} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
-        <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={closeNew}>Cancelar</button><button type="submit" className="primary-btn" disabled={saving||loading||!form.service_ids.length}>{saving?'Agendando...':'Confirmar agendamento'}</button></div>
+        </>}
+        <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={closeNew}>{!loading&&missingSetup.length?'Fechar':'Cancelar'}</button>{!loading&&!loadError&&!missingSetup.length&&<button type="submit" className="primary-btn" disabled={saving||!form.service_ids.length}>{saving?'Agendando...':'Confirmar agendamento'}</button>}</div>
       </form>
     </FormDialog>}
-  </>;
+  </div>;
 }

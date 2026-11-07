@@ -349,4 +349,43 @@ describe('CRM: persistência, indicadores e isolamento por empresa', {concurrenc
     }
     assert.equal((await call('/crm/clients', 'GET', undefined, crmCookie)).code, 200);
   });
+
+  test('tarefa não reabre se a anonimização do tutor vencer a transação concorrente', async () => {
+    const tutorId=randomUUID();
+    await db.query('INSERT INTO tutors(id,tenant_id,name) VALUES($1,$2,$3)',[tutorId,ids.tenantA,'Cadastro para disputa de privacidade']);
+    const task=await createTask(tutorId);
+    await call(`/crm/tasks/${task.id}`,'PATCH',{status:'cancelled'});
+    const privacyTransaction=await db.connect();
+    let reopening:ReturnType<typeof call>|undefined;
+    let committed=false;
+    try{
+      await privacyTransaction.query('BEGIN');
+      await privacyTransaction.query('SELECT id FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[ids.tenantA,tutorId]);
+      reopening=call(`/crm/tasks/${task.id}`,'PATCH',{status:'open'});
+      // A requisição deve alcançar e aguardar o bloqueio de linha da operação
+      // de privacidade; nenhuma espera fixa é usada para decidir o resultado.
+      const deadline=Date.now()+5000;
+      let waiting=false;
+      while(Date.now()<deadline){
+        const locks=await db.query(`SELECT 1 FROM pg_stat_activity
+          WHERE datname=current_database() AND wait_event_type='Lock'
+          AND query LIKE 'SELECT id,anonymized_at FROM tutors%' LIMIT 1`);
+        if(locks.rowCount){waiting=true;break;}
+        await new Promise(resolve=>setTimeout(resolve,10));
+      }
+      assert.ok(waiting,'A alteração da tarefa deve aguardar o bloqueio do tutor.');
+      await privacyTransaction.query("UPDATE tutors SET anonymized_at=now(),name='Titular anonimizado' WHERE tenant_id=$1 AND id=$2",[ids.tenantA,tutorId]);
+      await privacyTransaction.query('COMMIT');committed=true;
+      assert.equal((await reopening).code,409);
+      const saved=await db.query('SELECT status FROM crm_tasks WHERE tenant_id=$1 AND id=$2',[ids.tenantA,task.id]);
+      assert.equal(saved.rows[0].status,'cancelled');
+      assert.equal((await call(`/crm/clients/${tutorId}/tasks`,'POST',{title:'Novo contato',due_at:when(1)})).code,409);
+    }finally{
+      if(!committed)await privacyTransaction.query('ROLLBACK');
+      privacyTransaction.release();
+      await reopening?.catch(()=>{});
+      await db.query('DELETE FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2',[ids.tenantA,tutorId]);
+      await db.query('DELETE FROM tutors WHERE tenant_id=$1 AND id=$2',[ids.tenantA,tutorId]);
+    }
+  });
 });

@@ -18,7 +18,7 @@ let tenantA='',tenantB='',tutorA='',petA='',profA='',serviceA='',petB='',userA='
 let cookieA='',cookieB='',ownerEmail='',ownerPassword='';
 const day=(delta:number)=>{const date=new Date(Date.now()+delta*86400000);return new Intl.DateTimeFormat('sv-SE',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'America/Sao_Paulo'}).format(date);};
 const when=(delta:number,hour:number)=>`${day(delta)}T${String(hour).padStart(2,'0')}:00:00-03:00`;
-async function call(path:string,method='GET',body?:unknown,cookie=cookieA){const r=await fetch(base+'/api'+path,{method,headers:{'X-PetCore-Request':'1','Content-Type':'application/json',Cookie:cookie},body:body?JSON.stringify(body):undefined});return {code:r.status,data:await r.json(),headers:r.headers};}
+async function call(path:string,method='GET',body?:unknown,cookie=cookieA):Promise<{code:number;data:any;headers:Headers}>{const r=await fetch(base+'/api'+path,{method,headers:{'X-PetCore-Request':'1','Content-Type':'application/json',Cookie:cookie},body:body?JSON.stringify(body):undefined});return {code:r.status,data:await r.json(),headers:r.headers};}
 async function login(email:string,password:string){const r=await call('/auth/login','POST',{email,password},'');assert.equal(r.code,200);return (r.headers.get('set-cookie')||'').split(';')[0];}
 async function createAppoin(start:string,prof=profA,person=cookieA){return call('/calendar/appointments','POST',{tutor_id:tutorA,pet_id:petA,professional_id:prof,service_ids:[serviceA],starts_at:start,notes:'teste'},person);}
 before(async()=>{
@@ -59,6 +59,48 @@ test('controle de permissões de funcionário e limitação à própria agenda',
  assert.equal(options.code,200);assert.deepEqual(options.data.professionals.map((p:any)=>p.id),[employeeProf]);
  assert.equal((await createAppoin(when(3,15),profA,staffCookie)).code,403);
  assert.equal((await createAppoin(when(3,15),employeeProf,staffCookie)).code,201);
+});
+test('seletores de pets e profissionais funcionam com permissão mínima sem expor cadastros completos',async()=>{
+ const foreignService=(await db.query("INSERT INTO services(tenant_id,name,price_cents,duration_minutes) VALUES($1,'Serviço B privado',9999,60) RETURNING id",[tenantB])).rows[0].id;
+ const anonymousTutor=(await db.query("INSERT INTO tutors(tenant_id,name,anonymized_at) VALUES($1,'Titular anonimizado',now()) RETURNING id",[tenantA])).rows[0].id;
+ try{
+  for(const path of ['/options/pet-tutors','/options/professional-services','/options/professional-accounts']){
+   assert.equal((await call(path,'GET',undefined,'')).code,401);
+   assert.equal((await call(path,'GET',undefined,staffCookie)).code,403);
+  }
+  await db.query("UPDATE memberships SET permissions=ARRAY['pets'] WHERE tenant_id=$1 AND user_id=$2",[tenantA,employeeId]);
+  const tutorOptions=await call('/options/pet-tutors','GET',undefined,staffCookie);
+  assert.equal(tutorOptions.code,200);
+  assert.deepEqual(tutorOptions.data.map((row:any)=>row.id),[tutorA]);
+  assert.deepEqual(Object.keys(tutorOptions.data[0]).sort(),['id','name']);
+  assert.ok(!tutorOptions.data.some((row:any)=>row.id===anonymousTutor));
+  assert.equal((await call('/data/tutors','GET',undefined,staffCookie)).code,403);
+  const createdPet=await call('/data/pets','POST',{name:'Pet por funcionário',species:'Cão',size:'medio',tutor_id:tutorOptions.data[0].id},staffCookie);
+  assert.equal(createdPet.code,201);
+  assert.equal((await call('/options/professional-services','GET',undefined,staffCookie)).code,403);
+
+  await db.query("UPDATE memberships SET permissions=ARRAY['professionals'] WHERE tenant_id=$1 AND user_id=$2",[tenantA,employeeId]);
+  const serviceOptions=await call('/options/professional-services','GET',undefined,staffCookie);
+  assert.equal(serviceOptions.code,200);
+  assert.deepEqual(serviceOptions.data.map((row:any)=>row.id),[serviceA]);
+  assert.deepEqual(Object.keys(serviceOptions.data[0]).sort(),['id','name']);
+  assert.ok(!serviceOptions.data.some((row:any)=>row.id===foreignService));
+  const accounts=await call('/options/professional-accounts','GET',undefined,staffCookie);
+  assert.equal(accounts.code,200);
+  assert.deepEqual(accounts.data.map((row:any)=>row.id),[employeeId]);
+  assert.deepEqual(Object.keys(accounts.data[0]).sort(),['id','name']);
+  assert.equal((await call('/data/services','GET',undefined,staffCookie)).code,403);
+  assert.equal((await call('/team','GET',undefined,staffCookie)).code,403);
+  assert.equal((await call('/options/pet-tutors','GET',undefined,staffCookie)).code,403);
+  const configured=await call(`/professionals/${employeeProf}/schedule`,'PUT',{
+   shifts:Array.from({length:7},(_,index)=>({weekday:index+1,start_time:'08:00',end_time:'18:00'})),breaks:[],serviceIds:[serviceOptions.data[0].id]
+  },staffCookie);
+  assert.equal(configured.code,200);
+ }finally{
+  await db.query("UPDATE memberships SET permissions=ARRAY['appointments'] WHERE tenant_id=$1 AND user_id=$2",[tenantA,employeeId]);
+  await db.query('DELETE FROM services WHERE id=$1 AND tenant_id=$2',[foreignService,tenantB]);
+  await db.query('DELETE FROM tutors WHERE id=$1 AND tenant_id=$2',[anonymousTutor,tenantA]);
+ }
 });
 test('duas reservas simultâneas: somente uma pode vencer',async()=>{
  const [a,b]=await Promise.all([createAppoin(when(3,10)),createAppoin(when(3,10))]);

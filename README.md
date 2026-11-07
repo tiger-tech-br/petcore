@@ -1,225 +1,110 @@
-# PetCore SaaS — gestão operacional multiempresa
+# PetCore — gestão para pet shops
 
-> **Projeto independente:** este repositório é o SaaS **PetCore**. O projeto anterior permanece intacto e separado. Os bancos, as contas de sessão, os nomes de pacotes e a documentação desta cópia usam o nome PetCore.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva. Abre no login e reúne a operação interna do pet shop. O projeto está em preparação para homologação; a existência dos módulos e testes locais ainda não libera a oferta comercial.
 
+O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
-**Entrega: base executável da Etapa 1, não uma solução pronta para produção.**
+## O que já existe
 
-Sistema web em português que abre **diretamente no login**. Sem landing page, loja virtual ou site institucional. Front-end React 19 + TypeScript + Vite 7 + Sass (SCSS); API Node.js + Express 5 + PostgreSQL 17; autenticação por sessões PostgreSQL, senhas Argon2id. Interface responsiva para PC, tablet e celular. Todos os cadastros e agendamentos persistem em PostgreSQL, não no navegador. Fotos de pets são enviadas a um bucket S3 compatível **apenas quando o armazenamento externo está configurado**.
-
-## Layout PetCore
-
-Login e painel seguem as referências `pet-core-login.png` e `painel-petcore.png`, com azul-marinho, turquesa, marca com pata e coração e o cachorro da referência em `web/public/images/petcore-dog.png`. No celular, o cachorro aparece inteiro acima do formulário. Logo, títulos, campos e links ficam centralizados, com espaço entre o cachorro inteiro, o título do cartão e os campos. O login adapta imagem e espaçamentos à altura disponível do navegador, com a tela inicial sem rolagem verificada em 1366×607 e 320×568 px. Ajuda expandida, mensagens e etapas extras de autenticação podem aumentar a altura para manter os controles acessíveis. O painel inclui agenda de hoje, filtro por profissional, confirmações pendentes, busca e navegação inferior no celular. Os indicadores vêm da API; os valores agendados não representam recebimentos. Os módulos ainda não implementados estão identificados como “Em breve”.
-
-O contexto pronto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md).
-
-Formulários e detalhes abrem no `FormDialog` nativo, em tela inteira no celular (até 780 px) e centralizados no computador. Cabeçalho/fechar permanecem visíveis, com cancelar/salvar e validação local na janela; o fundo não rola e o foco é restaurado ao fechar. Por pedido do usuário, os avisos gerais preservam sua posição e seu comportamento originais na página. As páginas foram separadas de `main.tsx` em `CalendarPage`, `DataPage`, `WaitlistPage`, `TeamPage` e `PlatformPage`, com auxiliares em `ui.tsx` e estilos em `_dialog.scss`. Cadastros, jornadas/folgas, agenda, encaixes, convites e configurações seguem esse padrão: não acrescentar formulários escondidos abaixo das listas. A verificação local desta rodada não comprova operação completa em produção/Neon.
-
-Validação dos modais: `npm run build` passou para API e interface. Fluxos de cadastro, agenda, encaixe, convites e configuração foram conferidos no navegador com dados fictícios, em telas de 320×568, 360×670 e 1280×800 px, incluindo erro, fechamento, teclado e retorno à lista. A página temporária de testes foi removida; não houve criação ou alteração de cadastros reais no Neon.
-
-## Estado de implementação — não confundir com um sistema já publicado
-
-| Recurso | Situação atual |
+| Área | Comportamento implementado |
 |---|---|
-| Login, logout, sessão persistida no PostgreSQL, hash Argon2id | Implementado; login e persistência de sessão exercitados nos testes locais de integração |
-| Recuperação de senha por e-mail com token de 30 min | Implementado; exige provedor Resend com credenciais |
-| Duas áreas, criação de empresa e convites | Implementado; admin gera e compartilha link de convite manualmente |
-| Isolamento por empresa, vínculos de usuário, permissões | Implementado na API e em FKs compostas no banco |
-| Tutores, pets, profissionais, serviços, jornadas, pausas e folgas | CRUD básico, horários e vínculos de serviços; sem exclusão de cadastros |
-| Agenda dia/semana/profissional, serviços múltiplos, estados | Implementado no código |
-| Concorrência, reagendamento, antecipação, faltas, histórico | Implementado na API com transações e restrição EXCLUDE |
-| Lista de espera, sugestões de vaga, registro de oferta e encaixe | Implementado; sem envio automático de oferta |
-| CRM: clientes, segmentos, contatos e tarefas de retorno | Implementado, com permissão `crm`; migration `005_crm.sql` aplicada no Neon de testes. Validação registrada na seção CRM abaixo |
-| Jobs de lembrete | Registros são atualizados/cancelados; **não existe worker de envio ainda** |
-| Upload e URL privada de foto de pet | Implementado; depende de bucket S3 compatível configurado |
-| Vendas, produtos, estoque, caixa, relatórios | **Não implementados** (Etapa 3) |
-| Planos, assinaturas, pagamentos, cobranças, webhooks | **Não implementados** (Etapa 4) |
-| Notificações internas, e-mail e suporte | Central interna no AppShell e API implementada; código de simulação de lembretes existe. Envio automático de produção e suporte permanecem pendentes |
-| Backups automáticos, PITR, hospedagem ativa | **Não provisionados**; instruções de implantação/recuperação abaixo |
-| Testes de integração | 19 testes passaram em PostgreSQL local exclusivo, incluindo 12 do CRM; isso não comprova operação completa em produção |
+| Acesso e empresas | Login, sessão no PostgreSQL, senhas Argon2id, recuperação por provedor configurado, convites e permissões por empresa |
+| Cadastros e agenda | Clientes/tutores, pets, serviços, profissionais, jornada, pausas, folgas, agenda, reagendamento, antecipação, faltas e histórico |
+| Lista de espera | Registro, sugestões de vaga e encaixe transacional |
+| CRM | Carteira dos tutores existentes, segmentos de inatividade, ficha, contatos manuais e tarefas de retorno |
+| Produtos e estoque | Cadastro, preço/custo, mínimo, movimentos e histórico; controle de saldo e concorrência |
+| Financeiro | Vendas/comandas internas de produtos e serviços, recebimentos parciais, despesas e caixa com fechamento |
+| Relatórios | Indicadores, gráficos e exportação CSV a partir dos registros da empresa |
+| Plano e assinatura | Free de 30 dias, Mensal de R$ 35 e Anual de R$ 350; validade, suspensão e conciliação manual |
+| Suporte | Chamados e respostas entre o pet shop e a plataforma |
+| Privacidade | Pedidos de titulares, verificação de identidade, exportação, anonimização e auditoria |
+| Operação | Migrations controladas, manutenção, fotos em armazenamento privado e scripts de backup criptografado/restauração |
 
-Não registre clientes verdadeiros nem inicie cobrança até concluir os testes, segurança e publicação de produção.
+Produtos e estoque servem ao balcão e ao consumo interno. Não há loja virtual, compras públicas, táxi dog, entregas ou acompanhamento de pedidos de comércio eletrônico.
 
-## CRM de relacionamento
+Uma venda aberta ou um serviço agendado não é dinheiro recebido. O Financeiro registra recebimentos informados pela equipe; não precisa acessar a conta bancária do pet shop. Não há integração bancária, emissão fiscal ou captura de cartão no PetCore.
 
-O item **CRM** acompanha os tutores já cadastrados. Exibe indicadores, pesquisa e paginação, ficha com pets e atendimentos, histórico de contatos manuais e tarefas de retorno. A lista diferencia clientes sem visita concluída de clientes sem retorno há 30, 60 ou 90 dias. Apenas atendimentos `done` com início no passado contam como visitas; os indicadores abrangem a empresa inteira, independentemente dos filtros da lista.
+## Primeiros passos e aparência
 
-Contatos por WhatsApp, telefone, e-mail, presencial ou outro canal registram data, descrição e autor. Não enviam mensagens nem modificam autorizações de lembrete. As tarefas têm vencimento, observações e estados pendente/concluída/cancelada, com opção de reabrir. São controles internos da equipe: não reservam a agenda e não enviam mensagens ao tutor. O CRM não calcula recebimentos nem substitui o futuro Financeiro.
+O responsável recebe um guia: cadastrar serviços; cadastrar o profissional e configurar sua jornada/serviços; cadastrar cliente e pet; agendar; registrar um recebimento. Quando falta um cadastro necessário, a interface explica a dependência e oferece um atalho a quem tem permissão. Funcionários sem essa permissão recebem orientação para procurar o responsável.
 
-Administradores da empresa têm acesso. Funcionários precisam receber explicitamente a permissão `crm`, em Configurações, sem concessão automática. Essa permissão permite consultar o relacionamento da empresa, inclusive os resumos de atendimentos apresentados pela ficha. A API usa a empresa autenticada e FKs compostas para impedir vínculos cruzados entre pet shops. O fuso utilizado nos formulários e datas vem da empresa retornada pela API. A ficha é limitada a 10 atendimentos, 50 contatos e 50 tarefas, com pendentes primeiro; as listas principais são paginadas.
+Preserve o visual oficial das referências `pet-core-login.png` e `painel-petcore.png`: azul-marinho, turquesa, fundos claros, marca com pata/coração e o mesmo cachorro em `web/public/images/petcore-dog.png`. No login móvel, ele deve aparecer inteiro, incluindo as patas, com conteúdo centralizado e espaçamento.
 
-Arquivos: `web/src/CrmPage.tsx`, `web/src/styles/_crm.scss`, `api/src/crmRoutes.ts`, `api/sql/005_crm.sql` e `api/tests/crm.integration.test.ts`. Integrações em `main.tsx`, `AppShell.tsx`, `TeamPage.tsx`, `styles/main.scss`, `api/src/server.ts` e `api/src/dataRoutes.ts`. O router deve ser montado em `/api/crm` antes dos routers genéricos de `/api` para preservar a independência da permissão `crm`.
+Os formulários usam `FormDialog`: tela inteira até 780 px e modal centralizado no computador, sem formulários escondidos abaixo das listas. Foco, fechamento e rolagem do fundo são controlados. **Os avisos gerais de sucesso e erro mantêm a posição e o comportamento originais**, conforme pedido do usuário.
 
-Rotas autenticadas:
+## Planos e cobrança
 
-| Método e caminho | Finalidade |
-|---|---|
-| `GET /api/crm/clients` | Pesquisa, segmentos, indicadores e paginação (`q`, `segment`, `inactive_days`, `page`, `page_size`) |
-| `GET /api/crm/clients/:id` | Ficha do cliente da empresa atual |
-| `POST /api/crm/clients/:id/contacts` | Registrar contato com `channel`, `summary`, `occurred_at` |
-| `POST /api/crm/clients/:id/tasks` | Criar retorno interno com `title`, `notes`, `due_at` |
-| `GET /api/crm/tasks` | Listar tarefas com `filter`, `page`, `page_size` |
-| `PATCH /api/crm/tasks/:id` | Concluir, cancelar ou reabrir com `status` |
+- **Plano Free:** experiência de 30 dias; não é gratuito permanente. Vem selecionado no modal do primeiro acesso do responsável. O relógio começa quando ele confirma o Free.
+- **Plano Mensal:** R$ 35.
+- **Plano Anual:** R$ 350.
 
-A migration `005_crm.sql` é aditiva e cria `crm_contacts`, `crm_tasks` e índices. Não recria tutores nem modifica consentimentos ou migrations anteriores. Valide no banco exclusivo de testes antes de aplicá-la ao ambiente da aplicação pelo comando de migrations existente. Não execute seed em banco com dados reais. Os testes novos exigem `TEST_DATABASE_URL` apontando para um banco exclusivo terminado em `_test`; nunca usam `DATABASE_URL` como alternativa.
+É possível escolher um plano pago imediatamente, sem aguardar o teste. O pagamento acontece no checkout externo do PagBank. Escolher um plano ou voltar do checkout não comprova pagamento e não ativa acesso pago. A plataforma confere o recebimento no PagBank e registra a conciliação.
 
-**Validação específica do CRM em 02/11/2026:** `npm run build` passou para API e interface; 10 testes unitários e 19 de integração passaram em PostgreSQL local exclusivo, incluindo 12 do CRM. A interface foi conferida com dados fictícios em 1280×800, 360×670 e 320×568, cobrindo contatos, criação/conclusão/reabertura/cancelamento de tarefas, filtros, busca, paginação, Escape e modal único. Confirmada a posição original dos avisos gerais. A migration `005_crm.sql` foi aplicada e verificada no Neon atual após o usuário confirmar que é de testes. As fixtures visuais ficaram em um banco temporário local; não foram criados clientes, contatos ou tarefas de demonstração no Neon. Não houve publicação ou envio de mensagens. As alterações existentes de notificações, consentimento e `reminderWorker.ts` foram preservadas; a validação completa delas continua separada do CRM.
+A conta atual é PagBank PF. Este fluxo usa links recorrentes hospedados e não precisa de token de produção da API de assinaturas. Os links fornecidos têm valores de R$ 35/R$ 350, mas, na última conferência, ainda identificavam outro produto; continuam sem revisão aprovada no sistema.
 
-Fichas e formulários seguem o `FormDialog` existente, com tela inteira no celular e modal centralizado no computador. Os avisos gerais mantêm a posição e o comportamento anteriores, conforme pedido do usuário. O prompt específico para continuar no ChatGPT gratuito está em [PROMPT-CRM-CHATGPT-GRATUITO.md](PROMPT-CRM-CHATGPT-GRATUITO.md); o contexto geral também foi atualizado.
+O Free termina no vencimento, sem os dias de tolerância dos planos pagos. O vencimento bloqueia alterações, preservando consulta, assinatura, suporte e os canais próprios de privacidade. Documentos jurídicos publicados exigem aceite explícito da versão atual.
 
-## 1. Entenda o que será instalado
+## Tecnologia e execução local
 
-- **Node.js** executa o back-end e as ferramentas de desenvolvimento. Use Node.js **22.12+** (preferencialmente uma versão LTS atual compatível).
-- **npm** é o gerenciador de pacotes que vem com Node.js.
-- **React** cria os componentes da interface, **TypeScript** ajuda a detectar erros no código, **Vite** inicia o servidor de desenvolvimento e constrói os arquivos para publicação.
-- **Sass/SCSS** é um pré-processador que permite variáveis, organização e estilos mais fáceis de manter. O arquivo `web/src/styles/main.scss` (que importa os módulos `_base.scss`, `_app.scss`, `_auth.scss` e `_responsive.scss`) é convertido automaticamente em CSS pelo Vite. A dependência Sass deve estar instalada no projeto: `npm install --save-dev sass -w web`. A instalação do projeto com `npm install` já a inclui. Não é necessário adicionar um `<link>` manual no HTML porque `main.tsx` importa o SCSS e o Vite inclui o CSS compilado. Para experimentar compilação manual: `npx sass --watch web/src/styles/main.scss:web/public/preview.css` (pasta `web/public` deve existir; esse arquivo de prévia **não** é usado no app).
-- **Express** disponibiliza a API, **PostgreSQL** guarda os dados, **Docker Desktop** é uma opção para rodar somente um PostgreSQL **local para desenvolvimento**.
-- **Argon2id** guarda um hash irreversível das senhas. **Sessões** são armazenadas no PostgreSQL, com cookie HTTP-only.
+React 19, TypeScript, Vite e SCSS na interface; Node.js 22.12+, Express 5 e PostgreSQL na API. Sessões ficam no banco; os dados operacionais não ficam em `localStorage`. A imagem inclui clientes PostgreSQL 18 para backup e restauração.
 
-Documentação oficial: [Vite](https://vite.dev/guide/), [React](https://react.dev/learn), [TypeScript](https://www.typescriptlang.org/docs/), [Sass](https://sass-lang.com/install/), [Express](https://expressjs.com/en/starter/installing.html), [PostgreSQL](https://www.postgresql.org/docs/17/index.html), [node-postgres transactions](https://node-postgres.com/features/transactions).
+1. Instale Node.js compatível e PostgreSQL local; `compose.yml` é uma alternativa com Docker.
+2. Execute `npm ci` na raiz.
+3. Copie `.env.example` para `.env` somente se ainda não existir. Defina conexão, senha e segredo de sessão privados.
+4. Execute `npm run db:migrate`.
+5. Somente em desenvolvimento, configure os valores `SEED_*` e execute `npm run db:seed` para criar a plataforma e empresas demonstrativas.
+6. Execute `npm run dev` e abra `http://localhost:5173`.
 
-## 2. Primeira execução no Windows e VS Code
+Não execute seed em bases com clientes reais. Nunca envie `.env`, senhas, tokens ou conexões com senha ao repositório ou ao chat.
 
-1. Instale Node.js 22.12+ e, para usar o banco de testes local, Docker Desktop com engine iniciada. Instale o VS Code.
-2. Extraia a pasta `petcore-saas`, abra-a no VS Code (`Arquivo > Abrir Pasta`) e abra `Terminal > Novo Terminal`, escolhendo **PowerShell**.
-3. Confira as ferramentas:
+Para celular na mesma rede, mantenha `APP_ORIGIN=http://localhost:5173` e adicione o endereço Network real do Vite em `APP_ALLOWED_ORIGINS`. Reinicie a API após mudar as variáveis. Não use `*`; preserve o cabeçalho `X-PetCore-Request`.
+
+## Testes e evidências locais
 
 ```powershell
-node -v
-npm -v
-docker --version
-```
-
-4. Execute na **raiz** do projeto:
-
-```powershell
-npm install
-Copy-Item .env.example .env
-notepad .env
-```
-
-5. Defina no `.env` uma senha forte e igual em `POSTGRES_LOCAL_PASSWORD` e no campo da senha de `DATABASE_URL`. Gere `SESSION_SECRET` aleatório com este comando **PowerShell**:
-
-```powershell
-$bytes = New-Object byte[] 48
-[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
-[Convert]::ToBase64String($bytes)
-```
-
-6. Configure `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` (12+ caracteres) e `SEED_DEMO_OWNER_PASSWORD` (12+ caracteres). São segredos **locais**, nunca os envie para o repositório.
-7. Crie a instância local de desenvolvimento e aplique as migrations:
-
-```powershell
-docker compose --env-file .env up -d db
-npm run db:migrate
-npm run db:seed
-npm run dev
-```
-
-8. Entre em `http://localhost:5173`. Primeiro login: `SEED_ADMIN_EMAIL` + `SEED_ADMIN_PASSWORD`. Na área da plataforma, cadastre empresas e gere convites. O seed também gera **duas empresas demonstrativas isoladas**. Seus responsáveis usam `demo1@petcore.example` e `demo2@petcore.example` e a senha definida em `SEED_DEMO_OWNER_PASSWORD`.
-
-Para entrar pelo celular na mesma rede Wi-Fi, use o endereço `Network` exibido pelo Vite (por exemplo, `http://192.168.0.9:5173`). Mantenha `APP_ORIGIN=http://localhost:5173` e defina `APP_ALLOWED_ORIGINS=http://192.168.0.9:5173` no `.env`, usando o endereço real do seu computador. Reinicie `npm run dev` depois de alterar o `.env`. Se o IP mudar, atualize a configuração. A API aceita apenas as origens explicitamente configuradas e continua exigindo o cabeçalho de segurança; não use `*`.
-
-Para encerrar: `Ctrl+C` no terminal do Vite e `docker compose stop db` no terminal de banco. **Não use `docker compose down -v`** sem querer apagar o volume com os dados locais.
-
-Se escolher um **PostgreSQL em nuvem** desde o começo, não execute o Docker; configure `DATABASE_URL` com a conexão real, `DATABASE_SSL=true` conforme as exigências do provedor, execute migrations/seed apenas no ambiente destinado a desenvolvimento e inicie com `npm run dev`. Para dados reais, não execute `db:seed`.
-
-## 3. Testes unitários e de integração
-
-Os testes de horário (timezone, contiguidade e virada do dia) e da validação de origem podem ser executados sem PostgreSQL:
-
-```powershell
+npm run build
 npm run test:unit -w api
-```
-
-**Verificação nesta entrega:** os 10 testes unitários passaram, incluindo os horários e pedidos HTTP que verificam origens permitidas, endereços rejeitados e o cabeçalho obrigatório.
-
-Para testes de integração, use um segundo banco denominado `petcore_test`, separado do banco de desenvolvimento. Com Docker:
-
-```powershell
-docker compose exec db psql -U petcore -d postgres -c "CREATE DATABASE petcore_test;"
 npm run db:migrate -w api -- --test
 npm run test:integration -w api
 ```
 
-`TEST_DATABASE_URL` deve apontar para esse banco, com nome terminado exatamente em `_test`. Os testes são executados sobre registros reais no PostgreSQL, criam tutores/pets/profissionais/usuários temporários de teste e podem acumular dados de teste. **Nunca use produção para testes.**
+Integrações exigem `TEST_DATABASE_URL` de banco exclusivo terminado em `_test`, sem usar `DATABASE_URL` como alternativa. A suíte comercial altera configurações globais desse banco durante o teste e as restaura; não execute duas cópias dessa suíte no mesmo banco ao mesmo tempo.
 
-O conjunto verifica: dois tenants isolados; alterações forjadas de identificadores; impedimento de FKs cruzadas; permissões e agenda restrita do funcionário; duas reservas simultâneas, com uma rejeitada; reagendamento recusado sem perder horário original; antecipação com consentimento, histórico e job de lembrete; falta preservando o histórico; confirmação única da lista de espera; e leitura persistente por sessão nova.
+Evidências registradas nesta preparação:
 
-## 4. Como são separadas as empresas
+- Rodada completa de 84 testes aprovada: 18 unitários e 66 de integração, incluindo comercial 19/19 e regressões de upload.
+- Restauração local de backup criptografado conferiu 46 tabelas, contagens e proteções contra chave incorreta, destino ocupado e uso da origem. O ensaio não inclui as fotos.
+- Compilação final aprovada. Cadastro de serviço, profissional/jornada, cliente, pet e agendamento percorridos com dados fictícios. Agenda com novos espaçamentos conferida em computador/celular; após agendar, a data resultante fica visível. A conferência HTTPS remota ainda precisa ser registrada.
 
-- Cada empresa possui `tenants.id` (UUID). `users` é global, e `memberships` define em quais empresas um usuário pode trabalhar.
-- O servidor busca o `tenantId` na **sessão autenticada e na tabela de permissões** antes de consultar dados; nunca aceita um `tenant_id` enviado pelo formulário como autorização.
-- Tutores, pets, profissionais, serviços, agendamentos, lista de espera e jobs são relacionados por FKs compostas `(tenant_id, id)`, evitando referências a cadastros de outro pet shop.
-- Mudanças de horário ocorrem em **uma transação**. A agenda tem exclusão `EXCLUDE USING gist` para que duas reservas do mesmo profissional não ocupem intervalos sobrepostos, mesmo quando feitas simultaneamente.
-- Os dados não são replicados em `localStorage`. A interface faz consultas à API após login.
-- Não há isolamento por RLS nesta versão: a aplicação depende das consultas/autorizações de todas as rotas e FKs. Antes de produção, adote defesa adicional com testes, auditoria e/ou Row-Level Security cuidadosamente projetado.
+Esses resultados não comprovam construção Docker, entrega de e-mail, permissões do armazenamento remoto ou adequação jurídica da operação.
 
-## 5. Fotos e arquivos na nuvem
+## Fotos, e-mails e privacidade
 
-Use um bucket privado S3 compatível (AWS S3, Cloudflare R2 ou outro). Defina no `.env` `OBJECT_STORAGE_ENDPOINT`, `OBJECT_STORAGE_REGION`, `OBJECT_STORAGE_BUCKET`, `OBJECT_STORAGE_ACCESS_KEY` e `OBJECT_STORAGE_SECRET_KEY`. A API envia a foto validada do pet diretamente ao bucket, usa chaves com prefixos por empresa e retorna URL de leitura **assinada por 15 minutos** para usuários autorizados. O banco armazena a `photo_key`, não o arquivo. **Não configure bucket público.** O gerenciamento genérico de outros documentos/arquivos e a varredura antivírus ainda não estão disponíveis; só fotos de pets estão cobertas.
+Fotos dependem de `OBJECT_STORAGE_*`. A API valida e normaliza a imagem, remove metadados e fornece leitura temporária autorizada. O banco guarda a referência ao arquivo. Configure e confira bucket privado, permissões, versões e retenção no provedor.
 
-## 6. Preparar publicação em nuvem
+Recuperação de senha usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`. Lembretes são outro processo, com `RESEND_API_KEY`, `RESEND_FROM_EMAIL` e liberação explícita por duas variáveis. Ambos permanecem sem validação de envio real nesta homologação. Contatos do CRM não disparam mensagens nem alteram consentimentos.
 
-1. Contrate um banco PostgreSQL gerenciado, com TLS e **backup automático e recuperação pontual (PITR)** quando disponíveis. Configure permissão mínima para o usuário do banco, acesso restrito à API e política de retenção definida.
-2. Crie um bucket privado com acesso por chave limitada às operações necessárias. Versionamento/lifecycle do bucket e backups dos objetos devem ser configurados no provedor.
-3. Hospede o Node/Express em serviço que suporte processos longos, HTTPS, variáveis de ambiente e conexão segura com o banco. Utilize Node.js >=22.12, instale dependências e compile:
+Suporte e solicitações sobre dados pessoais: **tigertechbr@outlook.com**. O canal de contato não substitui um remetente validado no provedor de e-mail.
 
-```powershell
-npm install
-npm run build
-npm run db:migrate
-npm run start -w api
-```
+A implementação de privacidade não é uma certificação de conformidade. Ainda faltam identificação/endereço reais do operador, revisão dos documentos, fornecedores e regiões efetivos, retenção e procedimentos operacionais aprovados. Veja [PRIVACIDADE-LGPD.md](docs/PRIVACIDADE-LGPD.md) e [LEGAL-DRAFTS.md](docs/LEGAL-DRAFTS.md).
 
-4. No servidor configure `NODE_ENV=production`, `APP_ORIGIN=https://seu-dominio`, `SESSION_SECRET` forte, `DATABASE_URL`, `DATABASE_SSL` e credenciais do bucket. O Express entrega a interface compilada em `web/dist` pelo mesmo domínio, sem necessidade de CORS aberto. Certifique-se de configurar o proxy com HTTPS e cabeçalhos corretos.
-5. Configure a plataforma de hospedagem para iniciar a aplicação com `npm run start -w api`, health check `/api/health`, TLS, monitoração de erros, reinício do processo e gestão de segredos. **Não rode migrations automaticamente em todas as réplicas simultaneamente**.
-6. Publique primeiro em ambiente de homologação e execute os testes antes da abertura a clientes. Configure domínio e verifique login, convite, operações simultâneas, upload, certificado e restauração de backup.
+## Railway e recuperação
 
-**Importante:** este projeto não contém infraestrutura provisionada nem servidor remoto publicado; apenas a configuração de preparação. O registro real fica 100% em nuvem **quando você o conecta ao PostgreSQL gerenciado e ao bucket de objetos**. O Docker desta documentação é somente alternativa local para testar.
+Foi preparado um ambiente isolado de homologação no Railway, com branch de testes separado no Neon e destinos separados para fotos e backups. O domínio reservado é [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). **A implantação e a validação desse endereço ainda estão pendentes neste registro.**
 
-## 7. Backups e restauração (PostgreSQL)
+O serviço usa Dockerfile e configurações diretas no Railway para início, migrations e health check. Não depende de `railway.json` ou `railway.toml`. Não é necessário instalar outro PostgreSQL no Railway: o banco permanece no Neon.
 
-Contrate snapshots/PITR no provedor para recuperação de desastre e teste uma restauração periódica. Como backup lógico complementar, instale `pg_dump` e `pg_restore` compatíveis com a versão do banco e rode, com uma conta de backup autorizada:
+O backup cifra dump e manifesto com AES-256-GCM antes do envio a um bucket separado. O script de restauração exige banco novo, vazio e terminado em `_restore_test`. Backups automáticos, alertas, retenção e recuperação dos objetos precisam de configuração e conferência externas.
 
-```powershell
-# Conexão de origem: não compartilhe o endereço com senha.
-pg_dump --dbname "$env:DATABASE_URL" --format=custom --file "petcore-backup.dump"
-# Restaure em um banco NOVO e VAZIO, NUNCA direto em produção:
-pg_restore --dbname "$env:RESTORE_DATABASE_URL" --no-owner --no-acl --exit-on-error "petcore-backup.dump"
-```
+Procedimentos: [RAILWAY.md](docs/RAILWAY.md) e [OPERACAO.md](docs/OPERACAO.md).
 
-Verifique se o arquivo foi gerado, mantenha cópia **criptografada fora do servidor** e pratique a restauração com conferência de tabelas, acessos e quantidade de registros. `pg_dump` **não inclui** o conteúdo do bucket: mantenha backup/versionamento dos objetos, chaves/segredos protegidos e plano de restauração consistente entre banco e arquivos. No PowerShell, instale também os aplicativos cliente do PostgreSQL para ter `pg_dump`/`pg_restore` disponíveis.
+## Principais arquivos
 
-## 8. Ordem das próximas etapas
+- `api/src/authRoutes.ts`, `dataRoutes.ts`, `calendarRoutes.ts`: acesso, cadastros e agenda.
+- `api/src/crmRoutes.ts`, `businessRoutes.ts`, `privacyRoutes.ts`, `commercialRoutes.ts`: módulos de relacionamento, operação, privacidade e plataforma.
+- `api/sql/`: migrations aditivas; não altere arquivos já aplicados.
+- `api/scripts/migrate.mjs`, `backup.mjs`, `restore-check.mjs`: implantação e recuperação.
+- `web/src/CrmPage.tsx`, `InventoryPage.tsx`, `FinancePage.tsx`, `ReportsPage.tsx`, `PrivacyPage.tsx`, `CommercialPages.tsx`: módulos da interface.
+- `web/src/FirstSteps.tsx`, `FormDialog.tsx`, `DataPage.tsx`, `CalendarPage.tsx`: orientação e formulários responsivos.
 
-- **Etapa 1 (base entregue para validação):** autenticação, gestão de empresas e convites, permissões, cadastros, fotos, jornada e agenda com movimentações/histórico, encaixe e espera. Os testes locais de integração foram executados; a homologação completa do ambiente de publicação continua pendente.
-- **Etapa 2:** servidor de jobs (worker independente), notificações lidas/não lidas, deduplicação, e-mails antes dos agendamentos, alterações/cancelamentos, links de confirmação e suporte a falhas/retries. A tabela `reminder_jobs` já registra a intenção e reage a alterações, mas **não envia e-mails**.
-- **Etapa 3:** produtos, movimentos de estoque, vendas, caixa, despesas, conciliação, relatórios e testes transacionais.
-- **Etapa 4:** planos, assinaturas, cobranças em sandbox, webhooks com validação e idempotência, suspensão de acesso configurável, suporte, auditoria e integração fiscal separada. **Não existe cobrança real nesta entrega**.
-
-## 9. Estrutura dos arquivos
-
-```text
-petcore-saas/
-├── api/
-│   ├── sql/001_core.sql         # Estrutura do banco e exclusão de horários
-│   ├── scripts/migrate.ts       # Executa migrations uma vez cada
-│   ├── scripts/seed.ts          # Duas empresas demo e plataforma
-│   ├── src/core.ts              # PostgreSQL, sessões autorizadas, validação
-│   ├── src/authRoutes.ts        # Login, senha, convites, empresas
-│   ├── src/dataRoutes.ts        # Cadastros, jornada, equipe, configurações
-│   ├── src/calendarRoutes.ts    # Agenda, movimentações e lista de espera
-│   ├── src/fileRoutes.ts        # Fotos privadas de pets em S3
-│   ├── src/server.ts            # HTTP, segurança e entrega da interface
-│   └── tests/                   # Testes integrados com PostgreSQL
-├── web/
-│   ├── src/api.ts               # Fetch autenticado e datas
-│   ├── src/main.tsx             # Login e painéis do sistema
-│   └── src/styles/            # SCSS separado em tokens, base, app, login e responsividade
-├── .env.example                # Variáveis de exemplo sem chaves reais
-├── compose.yml                 # Banco local de desenvolvimento
-└── README.md
-```
-
-**Limitações conhecidas:** sem exclusão de cadastros; sem envio de convites automático; sem worker automático de produção; sem edição de todos os tipos de registros pela interface; sem renderização da foto na ficha além de link privado; sem cobrança/painel financeiro; não há exportação fiscal; sem integração automática de backup com provedor; o schema ainda não contém Row-Level Security; a agenda do protótipo usa `America/Sao_Paulo`, enquanto o CRM respeita o fuso retornado pela API. Build, 10 testes unitários e 19 de integração passaram localmente. A homologação de produção, envio real de lembretes, recuperação de senha por provedor e armazenamento externo precisam de validação específica.
+O isolamento usa autorização na API, filtros por empresa, transações e FKs compostas. Não há RLS habilitado. Preservar essas garantias exige testar cada rota nova; uma compilação aprovada não substitui essa verificação.

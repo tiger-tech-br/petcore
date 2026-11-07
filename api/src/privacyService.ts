@@ -45,16 +45,15 @@ export async function exportSubject(company:string,requestId:string,user:string)
    COALESCE((SELECT json_agg(json_build_object('service_id',s.service_id,'name',v.name,'price_cents',s.price_cents,'duration_minutes',s.duration_minutes) ORDER BY s.position)
     FROM appointment_services s JOIN services v ON v.tenant_id=s.tenant_id AND v.id=s.service_id WHERE s.tenant_id=a.tenant_id AND s.appointment_id=a.id),'[]'::json) AS services
    FROM appointments a JOIN pets p ON p.tenant_id=a.tenant_id AND p.id=a.pet_id WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY a.starts_at,a.id`,[company,item.tutor_id]);
-  const [contacts,tasks,consents,waitlist,sales]=await Promise.all([
-   db.query('SELECT id,channel,summary,occurred_at,created_at FROM crm_contacts WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY occurred_at,id',[company,item.tutor_id]),
-   db.query('SELECT id,title,notes,due_at,status,created_at,completed_at FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]),
-   db.query('SELECT email,action,created_at FROM tutor_email_reminder_consent_events WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]),
-   db.query('SELECT id,pet_id,earliest_at,latest_at,status,notes FROM waitlist WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY earliest_at,id',[company,item.tutor_id]),
-   db.query(`SELECT s.id,s.appointment_id,s.status,s.notes,s.created_at,to_jsonb(s)-'tenant_id'-'created_by' AS financial_record,
+  // Um PoolClient representa uma conexão e executa suas consultas em sequência.
+  const contacts=await db.query('SELECT id,channel,summary,occurred_at,created_at FROM crm_contacts WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY occurred_at,id',[company,item.tutor_id]);
+  const tasks=await db.query('SELECT id,title,notes,due_at,status,created_at,completed_at FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
+  const consents=await db.query('SELECT email,action,created_at FROM tutor_email_reminder_consent_events WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
+  const waitlist=await db.query('SELECT id,pet_id,earliest_at,latest_at,status,notes FROM waitlist WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY earliest_at,id',[company,item.tutor_id]);
+  const sales=await db.query(`SELECT s.id,s.appointment_id,s.status,s.notes,s.created_at,to_jsonb(s)-'tenant_id'-'created_by' AS financial_record,
     COALESCE((SELECT json_agg(to_jsonb(i)-'tenant_id') FROM business_sale_items i WHERE i.tenant_id=s.tenant_id AND i.sale_id=s.id),'[]'::json) AS items,
     COALESCE((SELECT json_agg(to_jsonb(l)-'tenant_id'-'created_by') FROM business_ledger l WHERE l.tenant_id=s.tenant_id AND l.sale_id=s.id),'[]'::json) AS transactions
-    FROM business_sales s WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY s.created_at,s.id`,[company,item.tutor_id])
-  ]);
+    FROM business_sales s WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY s.created_at,s.id`,[company,item.tutor_id]);
   await db.query("UPDATE privacy_requests SET status='in_progress',updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,requestId]);
   await requestEvent(db,company,requestId,user,'exported','in_progress');
   await recordAudit(db,{tenantId:company,userId:user,action:'privacy.export',entityType:'privacy_request',entityId:requestId,metadata:{tutorId:item.tutor_id}});

@@ -18,6 +18,21 @@ function eligibleReminderEmail(value:unknown):boolean {
   return !(/(^|\.)example\.(com|net|org)$/.test(domain)||/\.(test|invalid|localhost)$/.test(domain)||domain==='localhost');
 }
 function hasOwn(record:Record<string,unknown>,key:string){return Object.hasOwn(record,key);}
+// Seletores de relacionamento não concedem acesso ao cadastro completo: quem
+// cadastra pets ou configura profissionais recebe somente os nomes necessários.
+r.get('/options/pet-tutors',permit('pets'),async(req,res)=>{
+ const rows=await pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 AND anonymized_at IS NULL ORDER BY name,id',[tenant(req)]);
+ res.json(rows.rows);
+});
+r.get('/options/professional-services',permit('professionals'),async(req,res)=>{
+ const rows=await pool.query('SELECT id,name FROM services WHERE tenant_id=$1 ORDER BY name,id',[tenant(req)]);
+ res.json(rows.rows);
+});
+r.get('/options/professional-accounts',permit('professionals'),async(req,res)=>{
+ const rows=await pool.query(`SELECT u.id,u.name FROM memberships m JOIN users u ON u.id=m.user_id
+  WHERE m.tenant_id=$1 AND m.role='employee' ORDER BY u.name,u.id`,[tenant(req)]);
+ res.json(rows.rows);
+});
 // Identificador da empresa nunca é fornecido pelo cliente nestas operações.
 r.get('/data/:resource',async(req,res)=>{
  const key=getResource(req.params.resource as string),id=tenant(req);allowed(req,defs[key].permission);

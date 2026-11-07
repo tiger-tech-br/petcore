@@ -6,7 +6,7 @@ export async function settings(db:Db=pool) {
  const result=await db.query('SELECT * FROM commercial_settings WHERE singleton=true');return result.rows[0];
 }
 export function legalPublic(row:any) {
- if(!row.published)return {published:false,version:'draft',effectiveDate:null,operator:{brand:row.brand,legalName:null,supportEmail:null,privacyEmail:null,address:null},documents:{privacy:'',terms:''},subprocessors:[]};
+ if(!row.published)return {published:false,version:'draft',effectiveDate:null,operator:{brand:row.brand,legalName:null,supportEmail:row.support_email,privacyEmail:row.privacy_email,address:null},documents:{privacy:'',terms:''},subprocessors:[]};
  return {published:row.published,version:row.legal_version,effectiveDate:row.effective_date instanceof Date?row.effective_date.toISOString().slice(0,10):row.effective_date,
   operator:{brand:row.brand,legalName:row.legal_name,supportEmail:row.support_email,privacyEmail:row.privacy_email,address:row.address},
   documents:{privacy:row.privacy_text,terms:row.terms_text},subprocessors:row.subprocessors};
@@ -23,9 +23,10 @@ export async function subscription(company:string,db:Db=pool) {
  await db.query(`INSERT INTO tenant_subscriptions(tenant_id,trial_ends_at)
   SELECT $1,now()+(trial_days*interval '1 day') FROM commercial_settings WHERE singleton=true ON CONFLICT DO NOTHING`,[company]);
  const result=await db.query(`SELECT s.*,p.name AS plan_name,p.amount_cents,p.interval_months,c.grace_days,c.trial_days,
-  GREATEST(s.trial_ends_at,COALESCE(s.paid_through,s.trial_ends_at)) AS access_until,
+  GREATEST(CASE WHEN s.trial_started_at IS NOT NULL THEN s.trial_ends_at END,s.paid_through) AS access_until,
   CASE WHEN s.onboarding_completed_at IS NULL OR s.status IN ('pending','suspended','cancelled') THEN false
-   ELSE GREATEST(s.trial_ends_at,COALESCE(s.paid_through,s.trial_ends_at))+(c.grace_days*interval '1 day')>=now() END AS writable
+   ELSE (s.trial_started_at IS NOT NULL AND s.trial_ends_at>=now())
+    OR (s.paid_through IS NOT NULL AND s.paid_through+(c.grace_days*interval '1 day')>=now()) END AS writable
   FROM tenant_subscriptions s JOIN subscription_plans p ON p.id=s.plan_id CROSS JOIN commercial_settings c
   WHERE s.tenant_id=$1 AND c.singleton=true`,[company]);
  return result.rows[0];

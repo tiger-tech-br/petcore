@@ -3,6 +3,7 @@
 import {after,before,describe,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
 import pg from 'pg';
 import argon2 from 'argon2';
 
@@ -11,7 +12,7 @@ if(!testUrl||!decodeURIComponent(new URL(testUrl).pathname).endsWith('_test'))th
 process.env.DATABASE_URL=testUrl;process.env.NODE_ENV='test';
 process.env.SESSION_SECRET='commercial-isolated-test-only-'+randomUUID()+randomUUID();
 process.env.DATABASE_SSL??=new URL(testUrl).searchParams.has('sslmode')?'true':'false';
-const {createApp}=await import('../src/server.js');
+const {createApp,validateRuntimeConfiguration}=await import('../src/server.js');
 const {pool:appPool}=await import('../src/core.js');
 const db=new pg.Pool({connectionString:testUrl,ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:true}:undefined});
 const originalFetch=globalThis.fetch;
@@ -54,7 +55,7 @@ describe('Comercial: primeiro acesso, planos, conciliação, suporte e termos',{
  before(async()=>{
   settingsSnapshot=(await db.query('SELECT * FROM commercial_settings WHERE singleton=true')).rows[0];assert.ok(settingsSnapshot);
   planSnapshot=(await db.query('SELECT * FROM subscription_plans ORDER BY id')).rows;
-  await db.query("UPDATE commercial_settings SET published=false,trial_days=30,grace_days=0 WHERE singleton=true");
+  await db.query("UPDATE commercial_settings SET published=false,trial_days=30,grace_days=3 WHERE singleton=true");
   await db.query("UPDATE subscription_plans SET amount_cents=CASE WHEN id='monthly' THEN 3500 ELSE 35000 END,active=true,checkout_reviewed=false,checkout_url=NULL");
   const hash=await argon2.hash(password,{type:argon2.argon2id});
   for(const id of tenantIds)await db.query('INSERT INTO tenants(id,name) VALUES($1,$2)',[id,'Comercial fictício '+tag+' '+id.slice(0,4)]);
@@ -82,6 +83,56 @@ describe('Comercial: primeiro acesso, planos, conciliação, suporte e termos',{
   }finally{await appPool.end();await db.end();}
  });
 
+ test('migração de contatos preenche ausências, preserva canais personalizados e não publica documentos',async()=>{
+  const migration=await readFile(new URL('../sql/010_contact.sql',import.meta.url),'utf8');
+  const client=await db.connect();
+  try{
+   await client.query('BEGIN');
+   await client.query("UPDATE commercial_settings SET support_email='personalizado@example.test',privacy_email=NULL,published=false,legal_name='Identidade em revisão' WHERE singleton=true");
+   await client.query(migration);
+   let current=(await client.query('SELECT support_email,privacy_email,published,legal_name FROM commercial_settings WHERE singleton=true')).rows[0];
+   assert.equal(current.support_email,'personalizado@example.test');assert.equal(current.privacy_email,'tigertechbr@outlook.com');
+   assert.equal(current.published,false);assert.equal(current.legal_name,'Identidade em revisão');
+   await client.query("UPDATE commercial_settings SET support_email=NULL,privacy_email='privacidade-personalizada@example.test' WHERE singleton=true");
+   await client.query(migration);
+   current=(await client.query('SELECT support_email,privacy_email FROM commercial_settings WHERE singleton=true')).rows[0];
+   assert.equal(current.support_email,'tigertechbr@outlook.com');assert.equal(current.privacy_email,'privacidade-personalizada@example.test');
+  }finally{await client.query('ROLLBACK');client.release();}
+ });
+ test('produção exige origem HTTPS explícita; criação do app em testes continua independente dela',()=>{
+  for(const origin of [undefined,'','http://petcore.example.test','https://*.example.test','https://usuario:senha@example.test','https://example.test/caminho','https://example.test?origem=outra','https://example.test#fragmento']){
+   assert.throws(()=>validateRuntimeConfiguration({NODE_ENV:'production',APP_ORIGIN:origin}),/APP_ORIGIN/);
+  }
+  assert.doesNotThrow(()=>validateRuntimeConfiguration({NODE_ENV:'production',APP_ORIGIN:'https://petcore.example.test/'}));
+  assert.doesNotThrow(()=>validateRuntimeConfiguration({NODE_ENV:'test'}));
+ });
+ test('respostas de sucesso e erro da API não são armazenadas e recebem correlação emitida pelo servidor',async()=>{
+  const headers={'X-Request-Id':'do-not-echo-user-controlled-request-id'};
+  const success=await fetch(base+'/api/public/legal',{headers});
+  const invalid=await fetch(base+'/api/auth/login',{method:'POST',headers:{...headers,'Content-Type':'application/json'},body:'{'});
+  assert.equal(success.status,200);assert.equal(invalid.status,400);
+  const requestIds=[];
+  for(const response of [success,invalid]){
+   assert.equal(response.headers.get('cache-control'),'no-store');
+   const id=response.headers.get('x-request-id');assert.match(id??'',/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+   assert.notEqual(id,headers['X-Request-Id']);requestIds.push(id);
+   await response.text();
+  }
+  assert.notEqual(requestIds[0],requestIds[1]);
+ });
+ test('contatos públicos do suporte ficam disponíveis no rascunho sem divulgar documentos nem exigir aceite',async()=>{
+  await db.query(`UPDATE commercial_settings SET legal_name='Identidade ainda em revisão',address='Endereço ainda em revisão',
+   support_email='suporte@example.test',privacy_email='privacidade@example.test',privacy_text=$1,terms_text=$2,
+   subprocessors='[{"name":"Fornecedor em revisão"}]'::jsonb WHERE singleton=true`,[fakePrivacy,fakeTerms]);
+  const legal=await request('/public/legal','GET',undefined,'');assert.equal(legal.code,200);
+  assert.equal(legal.data.published,false);assert.equal(legal.data.version,'draft');assert.equal(legal.data.effectiveDate,null);
+  assert.equal(legal.data.operator.supportEmail,'suporte@example.test');assert.equal(legal.data.operator.privacyEmail,'privacidade@example.test');
+  assert.equal(legal.data.operator.legalName,null);assert.equal(legal.data.operator.address,null);
+  assert.deepEqual(legal.data.documents,{privacy:'',terms:''});assert.deepEqual(legal.data.subprocessors,[]);
+  assert.equal((await request('/auth/me')).data.legal.required,false);
+  assert.equal((await api('/accept-terms','POST',{version:'draft',accepted:true})).code,409);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM terms_acceptances WHERE user_id=$1',[ids.ownerA])).rows[0].n,0);
+ });
  test('sessão informa onboarding pendente e bloqueia mutação antes de escolher um plano',async()=>{
   const me=await request('/auth/me');assert.equal(me.code,200);assert.equal(me.data.subscription.onboarding_completed_at,null);assert.equal(me.data.subscription.writable,false);assert.equal(me.data.legal.required,false);
   assert.equal((await request('/data/tutors','POST',{name:'Cadastro de teste antes do plano'})).code,428);
@@ -107,7 +158,8 @@ describe('Comercial: primeiro acesso, planos, conciliação, suporte e termos',{
   await api('/choose-plan','POST',{plan_id:'monthly'},sessions.ownerB);
  });
  test('experiência expirada mantém consulta e suporte, mas não pode ser renovada por onboarding',async()=>{
-  await db.query("UPDATE tenant_subscriptions SET trial_ends_at=now()-interval '2 days' WHERE tenant_id=$1",[ids.a]);
+  assert.equal((await api('/me')).data.subscription.grace_days,3);
+  await db.query("UPDATE tenant_subscriptions SET trial_ends_at=now()-interval '1 second' WHERE tenant_id=$1",[ids.a]);
   assert.equal((await api('/me')).data.subscription.writable,false);assert.equal((await request('/data/tutors','GET')).code,200);
   assert.equal((await request('/data/tutors','POST',{name:'Cadastro sem acesso'})).code,402);
   assert.equal((await api('/onboarding','POST',{plan:'free'})).code,409);
@@ -136,6 +188,16 @@ describe('Comercial: primeiro acesso, planos, conciliação, suporte e termos',{
   const current=(await api('/me','GET',undefined,sessions.ownerB)).data;assert.equal(current.subscription.status,'active');assert.equal(current.subscription.writable,true);assert.equal(current.subscription.paid_through,firstPayment.period_end);
   const reused=await platformPayment(ids.e,ref);assert.ok([409,422].includes(reused.code));assert.equal((await api('/me','GET',undefined,sessions.ownerE)).data.payments.length,0);
   const renewed=await platformPayment(ids.b,'COMERCIAL-'+tag+'-PAY-2');assert.equal(renewed.code,201);renewalPayment=renewed.data;assert.equal(renewalPayment.period_start,firstPayment.period_end);assert.ok(new Date(renewalPayment.period_end)>new Date(firstPayment.period_end));
+ });
+ test('tolerância de três dias aplica somente ao período pago e também termina após o prazo',async()=>{
+  const before=(await db.query('SELECT paid_through FROM tenant_subscriptions WHERE tenant_id=$1',[ids.b])).rows[0];
+  try{
+   await db.query("UPDATE tenant_subscriptions SET paid_through=now()-interval '1 second' WHERE tenant_id=$1",[ids.b]);
+   assert.equal((await api('/me','GET',undefined,sessions.ownerB)).data.subscription.writable,true);
+   await db.query("UPDATE tenant_subscriptions SET paid_through=now()-interval '3 days 1 second' WHERE tenant_id=$1",[ids.b]);
+   assert.equal((await api('/me','GET',undefined,sessions.ownerB)).data.subscription.writable,false);
+   assert.equal((await request('/data/tutors','POST',{name:'Fora da tolerância paga'},sessions.ownerB)).code,402);
+  }finally{await db.query('UPDATE tenant_subscriptions SET paid_through=$2 WHERE tenant_id=$1',[ids.b,before.paid_through]);}
  });
  test('recebimento confirmado antes do primeiro acesso continua válido após escolher o plano',async()=>{
   const payment=await platformPayment(ids.d,'COMERCIAL-'+tag+'-PREPAID');assert.equal(payment.code,201);

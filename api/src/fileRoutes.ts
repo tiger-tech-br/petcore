@@ -9,7 +9,8 @@ import {requireSubscriptionWrite} from './commercialService.js';
 import {preparePetPhoto} from './petPhoto.js';
 import type {RequestHandler} from 'express';
 const router=Router();router.use('/pets',auth,permit('pets'),requireSubscriptionWrite);
-const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1}});
+// Este endpoint recebe somente a foto; os dados do pet são enviados por JSON.
+const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:5*1024*1024,files:1,fields:0,parts:1,fieldNameSize:64}});
 function store(){
  const endpoint=process.env.OBJECT_STORAGE_ENDPOINT,bucket=process.env.OBJECT_STORAGE_BUCKET,key=process.env.OBJECT_STORAGE_ACCESS_KEY,secret=process.env.OBJECT_STORAGE_SECRET_KEY;
  ensure(endpoint&&bucket&&key&&secret,503,'Armazenamento em nuvem não configurado. Configure as variáveis OBJECT_STORAGE_* no servidor.');

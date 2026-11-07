@@ -1,42 +1,76 @@
 # PetCore — preparação comercial
 
-Este registro acompanha trabalho em andamento. Um build aprovado não substitui a validação de implantação e operação.
+Registro de preparação em 06/11/2026. Diferencia código existente, validação local e configurações externas. Ainda não é declaração de prontidão comercial.
 
-## Entregas desta rodada
+## Código implementado
 
-- [ ] Produtos, movimentos e estoque com concorrência e histórico.
-- [ ] Vendas, recebimentos, despesas, contas e caixa.
-- [ ] Relatórios e gráficos baseados nos registros reais.
-- [ ] Planos R$ 40/mês e R$ 400/ano; controle de validade e conciliação de pagamentos.
-- [ ] PagBank PF: Link de Pagamento Recorrente externo, sem coletar cartões no PetCore.
-- [ ] Suporte com solicitações e respostas no painel.
-- [ ] Privacidade: solicitações, exportação, verificação, anonimização e auditoria.
-- [ ] Documentos jurídicos revisáveis e identificação do operador, sem dados inventados.
-- [ ] Publicação Railway com migração controlada, HTTPS, prontidão e encerramento seguro.
-- [ ] Backups criptografados e procedimento de restauração testado.
-- [ ] Lembretes com consentimento, deduplicação, retentativas e tratamento de falhas.
-- [ ] Testes de regressão, autorização, concorrência, dinheiro, privacidade e responsividade.
-- [ ] Revisão de segurança e correções verificadas.
+- [x] Clientes/tutores, pets, profissionais, serviços, jornadas, agenda e lista de espera.
+- [x] CRM com carteira, segmentos, contatos manuais e tarefas de retorno.
+- [x] Produtos, movimentos de estoque, concorrência e histórico.
+- [x] Vendas/comandas internas, recebimentos parciais, despesas e caixa.
+- [x] Relatórios, gráficos e CSV a partir dos registros da empresa.
+- [x] Planos R$ 35/mês e R$ 350/ano; Free de teste por 30 dias.
+- [x] Modal inicial com Free selecionado; pago pode ser escolhido imediatamente.
+- [x] Validade e conciliação manual: escolher plano/retornar do checkout não comprova pagamento.
+- [x] Free sem tolerância extra; tolerância somente para período pago.
+- [x] Chamados de suporte e respostas da plataforma.
+- [x] Solicitações de privacidade, verificação, exportação, anonimização e auditoria.
+- [x] Canais de suporte/privacidade: tigertechbr@outlook.com; documentos continuam em rascunho.
+- [x] Guia de primeiros passos, explicação de pré-requisitos e atalhos conforme permissão.
+- [x] Modais responsivos; identidade visual, cachorro inteiro e posição dos avisos preservados.
+- [x] Migrations controladas, manutenção e scripts de backup criptografado/restauração.
+- [x] Código de lembretes com consentimento e controles de envio; isso não significa envio ativado.
 
-## Decisões do usuário
+## Evidências locais registradas
 
-- A primeira hospedagem será no Railway, inicialmente no domínio HTTPS gerado pela plataforma.
-- O Neon atual contém somente testes. Dados reais serão incluídos após a preparação comercial.
-- A conta PagBank é PF. A documentação oficial atual exige Link Recorrente para essa modalidade; não se deve tentar habilitar a API de assinaturas restrita a PJ.
-- Preservar a identidade PetCore, o cachorro inteiro no login, modais responsivos e a posição original dos avisos.
+- [x] Rodada completa: 84 testes aprovados, sendo 18 unitários e 66 de integração, incluindo a suíte comercial 19/19 e as regressões de upload.
+- [x] Backup local AES-256-GCM e restauração em banco isolado: 46 tabelas e contagens conferidas; chave errada, destino ocupado e origem recusados. Não inclui fotos.
+- [x] Verificações locais anteriores de login, CRM e modais em computador/celular com dados fictícios.
+- [x] Compilação final de API/interface aprovada; TypeScript e Sass conferidos após a reorganização da agenda.
+- [x] Jornada fictícia pela interface: serviço, profissional/jornada, cliente, pet e agendamento no celular. Novo atendimento passa a mostrar sua data automaticamente; filtros antigos não o escondem.
+- [x] Agenda conferida em 360×740 e 1366×850; login com cachorro inteiro em 320×568 e 360×740. Posição dos avisos mantida.
+- [x] Revisão estática concluída; limite de campos multipart do envio de foto corrigido, com reprodução controlada anterior, regressões e revisão independente. Relatório original preserva a versão anterior e não certifica a versão publicada.
 
-## Configurações externas que precisam de valores reais antes do anúncio
+Não somar execuções sobrepostas. Resultados locais não comprovam entrega de e-mail, permissões remotas, construção Docker ou operação jurídica.
 
-- Identificação do responsável, endereço e canais de suporte/privacidade.
-- Revisão e aprovação dos termos, aviso de privacidade, contrato de operação e subprocessadores/regiões realmente contratados.
-- Links recorrentes mensal/anual criados no painel PagBank, valores conferidos e procedimento de conciliação.
-- Serviço Railway, credenciais privadas de banco, e-mail e armazenamento; não publicar o arquivo .env.
-- Destino de backup separado, chave de criptografia protegida, alertas e teste de restauração.
-- Homologação da URL HTTPS real, envio de e-mail e upload. Configurações ausentes não são consideradas concluídas.
+## Homologação externa em preparação
 
-## Referências oficiais
+- [x] Projeto Railway isolado criado; serviço e domínio reservados.
+- [x] Branch Neon de homologação separado: `petcore-homologacao-20261106`.
+- [x] Destinos separados para fotos e backups criados; variáveis de referência configuradas.
+- [x] Configurações diretas do serviço definidas para Dockerfile, início, pré-deploy e saúde.
+- [x] Serviços de manutenção e backup criados, com variáveis por referência e horários de cron configurados; ainda sem fonte, implantação ou execução.
+- [x] Migrations 006–010 aplicadas e verificadas na cópia de homologação, preservando o branch original.
+- [ ] Construir e implantar a imagem no Railway.
+- [ ] Verificar migrations, saúde, HTTPS, sessão e fluxos reais no endereço publicado.
+- [ ] Conferir permissões/privacidade remotas, upload, leitura e exclusão de fotos.
+- [ ] Executar backup remoto e restauração isolada com o destino configurado.
+- [ ] Conectar revisão aprovada e implantar os crons; conferir execução, retenção, alertas e recuperação de objetos.
+- [ ] Validar recuperação de senha e lembretes com remetente/destinatários autorizados. Envios seguem desabilitados.
 
-- [PagBank: recorrência e elegibilidade PF/PJ](https://developer.pagbank.com.br/docs/pagamentos-recorrentes)
-- [ANPD: direitos e agentes de tratamento](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes)
-- [ANPD: comunicação de incidentes](https://www.gov.br/anpd/pt-br/canais_atendimento/agente-de-tratamento/comunicado-de-incidente-de-seguranca-cis)
-- [Railway: domínios](https://docs.railway.com/networking/domains/working-with-domains)
+Domínio reservado: [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Sua reserva não comprova aplicação implantada.
+
+## Pendências para comercialização
+
+- [ ] Nome/identificação jurídica e endereço reais do responsável.
+- [ ] Revisão e aprovação dos termos, aviso de privacidade, contrato de operação e fornecedores/regiões efetivos.
+- [ ] Retenção, incidentes, resposta a titulares, encerramento e transferência de administração praticáveis e aprovados.
+- [ ] Revisão dos links PagBank: R$ 35/R$ 350 conferidos anteriormente, mas ainda com nome de outro produto; permanecem sem aprovação.
+- [ ] Conferência de conciliação/cancelamento no PagBank e instruções claras ao cliente.
+- [ ] Proteção da chave de backup e procedimento de recuperação fora do ambiente ativo.
+- [ ] Homologação completa antes de receber clientes reais e anunciar.
+
+A conta PagBank atual é PF: checkout externo por links recorrentes e conciliação manual. Não há captura de cartão, integração bancária ou token da API de assinaturas necessário a esse fluxo.
+
+## Limites do escopo
+
+O sistema gerencia o pet shop internamente, incluindo vendas no balcão. Não inclui loja virtual, táxi dog, entregas, status de pedidos de comércio eletrônico ou emissão fiscal. Recursos de privacidade não são uma certificação de conformidade.
+
+A hospedagem começa no endereço do Railway. Um subdomínio futuro da Tiger Tech pode ser configurado depois, sem alterar o site principal agora.
+
+## Referências
+
+- [Guia de publicação](RAILWAY.md) e [operação/recuperação](OPERACAO.md).
+- [Privacidade e procedimentos](PRIVACIDADE-LGPD.md).
+- [PagBank: recorrência](https://developer.pagbank.com.br/docs/pagamentos-recorrentes).
+- [ANPD: direitos e agentes de tratamento](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes).

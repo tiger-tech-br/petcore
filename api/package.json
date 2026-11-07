@@ -7,11 +7,14 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
-    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate": "node scripts/migrate.mjs",
     "db:seed": "tsx scripts/seed.ts",
     "test": "npm run test:unit && npm run test:integration",
-    "test:unit": "node --experimental-strip-types --test tests/scheduling.unit.test.ts tests/originGuard.unit.test.ts",
-    "test:integration": "node --import tsx --test tests/saas.integration.test.ts tests/crm.integration.test.ts"
+    "test:unit": "node --experimental-strip-types --test tests/scheduling.unit.test.ts tests/originGuard.unit.test.ts tests/petPhoto.unit.test.ts tests/backup.unit.test.ts",
+    "test:integration": "node --import tsx --test tests/saas.integration.test.ts tests/crm.integration.test.ts tests/business.integration.test.ts tests/privacy.integration.test.ts tests/commercial.integration.test.ts tests/uploads.integration.test.ts",
+    "ops:maintenance": "node dist/maintenance.js --once",
+    "ops:backup": "node scripts/backup.mjs",
+    "ops:restore-check": "node scripts/restore-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.900.0",

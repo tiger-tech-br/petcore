@@ -1,1 +1,0 @@
-{"root":["./src/appshell.tsx","./src/authscreen.tsx","./src/brand.tsx","./src/calendarpage.tsx","./src/crmpage.tsx","./src/datapage.tsx","./src/formdialog.tsx","./src/globalsearch.tsx","./src/overview.tsx","./src/platformpage.tsx","./src/teampage.tsx","./src/waitlistpage.tsx","./src/api.ts","./src/main.tsx","./src/ui.tsx","./vite.config.ts"],"version":"5.9.3"}

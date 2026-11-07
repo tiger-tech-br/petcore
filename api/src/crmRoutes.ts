@@ -173,13 +173,20 @@ router.post('/clients/:id/tasks', async (req, res) => {
 router.patch('/tasks/:id', async (req, res) => {
   const company = tenant(req), id = z.uuid().parse(req.params.id);
   const input = statusInput.parse(req.body);
-  const result = await pool.query(`WITH changed AS (
+  const result = await tx(async db => {
+    const current = await db.query('SELECT tutor_id FROM crm_tasks WHERE tenant_id=$1 AND id=$2', [company,id]);
+    ensure(current.rowCount, 404, 'Tarefa não encontrada.');
+    // A mesma ordem de bloqueios da anonimização impede reabrir uma tarefa
+    // enquanto o cadastro está sendo desidentificado.
+    await lockTutor(db, company, current.rows[0].tutor_id);
+    return db.query(`WITH changed AS (
     UPDATE crm_tasks SET status=$3,updated_at=now(),
       completed_at=CASE WHEN $3='done' THEN COALESCE(completed_at,now()) ELSE NULL END
     WHERE tenant_id=$1 AND id=$2 RETURNING *
   ) SELECT ${taskColumns} FROM changed k
     JOIN tutors t ON t.tenant_id=k.tenant_id AND t.id=k.tutor_id
     JOIN users u ON u.id=k.created_by`, [company,id,input.status]);
+  });
   ensure(result.rowCount, 404, 'Tarefa não encontrada.');
   res.json(result.rows[0]);
 });

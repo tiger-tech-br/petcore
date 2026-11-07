@@ -9,6 +9,7 @@ import {localSlot} from './scheduling.js';
 if (!process.env.DATABASE_URL) throw new Error('Configure DATABASE_URL');
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 40) throw new Error('SESSION_SECRET precisa ter 40+ caracteres');
 export const pool=new Pool({connectionString:process.env.DATABASE_URL, max:12,
+ connectionTimeoutMillis:10000,idleTimeoutMillis:30000,statement_timeout:30000,idle_in_transaction_session_timeout:30000,
  ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:true}:undefined});
 export type Db = Pool|PoolClient;
 export const sha=(s:string)=>createHash('sha256').update(s).digest('hex');
@@ -102,6 +103,8 @@ export function sendError(err:unknown,_req:Request,res:Response,_next:NextFuncti
  if(e.code==='23503'||e.code==='23514'||e.code==='23505'||e.code==='22P02')return res.status(422).json({error:'Referência inválida, registro duplicado ou dados incompatíveis com esta empresa.'});
  if(e.issues)return res.status(422).json({error:'Verifique os dados informados.',details:e.issues});
  if(e.code==='LIMIT_FILE_SIZE')return res.status(413).json({error:'A foto deve ter até 5 MB.'});
+ if(['LIMIT_FILE_COUNT','LIMIT_FIELD_COUNT','LIMIT_PART_COUNT','LIMIT_FIELD_KEY','LIMIT_FIELD_VALUE'].includes(e.code??''))return res.status(413).json({error:'O envio ultrapassa os limites permitidos. Envie somente uma foto, sem campos adicionais.'});
+ if(e.code==='LIMIT_UNEXPECTED_FILE')return res.status(400).json({error:'Envie somente uma foto no campo indicado.'});
  if(e.code==='40P01'||e.code==='55P03'||e.code==='57014')return res.status(409).json({error:'Outra operação está em andamento. Atualize a tela e tente novamente.'});
  if(e.status===400)return res.status(400).json({error:'O conteúdo enviado não é válido.'});
  if(!e.status || e.status>=500)console.error('PetCore API:',{code:e.code??'INTERNAL',status:e.status??500,requestId:_req.requestId});
