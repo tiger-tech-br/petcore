@@ -87,7 +87,7 @@ async function getJobs(jobId: string | null = null): Promise<ReminderRow[]> {
       FROM tutor_email_reminder_consent_events e
       WHERE e.tenant_id = tu.tenant_id
         AND e.tutor_id = tu.id
-      ORDER BY e.created_at DESC, e.id DESC
+      ORDER BY e.event_order DESC
       LIMIT 1
     ) consent ON TRUE
     WHERE r.state = 'queued'
@@ -186,7 +186,7 @@ async function probeClaim(): Promise<void> {
         SELECT e.action, e.email
         FROM tutor_email_reminder_consent_events e
         WHERE e.tenant_id = tu.tenant_id AND e.tutor_id = tu.id
-        ORDER BY e.created_at DESC, e.id DESC
+        ORDER BY e.event_order DESC
         LIMIT 1
       ) consent ON TRUE
       WHERE r.state = 'queued'

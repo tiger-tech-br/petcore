@@ -1,6 +1,6 @@
 # Publicar o PetCore no Railway
 
-Foi preparado um ambiente isolado de homologação, com dados de teste. O serviço, o domínio e os destinos de armazenamento existem; a construção Docker, a implantação e a conferência HTTPS ainda estavam pendentes neste registro de 06/11/2026. A abertura comercial depende da homologação e das configurações de operação abaixo.
+O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `b23f40a5-9c42-4710-9c2a-cb0668a7d04e` terminaram com `SUCCESS` na revisão `4d5ffe41`. O ensaio remoto aprovou 11 verificações. Ajustes posteriores ainda aguardam publicação e conferência; a abertura comercial também depende da aprovação operacional/jurídica.
 
 | Recurso preparado | Identificação |
 |---|---|
@@ -9,10 +9,11 @@ Foi preparado um ambiente isolado de homologação, com dados de teste. O servi�
 | Serviço da aplicação | `d1f49445-2cef-4d90-a087-a786207d545e` |
 | Serviço de manutenção | `27c32234-98cf-40d1-b88e-5a85cd06bc86` |
 | Serviço de backup | `33f68ea6-8cc6-4e19-9a14-9f21215b3742` |
-| Domínio reservado | `https://petcore-homologacao.up.railway.app` |
+| Aplicativo publicado | `https://petcore-homologacao.up.railway.app` |
 | Branch separado no Neon | `petcore-homologacao-20261106` |
+| Serviço de lembretes preparado | `d0f7834d-3b33-4898-8cf2-db1438b9bba8` |
 
-Buckets separados para fotos e backups e suas variáveis de referência foram preparados. Isso ainda não comprova suas permissões remotas, upload, exclusão, envio de backup, cron ou restauração. Não altere os outros projetos Railway nem o banco original para concluir esta homologação.
+Fotos e backups usam destinos separados. Upload real normalizado, recusa de leitura anônima, autorização entre empresas e exclusão de fotos foram conferidos. O ensaio removeu seus próprios registros e objetos fictícios. Manutenção, backup e restauração remotos também tiveram execução confirmada. Não altere outros projetos Railway. As bases de homologação e original estão nas migrations 001–013; o original foi confirmado como somente testes e atualizado após a cópia de preservação `br-quiet-mountain-b62dyl9j`.
 
 ## Estrutura da implantação
 
@@ -60,7 +61,7 @@ Não passe senhas como argumentos de construção. A ausência do Docker no comp
 | Região e réplica | `us-east4-eqdc4a`, 1 réplica |
 | Recursos configurados | 1 GB de memória, 1 vCPU |
 
-Esses valores preparados não são evidência de implantação bem-sucedida. Acompanhe a construção, o pré-deploy, a saúde e o uso de recursos do serviço real.
+Esses valores foram usados na implantação conferida. Continue acompanhando construção, pré-deploy, saúde e recursos em cada revisão nova.
 
 Um endereço `*.up.railway.app` permite começar sem comprar outro domínio. Futuramente, um subdomínio da Tiger Tech pode apontar para esse serviço, preservando o site principal. Confira os registros DNS pedidos pelo Railway e atualize `APP_ORIGIN` ao trocar o endereço. É preferível abrir o PetCore em seu próprio subdomínio a colocá-lo em um iframe do site institucional. [Domínios no Railway](https://docs.railway.com/networking/domains/working-with-domains).
 
@@ -103,15 +104,15 @@ Antes de alterar uma base de produção, valide as migrations em ambiente isolad
 
 ## Fotos, mensagens e configurações comerciais
 
-Confirme o caráter privado do bucket e teste upload, leitura autorizada e exclusão com dados fictícios. Configure a política de versões e retenção separadamente; uma exclusão no bucket ativo pode não apagar versões anteriores. Não configure o bucket como público para corrigir uma URL que falha.
+O ensaio hospedado aprovou fotos privadas, leitura autorizada e exclusão com dados fictícios. Configure e acompanhe versões e retenção separadamente; excluir o objeto ativo não comprova apagar versões anteriores ou backups. Não torne o bucket público para corrigir uma URL.
 
-O provedor de e-mail e o remetente precisam estar habilitados para os destinatários reais. Um envio de teste aceito pelo provedor não comprova a entrega de recuperação de senha e lembretes a todos os clientes. O domínio do aplicativo pode continuar sendo o do Railway, mas o remetente do provedor tem requisitos próprios de validação.
+Um teste de e-mail foi aceito pelo Resend e confirmado pelo usuário na pasta Spam. As variáveis de recuperação foram configuradas sem deploy e aguardam a revisão final. Isso não comprova entrega regular na Caixa de Entrada nem a conclusão da recuperação pelo aplicativo publicado. O diagnóstico e as verificações de remetente estão em [EMAIL.md](EMAIL.md).
 
 No painel da plataforma, preencha identificação e contatos reais da operação, documentos jurídicos, fornecedores/regiões e condições comerciais. Publique os documentos somente após revisão. Confira nome do produto, preço, periodicidade e cancelamento dos links do PagBank. O recebimento confirmado no provedor deve corresponder à conciliação que libera a assinatura; o retorno do navegador não é prova de pagamento.
 
-Suporte e privacidade usam o contato público fornecido pelo responsável: **tigertechbr@outlook.com**. A migração de contatos preenche apenas campos ausentes; não publica os documentos nem substitui canais personalizados. Nome jurídico, endereço e fornecedores/regiões ainda precisam de definição e revisão.
+Operador informado: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**. Endereço: Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Suporte/privacidade: **tigertechbr@outlook.com**. Domínio institucional/remetente: **tigertech.dev.br**. A identidade já foi preenchida; documentos, fornecedores/regiões e procedimentos ainda exigem revisão e aprovação. A publicação jurídica permanece desativada.
 
-Os planos confirmados são Free por 30 dias, Mensal R$ 35 e Anual R$ 350. No primeiro acesso, o Free vem selecionado e seu prazo começa ao confirmar. Também é possível assinar imediatamente no checkout externo. O Free expira sem tolerância adicional; os dias de regularização aplicam apenas a período pago. A conta PagBank PF usa links recorrentes com conciliação manual, sem tokens da API de assinaturas. Na última conferência, os links ainda tinham o nome de outro produto; continuam sem revisão aprovada.
+Os planos são Free por 30 dias, Mensal R$ 35 e Anual R$ 350. O Free começa quando confirmado e não recebe tolerância adicional. O pago pode ser escolhido imediatamente, com checkout externo e conciliação manual PagBank PF. Foram conferidos, sem compra, [PetCore Mensal](https://pag.ae/82jFKCTjo) e [PetCore Anual](https://pag.ae/82jFLbrjr); a revisão dos planos está aprovada. Os links antigos de outro produto foram substituídos. A publicação jurídica ainda condiciona sua liberação no aplicativo.
 
 ## Serviços e agendamentos de operação
 
@@ -126,20 +127,21 @@ Use a mesma imagem para os comandos de operação, em serviços ou tarefas separ
 | Somente fila de exclusão de fotos | `node api/dist/maintenance.js --files-only` |
 | Backup cifrado para bucket privado | `node api/scripts/backup.mjs` |
 
-Escolha cron ou processo contínuo de manutenção, sem duplicar desnecessariamente os dois. O intervalo do processo contínuo é `MAINTENANCE_INTERVAL_SECONDS`, com padrão de 60 segundos. A manutenção não envia e-mails e não apaga históricos de clientes ou financeiros. A entrega de lembretes possui seu próprio processo e exige configuração e validação específicas. Os agendamentos remotos e a entrega real ainda não foram homologados.
+Nesta implantação a manutenção usa cron, sem processo contínuo duplicado. Ela não envia e-mails nem apaga históricos de clientes ou financeiros. A entrega de lembretes é outro processo e depende de consentimento, configuração e validação próprias.
 
-Dois serviços vazios foram criados e configurados neste ambiente. **Ainda não têm fonte conectada, implantação nem execução comprovada**:
+Serviços de operação e estado observado:
 
-| Serviço | Agendamento UTC | Comando |
+| Serviço | Agendamento UTC | Estado |
 |---|---|---|
-| `petcore-maintenance` | `*/15 * * * *` — a cada 15 minutos | `node api/dist/maintenance.js --once` |
-| `petcore-backup` | `0 6 * * *` — diariamente às 03h de Brasília | `node api/scripts/backup.mjs` |
+| `petcore-maintenance` | `*/15 * * * *` — a cada 15 minutos | Execução confirmada; `node api/dist/maintenance.js --once` |
+| `petcore-backup` | `0 6 * * *` — diariamente às 03h de Brasília | Execução confirmada; `node api/scripts/backup.mjs` |
+| Lembretes | `*/5 * * * *` — a cada cinco minutos | Criado/configurado; código de lote e testes em conclusão. Ativação e execução ainda precisam ser confirmadas |
 
-Ambos usam Dockerfile, uma réplica em `us-east4-eqdc4a`, 1 vCPU, 0,5 GB e reinício `NEVER`. Não possuem domínio, proxy TCP, health check HTTP ou pré-deploy. Precisam receber a mesma revisão aprovada da aplicação antes da implantação. Não execute migrations ou seed nesses crons.
+Manutenção e backup usam Dockerfile, uma réplica em `us-east4-eqdc4a`, 1 vCPU, 0,5 GB e reinício `NEVER`. Não possuem domínio, proxy TCP, health check HTTP ou pré-deploy. Mantenha cada serviço na revisão aprovada para seu comando. Não execute migrations ou seed nesses crons.
 
-As conexões de ambos referenciam `petcore.DATABASE_DIRECT_URL`. A manutenção recebe referências ao segredo de sessão e às variáveis de fotos; o backup recebe referências à chave e ao destino de backup e aos identificadores do destino de fotos para conferir a separação. Os valores secretos não foram copiados para a documentação. As mudanças de variáveis foram feitas sem disparar deploy; nenhum e-mail ou pagamento foi habilitado.
+As conexões de manutenção/backup referenciam `petcore.DATABASE_DIRECT_URL`. A manutenção usa referências ao segredo de sessão e às variáveis de fotos; o backup usa referências à chave/destino de backup e aos identificadores do destino de fotos. Segredos não constam desta documentação. Novas variáveis de e-mail foram gravadas sem deploy e precisam da implantação final. O usuário autorizou lembretes somente com opt-in registrado; não declare o serviço ativo antes de confirmar sua revisão e execução.
 
-Depois de conectar a fonte e implantar, acompanhe uma execução de cada serviço. Confirme saída bem-sucedida da manutenção e, no backup, objetos cifrados, registro `uploaded` e restauração isolada antes de marcar a recuperação como verificada. Um horário de cron configurado não comprova nenhuma dessas etapas.
+A manutenção e o backup já tiveram execução acompanhada. A restauração remota conferiu 46 tabelas e registrou `verified` no backup com prefixo `ff3dc3a4`. Continue verificando resultados de cada ciclo e falhas; uma execução aprovada não comprova que todos os ciclos futuros ocorrerão.
 
 O cron de backup deve terminar ao concluir e precisa das credenciais de banco e backup, mas não das credenciais de cobrança. Reserve recursos e espaço temporário para o dump, para sua versão cifrada e para o teste de restauração. Monitore término com falha; apenas cadastrar um horário não comprova que o backup está sendo feito.
 
@@ -160,7 +162,7 @@ O backup gera um dump e um manifesto de contagens obtidos de um mesmo snapshot. 
 
 `backup_runs` distingue backup criado/enviado de restauração verificada. Um upload concluído ainda precisa de ensaio de restauração. Configure também a recuperação pontual e os backups do provedor quando aplicáveis. O dump não inclui os objetos de fotos nem as credenciais do ambiente.
 
-O ensaio local registrado restaurou e conferiu 46 tabelas, além de recusar chave incorreta, destino ocupado e uso da origem. Os bancos e arquivos temporários foram removidos. Esse resultado não comprova backup remoto, cron nem recuperação das fotos; essas verificações continuam pendentes.
+Os ensaios local e remoto conferiram 46 tabelas. O local também recusou chave incorreta, destino ocupado e uso da origem, removendo seus bancos/arquivos temporários. O remoto confirmou a recuperação do dump cifrado, sem incluir fotos. Retenção, alertas, guarda da chave e recuperação dos objetos continuam exigindo procedimentos próprios.
 
 ## Conferência antes de anunciar
 

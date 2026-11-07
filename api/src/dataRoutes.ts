@@ -63,7 +63,9 @@ r.post('/data/:resource',async(req,res)=>{
 });
 r.patch('/data/:resource/:id',async(req,res)=>{
  const key=getResource(req.params.resource as string),id=tenant(req),recordId=z.uuid().parse(req.params.id);allowed(req,defs[key].permission);
- const def=defs[key];const data=def.schema.partial().strict().parse(req.body) as Record<string,unknown>;
+ const def=defs[key];const parsed=def.schema.partial().strict().parse(req.body) as Record<string,unknown>;
+ // Defaults servem à criação. PATCH altera somente campos enviados pela pessoa.
+ const data=Object.fromEntries(Object.entries(parsed).filter(([field])=>Object.hasOwn(req.body,field)));
  if(key==='tutors'){
   ensure(Object.keys(data).length>0,422,'Nenhum campo para atualizar.');
   const updated=await tx(async db=>{

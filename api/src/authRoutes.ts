@@ -107,22 +107,28 @@ router.post('/invite/join',auth,async(req,res)=>{
 });
 router.post('/password/forgot',throttle,async(req,res)=>{
  const {email}=z.object({email:z.email()}).parse(req.body);
- ensure(process.env.EMAIL_PROVIDER==='resend'&&process.env.EMAIL_API_KEY&&process.env.EMAIL_FROM,503,'Configure EMAIL_PROVIDER=resend, EMAIL_API_KEY e EMAIL_FROM para habilitar recuperação.');
+ ensure(process.env.EMAIL_PROVIDER==='resend'&&process.env.EMAIL_API_KEY&&process.env.EMAIL_FROM,503,'A recuperação de senha está indisponível no momento. Tente novamente mais tarde ou fale com o suporte.');
  const user=await pool.query('SELECT id FROM users WHERE email=$1',[normEmail(email)]);
  if(user.rowCount){
   const raw=token();await pool.query(`INSERT INTO password_resets(user_id,token_hash,expires_at) VALUES($1,$2,now()+interval '30 minutes')`,[user.rows[0].id,sha(raw)]);
   const url=`${process.env.APP_ORIGIN}/?reset=${raw}`;
-  const reply=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.EMAIL_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.EMAIL_FROM,to:[normEmail(email)],subject:'Recuperar senha PetCore',html:`<p>Solicitou recuperação de senha?</p><p><a href="${url}">Alterar minha senha</a></p><p>O link expira em 30 minutos.</p>`})});
-  ensure(reply.ok,502,'O provedor de e-mail não confirmou o envio.');
+  try{
+   const reply=await fetch('https://api.resend.com/emails',{method:'POST',signal:AbortSignal.timeout(10000),headers:{Authorization:`Bearer ${process.env.EMAIL_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.EMAIL_FROM,to:[normEmail(email)],subject:'Recuperar senha PetCore',html:`<p>Solicitou recuperação de senha?</p><p><a href="${url}">Alterar minha senha</a></p><p>O link expira em 30 minutos.</p>`})});
+   ensure(reply.ok,502,'Falha ao enviar recuperação.');
+  }catch{error(502,'Não foi possível enviar as orientações agora. Tente novamente em alguns minutos ou fale com o suporte.');}
  }
  res.json({message:'Se a conta existir, você receberá orientações por e-mail.'});
 });
 router.post('/password/reset',async(req,res)=>{
  const {token:raw,password}=z.object({token:z.string().length(64),password:passRule}).parse(req.body);
  await tx(async c=>{
-  const r=await c.query(`SELECT * FROM password_resets WHERE token_hash=$1 AND used_at IS NULL AND expires_at>now() FOR UPDATE`,[sha(raw)]);ensure(r.rowCount,410,'Token inválido ou expirado.');
-  await c.query('UPDATE users SET password_hash=$1,session_version=session_version+1 WHERE id=$2',[await hashPassword(password),r.rows[0].user_id]);
-  await c.query('UPDATE password_resets SET used_at=now() WHERE id=$1',[r.rows[0].id]);
+  const owner=await c.query('SELECT user_id FROM password_resets WHERE token_hash=$1',[sha(raw)]);ensure(owner.rowCount,410,'Token inválido ou expirado.');
+  // Serializa todos os links da conta antes de bloquear qualquer token.
+  // FOR UPDATE também ordena novas emissões pela chave estrangeira de user_id.
+  const user=await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[owner.rows[0].user_id]);ensure(user.rowCount,410,'Token inválido ou expirado.');
+  const r=await c.query(`SELECT id FROM password_resets WHERE token_hash=$1 AND user_id=$2 AND used_at IS NULL AND expires_at>clock_timestamp() FOR UPDATE`,[sha(raw),owner.rows[0].user_id]);ensure(r.rowCount,410,'Token inválido ou expirado.');
+  await c.query('UPDATE users SET password_hash=$1,session_version=session_version+1 WHERE id=$2',[await hashPassword(password),owner.rows[0].user_id]);
+  await c.query('UPDATE password_resets SET used_at=clock_timestamp() WHERE user_id=$1 AND used_at IS NULL',[owner.rows[0].user_id]);
  });res.json({ok:true});
 });
 export default router;

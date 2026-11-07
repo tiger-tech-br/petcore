@@ -1,6 +1,6 @@
 # PetCore — gestão para pet shops
 
-Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva. Abre no login e reúne a operação interna do pet shop. O projeto está em preparação para homologação; a existência dos módulos e testes locais ainda não libera a oferta comercial.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). A revisão HTTPS conferida é `4d5ffe41`, implantação `b23f40a5-9c42-4710-9c2a-cb0668a7d04e`, concluída com sucesso. Ajustes posteriores ainda precisam da publicação e validação final; este registro não declara prontidão comercial.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
@@ -40,7 +40,7 @@ Os formulários usam `FormDialog`: tela inteira até 780 px e modal centralizado
 
 É possível escolher um plano pago imediatamente, sem aguardar o teste. O pagamento acontece no checkout externo do PagBank. Escolher um plano ou voltar do checkout não comprova pagamento e não ativa acesso pago. A plataforma confere o recebimento no PagBank e registra a conciliação.
 
-A conta atual é PagBank PF. Este fluxo usa links recorrentes hospedados e não precisa de token de produção da API de assinaturas. Os links fornecidos têm valores de R$ 35/R$ 350, mas, na última conferência, ainda identificavam outro produto; continuam sem revisão aprovada no sistema.
+A conta atual é PagBank PF. Este fluxo usa links recorrentes hospedados e não precisa de token de produção da API de assinaturas. Os links atuais foram conferidos, sem compra: [PetCore Mensal — R$ 35](https://pag.ae/82jFKCTjo) e [PetCore Anual — R$ 350](https://pag.ae/82jFLbrjr). A revisão dos planos está aprovada no cadastro. Os links antigos de “sistema de demandas” não devem ser reutilizados. A publicação jurídica continua desativada; ela ainda é uma condição para liberar o checkout aos clientes pelo aplicativo.
 
 O Free termina no vencimento, sem os dias de tolerância dos planos pagos. O vencimento bloqueia alterações, preservando consulta, assinatura, suporte e os canais próprios de privacidade. Documentos jurídicos publicados exigem aceite explícito da versão atual.
 
@@ -72,29 +72,33 @@ Integrações exigem `TEST_DATABASE_URL` de banco exclusivo terminado em `_test`
 
 Evidências registradas nesta preparação:
 
-- Rodada completa de 84 testes aprovada: 18 unitários e 66 de integração, incluindo comercial 19/19 e regressões de upload.
+- Rodada completa de 103 testes aprovada: 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload.
 - Restauração local de backup criptografado conferiu 46 tabelas, contagens e proteções contra chave incorreta, destino ocupado e uso da origem. O ensaio não inclui as fotos.
-- Compilação final aprovada. Cadastro de serviço, profissional/jornada, cliente, pet e agendamento percorridos com dados fictícios. Agenda com novos espaçamentos conferida em computador/celular; após agendar, a data resultante fica visível. A conferência HTTPS remota ainda precisa ser registrada.
+- Compilação da revisão publicada aprovada. Cadastro de serviço, profissional/jornada, cliente, pet e agendamento percorridos com dados fictícios. Agenda com novos espaçamentos conferida em computador/celular; após agendar, a data resultante fica visível.
+- Ensaio HTTPS com 11 verificações aprovado: sessão segura, Free, origens, isolamento, permissões mínimas, fotos privadas, substituição/exclusão, exportação e anonimização. Todos os registros e objetos fictícios desse ensaio foram removidos.
+- Recuperação invalida também os links anteriores da mesma conta. Os lembretes preservam a autorização em edições parciais e usam ordem sequencial dos eventos de consentimento. Os testes usam provedor simulado, sem e-mails reais.
 
-Esses resultados não comprovam construção Docker, entrega de e-mail, permissões do armazenamento remoto ou adequação jurídica da operação.
+Construção Docker, HTTPS e controles remotos de fotos já tiveram conferência. Isso não comprova adequação jurídica nem entrega regular de e-mails na Caixa de Entrada.
 
 ## Fotos, e-mails e privacidade
 
-Fotos dependem de `OBJECT_STORAGE_*`. A API valida e normaliza a imagem, remove metadados e fornece leitura temporária autorizada. O banco guarda a referência ao arquivo. Configure e confira bucket privado, permissões, versões e retenção no provedor.
+Fotos dependem de `OBJECT_STORAGE_*`. A API normaliza a imagem, remove metadados e fornece leitura temporária autorizada. Upload real, recusa de leitura anônima e exclusão foram conferidos. A retenção de versões e a recuperação dos objetos continuam sendo procedimentos próprios do armazenamento.
 
-Recuperação de senha usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`. Lembretes são outro processo, com `RESEND_API_KEY`, `RESEND_FROM_EMAIL` e liberação explícita por duas variáveis. Ambos permanecem sem validação de envio real nesta homologação. Contatos do CRM não disparam mensagens nem alteram consentimentos.
+Recuperação usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`; as variáveis foram configuradas sem disparar deploy e aguardam a revisão final. Lembretes usam outro processo, `RESEND_*` e liberação explícita. O serviço de lembretes foi preparado para cada cinco minutos, mas sua ativação ainda precisa ser confirmada após concluir o código e os testes. Somente tutores com autorização registrada podem receber. Contatos do CRM não disparam mensagens nem concedem consentimento.
+
+Um único teste de e-mail foi aceito pelo Resend e o usuário confirmou o recebimento na pasta Spam. Isso comprova aquele recebimento, sem garantir entrega na Caixa de Entrada. O diagnóstico DNS e as verificações restantes estão em [EMAIL.md](docs/EMAIL.md).
 
 Suporte e solicitações sobre dados pessoais: **tigertechbr@outlook.com**. O canal de contato não substitui um remetente validado no provedor de e-mail.
 
-A implementação de privacidade não é uma certificação de conformidade. Ainda faltam identificação/endereço reais do operador, revisão dos documentos, fornecedores e regiões efetivos, retenção e procedimentos operacionais aprovados. Veja [PRIVACIDADE-LGPD.md](docs/PRIVACIDADE-LGPD.md) e [LEGAL-DRAFTS.md](docs/LEGAL-DRAFTS.md).
+A identidade e o endereço foram informados: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**, Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Domínio institucional e remetente: `tigertech.dev.br`. Não foi informado CNPJ. A implementação de privacidade não é certificação de conformidade: revisão/publicação jurídica, fornecedores, retenção e procedimentos operacionais ainda precisam de aprovação. Veja [PRIVACIDADE-LGPD.md](docs/PRIVACIDADE-LGPD.md) e [LEGAL-DRAFTS.md](docs/LEGAL-DRAFTS.md).
 
 ## Railway e recuperação
 
-Foi preparado um ambiente isolado de homologação no Railway, com branch de testes separado no Neon e destinos separados para fotos e backups. O domínio reservado é [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). **A implantação e a validação desse endereço ainda estão pendentes neste registro.**
+O ambiente de homologação usa o Neon e destinos privados separados para fotos e backups. Migrations 001–013 foram aplicadas na homologação e no banco original, confirmado como somente testes, após a cópia de preservação `br-quiet-mountain-b62dyl9j`. Não use seed ou testes destrutivos quando houver dados reais.
 
 O serviço usa Dockerfile e configurações diretas no Railway para início, migrations e health check. Não depende de `railway.json` ou `railway.toml`. Não é necessário instalar outro PostgreSQL no Railway: o banco permanece no Neon.
 
-O backup cifra dump e manifesto com AES-256-GCM antes do envio a um bucket separado. O script de restauração exige banco novo, vazio e terminado em `_restore_test`. Backups automáticos, alertas, retenção e recuperação dos objetos precisam de configuração e conferência externas.
+A manutenção a cada 15 minutos e o backup diário às 03h de Brasília já tiveram execução confirmada. O backup cifra dump e manifesto com AES-256-GCM antes do envio a um bucket separado. Uma restauração remota conferiu 46 tabelas e registrou o backup de prefixo `ff3dc3a4` como `verified`. O dump não inclui fotos. Alertas, retenção, guarda externa da chave e recuperação dos objetos exigem acompanhamento próprio.
 
 Procedimentos: [RAILWAY.md](docs/RAILWAY.md) e [OPERACAO.md](docs/OPERACAO.md).
 

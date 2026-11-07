@@ -1,0 +1,2 @@
+# Preserve os checksums das migrations também em checkouts no Windows.
+api/sql/*.sql text eol=lf

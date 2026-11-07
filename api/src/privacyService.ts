@@ -48,7 +48,7 @@ export async function exportSubject(company:string,requestId:string,user:string)
   // Um PoolClient representa uma conexão e executa suas consultas em sequência.
   const contacts=await db.query('SELECT id,channel,summary,occurred_at,created_at FROM crm_contacts WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY occurred_at,id',[company,item.tutor_id]);
   const tasks=await db.query('SELECT id,title,notes,due_at,status,created_at,completed_at FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
-  const consents=await db.query('SELECT email,action,created_at FROM tutor_email_reminder_consent_events WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
+  const consents=await db.query('SELECT email,action,created_at FROM tutor_email_reminder_consent_events WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY event_order',[company,item.tutor_id]);
   const waitlist=await db.query('SELECT id,pet_id,earliest_at,latest_at,status,notes FROM waitlist WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY earliest_at,id',[company,item.tutor_id]);
   const sales=await db.query(`SELECT s.id,s.appointment_id,s.status,s.notes,s.created_at,to_jsonb(s)-'tenant_id'-'created_by' AS financial_record,
     COALESCE((SELECT json_agg(to_jsonb(i)-'tenant_id') FROM business_sale_items i WHERE i.tenant_id=s.tenant_id AND i.sale_id=s.id),'[]'::json) AS items,

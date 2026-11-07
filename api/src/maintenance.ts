@@ -11,7 +11,10 @@ export async function runMaintenanceOnce(options:{prune?:boolean;files?:boolean}
   const sessionTable=(await db.query("SELECT to_regclass('public.session') AS name")).rows[0].name;
   if(sessionTable)counts.expiredSessions=(await db.query('DELETE FROM "session" WHERE expire<now()')).rowCount??0;
   counts.expiredRateLimits=(await db.query("DELETE FROM auth_rate_limits WHERE window_started<now()-interval '1 day'")).rowCount??0;
-  counts.expiredResetTokens=(await db.query('DELETE FROM password_resets WHERE used_at IS NOT NULL OR expires_at<now()')).rowCount??0;
+  counts.expiredResetTokens=(await db.query(`WITH expired AS (
+   SELECT id FROM password_resets WHERE used_at IS NOT NULL OR expires_at<now()
+   ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
+  ) DELETE FROM password_resets r USING expired WHERE r.id=expired.id`)).rowCount??0;
   counts.expiredInvitations=(await db.query("DELETE FROM invitations WHERE expires_at<now()-interval '1 day'")).rowCount??0;
  });
  let files:Record<string,unknown>={enabled:false};

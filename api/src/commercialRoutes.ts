@@ -4,7 +4,7 @@ import {auth,platform,pool,tenant,tx,ensure} from './core.js';
 import {recordAudit} from './audit.js';
 import {confirmPassword} from './reauth.js';
 import {settings,legalPublic,legalVersion,paymentLink,subscription} from './commercialService.js';
-import {privacyTemplate,termsTemplate} from './legalTemplates.js';
+import {legalTemplatesFor} from './legalTemplates.js';
 
 export const publicCommercial=Router();
 publicCommercial.get('/legal',async(_req,res)=>{res.set('Cache-Control','no-store');res.json(legalPublic(await settings()));});
@@ -67,8 +67,8 @@ router.post('/accept-terms',async(req,res)=>{
 });
 
 router.get('/platform/settings',platform,async(_req,res)=>{
- const config=await settings();res.json({...config,privacy_text:config.privacy_text||privacyTemplate,terms_text:config.terms_text||termsTemplate,
-  plans:(await pool.query('SELECT * FROM subscription_plans ORDER BY interval_months')).rows});
+ const [config,plans]=await Promise.all([settings(),pool.query('SELECT * FROM subscription_plans ORDER BY interval_months')]);
+ const draft=legalTemplatesFor({...config,plans:plans.rows});res.json({...config,privacy_text:config.privacy_text||draft.privacy,terms_text:config.terms_text||draft.terms,plans:plans.rows});
 });
 const email=z.union([z.email().max(255),z.literal('')]);
 const settingsInput=z.object({brand:z.string().trim().min(2).max(100),legal_name:z.string().trim().max(200),support_email:email,privacy_email:email,address:z.string().trim().max(500),

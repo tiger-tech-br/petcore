@@ -10,3 +10,4 @@ coverage/
 .DS_Store
 
 /resend petcore.txt
+/.email-test-private.json

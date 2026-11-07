@@ -3,10 +3,12 @@
  *
  * Uso padrao: leitura/simulacao, sem gravacao e sem envios.
  * Envio real exige DUAS travas de configuracao e --run-once.
- * Nao executar em producao ate concluir os testes de falhas/duplicidade.
- * O worker de simulacao (reminderWorker.ts) permanece INTACTO.
+ * Processa no maximo 20 mensagens por chamada, com prazo de envio de 10s.
+ * O worker de simulacao (reminderWorker.ts) permanece somente leitura.
  */
 import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { Resend } from 'resend';
 import type { PoolClient, QueryResultRow } from 'pg';
 import { pool } from './core.js';
@@ -35,10 +37,13 @@ interface Job extends QueryResultRow {
 }
 
 const MAX_ATTEMPTS = 3;
+const MAX_JOBS_PER_RUN = 20;
+const SEND_TIMEOUT_MS = 10000;
 // Nao basta executar um comando: sao necessarias duas confirmacoes adicionais.
-const REAL_SEND_ENABLED = process.env.REMINDER_EMAILS_ENABLED === 'true' &&
-  process.env.REMINDER_EMAILS_CONFIRM_SEND === 'YES';
-const RUN_ONCE = process.argv.includes('--run-once');
+function realSendEnabled(): boolean {
+  return process.env.REMINDER_EMAILS_ENABLED === 'true' &&
+    process.env.REMINDER_EMAILS_CONFIRM_SEND === 'YES';
+}
 
 function validRecipient(raw: string | null): boolean {
   const email = (raw ?? '').trim().toLowerCase();
@@ -85,7 +90,7 @@ const JOB_SQL = `
     SELECT e.action, e.email
     FROM tutor_email_reminder_consent_events e
     WHERE e.tutor_id=tu.id AND e.tenant_id=tu.tenant_id
-    ORDER BY e.created_at DESC, e.id DESC LIMIT 1
+    ORDER BY e.event_order DESC LIMIT 1
   ) consent ON true
 `;
 
@@ -107,7 +112,7 @@ async function preview(): Promise<void> {
 }
 
 // 1) Reserva atomica duravel. Nao reenvia jobs que tenham tentativa incerta.
-async function claimOne(): Promise<{jobId:string; claimId:string} | null> {
+export async function claimOne(): Promise<{jobId:string; claimId:string} | null> {
   const db = await pool.connect();
   try {
     await db.query('BEGIN');
@@ -183,7 +188,7 @@ async function finishBlocked(db:PoolClient,job:Job,reason:string):Promise<void>{
 // 2) Revalida com tutor/agendamento bloqueados enquanto realiza o envio.
 // Mantem os locks enquanto aguarda a API: impede revogacao/cancelamento no meio.
 // Se o processo morrer apos o envio, a tentativa 'started' bloqueia reenvio.
-async function deliverOne(jobId:string, claimId:string):Promise<void>{
+export async function deliverOne(jobId:string, claimId:string):Promise<void>{
   const db=await pool.connect();
   try {
     await db.query('BEGIN');
@@ -221,7 +226,7 @@ async function deliverOne(jobId:string, claimId:string):Promise<void>{
         to:[job.tutor_email!.trim()],
         subject:`Lembrete de atendimento — ${job.company_name}`,
         text:`Ola, ${job.tutor_name}!\n\nO atendimento de ${job.pet_name} em ${job.company_name} esta agendado para ${sentTime}.\n\nEm caso de duvidas ou reagendamento, entre em contato com o pet shop.\n\nMensagem automatica pelo PetCore — tecnologia Tiger Tech.`,
-      },{idempotencyKey:`petcore-reminder/${job.id}`});
+      },{idempotencyKey:`petcore-reminder/${job.id}`,signal:AbortSignal.timeout(SEND_TIMEOUT_MS)});
       providerId=response.data?.id ?? null;
       providerProblem=response.error?.name ?? null;
     } catch {
@@ -265,26 +270,33 @@ async function deliverOne(jobId:string, claimId:string):Promise<void>{
   } finally {db.release();}
 }
 
+export async function runRemindersOnce():Promise<{processed:number}>{
+  if (!realSendEnabled()) {
+    throw Error('Envio real bloqueado. Mantenha o modo de pre-visualizacao nesta etapa.');
+  }
+  let processed=0;
+  while (processed<MAX_JOBS_PER_RUN) {
+    const claimed=await claimOne();
+    if (!claimed) break;
+    await deliverOne(claimed.jobId,claimed.claimId);
+    processed++;
+  }
+  if (!processed) console.log('Nenhum lembrete autorizado chegou ao horario de envio.');
+  return {processed};
+}
+
 async function main():Promise<void>{
   if (process.argv.some(x=>x.startsWith('--') && x !== '--run-once')) {
     throw Error('Opcao desconhecida; por seguranca nenhum envio foi iniciado.');
   }
-  if (!RUN_ONCE) {
+  if (!process.argv.includes('--run-once')) {
     await preview();
     return;
   }
-  if (!REAL_SEND_ENABLED) {
-    throw Error('Envio real bloqueado. Mantenha o modo de pre-visualizacao nesta etapa.');
-  }
-  const claimed=await claimOne();
-  if (!claimed) {
-    console.log('Nenhum lembrete autorizado chegou ao horario de envio.');
-    return;
-  }
-  await deliverOne(claimed.jobId,claimed.claimId);
+  await runRemindersOnce();
 }
 
-main().catch(e=>{
+if (process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url) main().catch(e=>{
   console.error('Processador de lembretes:',e instanceof Error?e.message:'erro desconhecido');
   process.exitCode=1;
 }).finally(async()=>{await pool.end();});
