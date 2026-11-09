@@ -3,6 +3,7 @@ import {BarChart3, Bell, Building2, CalendarClock, CalendarDays, ChevronDown, Co
 import {Brand} from './Brand';
 import GlobalSearch from './GlobalSearch';
 import {api, dateTime, type Session} from './api';
+import {listenNativeBack} from './nativeAndroid';
 
 export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
 type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;children:ReactNode};
@@ -12,6 +13,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,childr
   const {user,companies} = session;
   const can=(p?:string)=>!p||user.role==='admin'||user.permissions.includes(p);
   const role=user.role==='platform'?'Plataforma':user.role==='admin'?'Administrador':'Funcionário';
+  useEffect(()=>listenNativeBack(()=>{if(!drawer)return false;setDrawer(false);return true;},true),[drawer]);
   const nav = [
     {key:'overview',label:'Visão geral',icon:Home,show:true},
     {key:'calendar',label:'Agenda',icon:CalendarDays,show:can('appointments')},

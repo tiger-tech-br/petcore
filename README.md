@@ -32,6 +32,14 @@ Preserve o visual oficial das referências `pet-core-login.png` e `painel-petcor
 
 Os formulários usam `FormDialog`: tela inteira até 780 px e modal centralizado no computador, sem formulários escondidos abaixo das listas. Foco, fechamento e rolagem do fundo são controlados. **Os avisos gerais de sucesso e erro mantêm a posição e o comportamento originais**, conforme pedido do usuário.
 
+## Aplicativo Android
+
+Foi gerado o APK release assinado **PetCore 1.0.0**, em `releases/PetCore-1.0.0.apk`, para Android **8.0 ou superior**. Ele abre o mesmo sistema no endereço de homologação do Railway e precisa de internet. O modo Android tem textos maiores, áreas de toque ampliadas, espaçamento e formulários responsivos; preserva o cachorro inteiro no login e os avisos existentes. Fotos e exportações CSV/JSON usam os seletores do Android, e o botão Voltar fecha primeiro formulários e menus.
+
+As políticas nativas passaram em 7 testes Java e a integração web em 8 testes unitários; build release e verificação de assinatura passaram, e `lintRelease` terminou sem erros, com avisos. O ensaio responsivo no navegador conferiu 320 × 568, 360 × 740 e 412 × 892, além de criar um agendamento fictício local. O uso em aparelho/emulador ainda não foi testado. Os ajustes web precisam ser publicados antes de usar o APK conectado a eles. A chave privada de atualização está em `.android-signing/`, fora do Git, e precisa ser preservada em cópia privada. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
+
+O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e salão de beleza. Melhorias futuras para pet shops pertencem ao mesmo PetCore; táxi dog segue fora do escopo implementado.
+
 ## Planos e cobrança
 
 - **Plano Free:** experiência de 30 dias; não é gratuito permanente. Vem selecionado no modal do primeiro acesso do responsável. O relógio começa quando ele confirma o Free.

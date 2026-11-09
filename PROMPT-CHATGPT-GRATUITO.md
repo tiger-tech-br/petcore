@@ -24,6 +24,8 @@ Já existem:
 
 Produtos e estoque atendem ao balcão e à operação interna. **Não existem loja virtual, compras públicas, táxi dog, entregas ou status de pedidos de comércio eletrônico. Não adicione esses módulos sem solicitação minha.** Emissão fiscal e integração bancária também não foram implementadas.
 
+Meu portfólio terá **um único SaaS por área**: pet shop, barbearia, prontuário e salão de beleza. Se eu pedir melhorias de pet shop no futuro, atualize o mesmo PetCore. Não crie outro SaaS para a mesma área. Táxi dog foi apenas uma dúvida e não está autorizado para implementação.
+
 ## Planos confirmados
 
 Os preços finais são **R$ 35 mensais e R$ 350 anuais**. Desconsidere os valores antigos de R$ 40/R$ 400.
@@ -48,12 +50,30 @@ Formulários e detalhes abrem em `FormDialog` nativo: tela inteira no celular at
 
 Há um guia de primeiros passos: serviços → profissional/jornada/serviços habilitados → cliente e pet → agendamento → recebimento. Quando falta pré-requisito, a tela explica o que fazer e oferece atalho somente a quem tem permissão. Preserve isso e as orientações para procurar o responsável quando faltar acesso.
 
+## Aplicativo Android adicionado
+
+Agora existe um projeto Android em `android/` e o comando `npm run android:apk`, implementado em `scripts/build-android.mjs`. Foi gerado o release assinado **PetCore 1.0.0**, código 1, pacote `br.dev.tigertech.petcore`, Android 8.0+ (`minSdk 26`, `targetSdk 36`), em `releases/PetCore-1.0.0.apk`. SHA-256: `c80931dbe37cbdad9cd48c4343ec7fa21b4ec6e1cebe3332cd78dd6498dcc962`. Os metadados públicos ficam ao lado do APK.
+
+É um WebView que acessa **o mesmo endereço HTTPS do Railway**, com internet; não há base de clientes separada nem operação offline. Preserve cookies, origem exata, proteção de sessão, permissões por empresa e bloqueio de conteúdo inseguro. Não use `*` para permitir navegação ou a ponte nativa. Links externos abrem os aplicativos apropriados; fotos usam o seletor do Android, sem permissão ampla sobre arquivos.
+
+`web/src/nativeAndroid.ts` reconhece `PetCoreAndroid/` no User-Agent e ativa `data-petcore-native="android"`; `web/src/styles/_native-android.scss`, importado por último, amplia textos e toques, centraliza o conteúdo e melhora os espaços somente nesse modo. O login mantém o mesmo cachorro inteiro. Preserve o comportamento dos formulários em tela inteira no celular e **não mova os avisos gerais de sucesso/erro**.
+
+As exportações de relatórios e privacidade usam `saveTextFile`: no Android, a ponte `PetCoreNative` abre o seletor de destino para CSV/JSON; no navegador, continua a exportação por Blob. A ponte só aceita origem HTTPS autorizada e frame principal, formato/nome válido e tamanho limitado a 16 MiB, com respostas de sucesso, cancelamento e erro. O botão Voltar fecha primeiro modal/menu; depois volta na navegação. Preserve essas integrações em `AppShell.tsx`, `AuthScreen.tsx`, `main.tsx`, `businessUi.tsx` e `PrivacyPage.tsx`.
+
+Passaram **7 testes Java**, **8 testes unitários de nativeAndroid**, build release e verificação da assinatura v2/v3. `lintRelease` terminou com zero erros e avisos remanescentes. O ensaio visual local em `web/native-qa.html` usou componentes reais e dados fictícios. No navegador: formulário em 320 × 568 sem excesso horizontal, Cancelar/Agendar com 48 px; login em 360 × 740 sem rolagem e cachorro inteiro; ações do diálogo em 412 × 892 dentro da área visível. Criar um agendamento fictício local fechou o modal e exibiu o cartão na agenda. **Não houve teste de instalação/uso em aparelho ou emulador**; não invente validação de teclado, seletores de fotos/arquivos ou Voltar no Android.
+
+A camada web precisa ser publicada com esses ajustes para aparecer no APK. Mudanças só na web são publicadas no servidor; alterações na camada Android exigem novo APK e incremento do código de versão. A chave de assinatura em `.android-signing/` é privada, ignorada pelo Git e precisa ser preservada para futuras atualizações. Não peça essa chave, não recrie outra silenciosamente e não a publique. Consulte `docs/ANDROID.md`.
+
+APK gerado não significa produto comercialmente liberado: SPF pendente e pontos jurídicos/operacionais continuam no checklist. Não desative esses controles para aparentar conclusão.
+
 ## Arquivos principais
 
 - `web/src/AuthScreen.tsx`, `AppShell.tsx`, `Overview.tsx`, `Brand.tsx` e `GlobalSearch.tsx`.
 - `web/src/CalendarPage.tsx`, `DataPage.tsx`, `WaitlistPage.tsx`, `TeamPage.tsx` e `PlatformPage.tsx`.
 - `web/src/CrmPage.tsx`, `InventoryPage.tsx`, `FinancePage.tsx`, `ReportsPage.tsx`, `PrivacyPage.tsx`, `LegalScreen.tsx` e `CommercialPages.tsx`.
 - `web/src/FirstSteps.tsx`, `FormDialog.tsx`, `businessUi.tsx`, `api.ts` e `main.tsx`.
+- `web/src/nativeAndroid.ts`, `web/src/styles/_native-android.scss`, `web/tests/nativeAndroid.unit.test.ts`, `web/native-qa.html` e `web/tests/native-qa.tsx`.
+- `android/`, `scripts/build-android.mjs` e `docs/ANDROID.md`; preserve a chave privada fora do Git.
 - `api/src/crmRoutes.ts`, `businessRoutes.ts`, `businessService.ts`, `privacyRoutes.ts`, `privacyService.ts`, `commercialRoutes.ts` e `commercialService.ts`.
 - `api/src/core.ts`, `server.ts`, `originGuard.ts`, `fileRoutes.ts`, `petPhoto.ts`, `maintenance.ts` e processos de lembrete existentes.
 - `api/sql/` e `api/scripts/migrate.mjs`, `backup.mjs`, `restore-check.mjs`.

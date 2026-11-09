@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="66dp" android:height="72dp" android:viewportWidth="66" android:viewportHeight="72">
+    <group android:rotation="-25" android:pivotX="12" android:pivotY="24"><path android:fillColor="#06CDD0" android:pathData="M4.6,24a7.4,10 0,1 0,14.8 0a7.4,10 0,1 0,-14.8 0" /></group>
+    <group android:rotation="-7" android:pivotX="26" android:pivotY="12"><path android:fillColor="#04CBD0" android:pathData="M18.8,12a7.2,11 0,1 0,14.4 0a7.2,11 0,1 0,-14.4 0" /></group>
+    <group android:rotation="9" android:pivotX="43" android:pivotY="12"><path android:fillColor="#10D1CB" android:pathData="M35.8,12a7.2,11 0,1 0,14.4 0a7.2,11 0,1 0,-14.4 0" /></group>
+    <group android:rotation="28" android:pivotX="56" android:pivotY="25"><path android:fillColor="#0BC9C7" android:pathData="M48.7,25a7.3,10 0,1 0,14.6 0a7.3,10 0,1 0,-14.6 0" /></group>
+    <path android:fillColor="#0B174C" android:pathData="M11,48a22,22 0,1 0,44 0a22,22 0,1 0,-44 0" />
+    <path android:fillColor="#FFFFFF" android:pathData="M17.4,48a15.6,15.6 0,1 0,31.2 0a15.6,15.6 0,1 0,-31.2 0" />
+    <path android:fillColor="#05BEC1" android:pathData="M33,58S20,50 20,43.6C20,37.5 28.5,35.5 33,41.5C37.5,35.5 46,37.5 46,43.6C46,50 33,58 33,58Z" />
+</vector>

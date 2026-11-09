@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PetCore.Base" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">@color/petcore_surface</item>
+        <item name="android:navigationBarColor">@color/petcore_surface</item>
+        <item name="android:windowBackground">@color/petcore_surface</item>
+        <item name="android:colorAccent">@color/petcore_teal</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+    <style name="Theme.PetCore" parent="Theme.PetCore.Base" />
+</resources>

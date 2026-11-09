@@ -1,0 +1,14 @@
+{
+  "applicationId": "br.dev.tigertech.petcore",
+  "version": "1.0.0",
+  "versionCode": 1,
+  "minSdk": 26,
+  "targetSdk": 36,
+  "bytes": 1756814,
+  "sha256": "c80931dbe37cbdad9cd48c4343ec7fa21b4ec6e1cebe3332cd78dd6498dcc962",
+  "certificateSha256": "740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1",
+  "signed": true,
+  "debuggable": false,
+  "requiresInternet": true,
+  "builtAt": "2026-11-09T22:06:18.961Z"
+}

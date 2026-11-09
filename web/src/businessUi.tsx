@@ -2,6 +2,7 @@ import {useCallback,useEffect,useRef,useState,type ReactNode} from 'react';
 import {ArrowDownLeft,ArrowUpRight,ChevronLeft,ChevronRight,RefreshCw,Wallet} from 'lucide-react';
 import {api,money,today} from './api';
 import {Empty} from './ui';
+import {saveTextFile} from './nativeAndroid';
 
 export type BusinessPageProps={setMessage:(value:string)=>void;setError:(value:string)=>void};
 export type PageResult<T>={items:T[];total:number;page:number;pageSize:number};
@@ -80,6 +81,5 @@ export const paymentLabel=(value:string)=>({pix:'Pix',cash:'Dinheiro',credit_car
 export async function downloadBusinessCsv(path:string,filename:string) {
   const response=await fetch('/api'+path,{credentials:'include',headers:{'X-PetCore-Request':'1'}});
   if(!response.ok){let message='Não foi possível exportar o relatório.';try{const body=await response.json();message=body.error||message;}catch{}throw Error(message);}
-  const blob=await response.blob(),url=URL.createObjectURL(blob),link=document.createElement('a');
-  link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  return saveTextFile(filename,'text/csv',await response.text());
 }

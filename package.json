@@ -10,6 +10,7 @@
     "dev": "concurrently -k -n api,web \"npm run dev -w api\" \"npm run dev -w web\"",
     "build": "npm run build --workspace api && npm run build --workspace web",
     "test": "npm run test --workspace api",
+    "android:apk": "node scripts/build-android.mjs",
     "db:migrate": "npm run db:migrate --workspace api",
     "db:seed": "npm run db:seed --workspace api"
   },

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="petcore_navy">#071449</color>
+    <color name="petcore_teal">#009CA6</color>
+    <color name="petcore_surface">#F2FBFB</color>
+    <color name="petcore_white">#FFFFFF</color>
+</resources>

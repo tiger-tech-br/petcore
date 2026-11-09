@@ -18,6 +18,9 @@ import PrivacyPage from './PrivacyPage';
 import LegalScreen from './LegalScreen';
 import {PlanOnboardingDialog,SubscriptionPage,SupportPage,TermsConsentDialog} from './CommercialPages';
 import './styles/main.scss';
+import {activateNativeAndroid,listenNativeBack} from './nativeAndroid';
+
+activateNativeAndroid();
 
 function App(){
  const[session,setSession]=useState<Session|null>(null),[checking,setChecking]=useState(true),[view,setView]=useState<MenuKey>('overview'),[drawer,setDrawer]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[searchQuery,setSearchQuery]=useState(''),[newBooking,setNewBooking]=useState(false);
@@ -26,6 +29,11 @@ function App(){
  function readLegal(kind:'privacy'|'terms'){legalBack.current=location.pathname+location.search;history.pushState(null,'',`/${kind}`);setLegalView(kind);}
  function closeLegal(){history.replaceState(null,'',legalBack.current);setLegalView(null);}
  function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setError('');setMessage('');}
+ useEffect(()=>listenNativeBack(()=>{
+  if(legalView){closeLegal();return true;}
+  if(session&&session.user.role!=='platform'&&view!=='overview'){navigate('overview');return true;}
+  return false;
+ }),[legalView,session,view]);
  async function refresh(){try{
   let me=await api<Session>('/auth/me');
   const invite=new URLSearchParams(location.search).get('invite');

@@ -2,6 +2,7 @@ import React, {useEffect,useState} from 'react';
 import {ArrowLeft, ArrowRight, Eye, EyeOff, Headphones, LockKeyhole, Mail, UserRound, X} from 'lucide-react';
 import {api} from './api';
 import {Brand, BrandMark} from './Brand';
+import {listenNativeBack} from './nativeAndroid';
 
 type AuthMode = 'login' | 'invite' | 'forgot' | 'reset';
 
@@ -18,6 +19,12 @@ export default function AuthScreen({onDone,onReadLegal}: {onDone: () => void;onR
   const query = new URLSearchParams(location.search), invite = query.get('invite'), reset = query.get('reset');
 
   function changeMode(next: AuthMode) {setMode(next); setError(''); setNotice(''); setShowPassword(false);}
+  useEffect(()=>listenNativeBack(()=>{
+    if(loading)return true;
+    if(helpOpen){setHelpOpen(false);return true;}
+    if(mode==='forgot'||mode==='invite'){changeMode('login');return true;}
+    return false;
+  },true),[mode,loading,helpOpen]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault(); setLoading(true); setError(''); setNotice('');

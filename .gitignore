@@ -11,3 +11,13 @@ coverage/
 
 /resend petcore.txt
 /.email-test-private.json
+
+# Android: caches, builds and private release signing material.
+/android/.gradle/
+/android/.kotlin/
+/android/**/build/
+/android/local.properties
+/.android-signing/
+/releases/*.apk
+/releases/*.aab
+/releases/*.idsig
