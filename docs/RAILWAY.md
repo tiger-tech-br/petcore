@@ -1,6 +1,6 @@
 # Publicar o PetCore no Railway
 
-O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5` terminaram com `SUCCESS` na revisão `434a341f`. O ensaio remoto aprovou 12 verificações. A manutenção e os lembretes usam essa mesma revisão. A abertura comercial ainda depende das pendências operacionais e jurídicas registradas no checklist.
+O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `1fa762ae-a491-443e-afa5-929d630afe61` terminaram com `SUCCESS` na revisão `1d953fbc`, em 09/11/2026, incluindo os ajustes web para o APK. A conferência após a publicação aprovou página/saúde/banco, sessão sem login com 401 e comparação SHA-256 dos dois assets com o build local (`index-aMF9JEKv.js` e `index-C7hMQ-l-.css`). O ensaio anterior de 12 verificações foi aprovado na revisão `434a341f`. Os serviços operacionais não tiveram sua fonte alterada nesta entrega Android. A consulta final retornou cinco serviços sem problemas ou falhas recentes e sem alterações pendentes. A abertura comercial ainda depende das pendências operacionais e jurídicas registradas no checklist.
 
 | Recurso preparado | Identificação |
 |---|---|

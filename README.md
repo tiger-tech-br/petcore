@@ -1,6 +1,6 @@
 # PetCore — gestão para pet shops
 
-Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). A revisão atual é `434a341f`, implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5`, concluída com sucesso e conferida por 12 verificações HTTPS. Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). A revisão atual é `1d953fbc`, implantação `1fa762ae-a491-443e-afa5-929d630afe61`, concluída com sucesso em 09/11/2026 com os ajustes Android. Após a publicação, página e saúde responderam 200, o banco respondeu normalmente, a sessão sem login retornou 401 e os dois arquivos de interface corresponderam byte a byte ao build local. A rodada anterior de 12 verificações HTTPS permanece registrada para a revisão `434a341f`. Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
