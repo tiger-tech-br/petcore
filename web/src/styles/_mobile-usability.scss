@@ -2,6 +2,16 @@
 .commercial-plan .commercial-plan-cancel {margin-top:12px}
 
 @media (max-width:780px) {
+  html .mobile-bottom-nav {
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    position:fixed;inset:auto 0 0;z-index:6;
+    height:calc(76px + env(safe-area-inset-bottom));
+    padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+    gap:4px;background:#fff;
+  }
+  html .mobile-bottom-nav button {min-width:0;min-height:54px;padding:0 4px;font-size:14px;line-height:1.3;gap:4px}
+  html .mobile-bottom-nav button svg {width:25px;height:25px;flex-shrink:0}
+  html .content-wrap {padding-bottom:calc(108px + env(safe-area-inset-bottom))}
   html .commercial-page .commercial-plan .commercial-plan-cancel {min-height:48px;font-size:16px;line-height:1.5;padding:12px}
   html .form-dialog .commercial-detail-actions {display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
   html .form-dialog .commercial-detail-actions>button {min-width:0;min-height:48px;font-size:16px;line-height:1.5;padding:12px;white-space:normal;overflow-wrap:normal;word-break:normal}
@@ -44,9 +54,16 @@
     }
     .business-first-number {width:28px;height:28px;font-size:14px}
     .business-first-progress {font-size:14px;line-height:1.5;white-space:normal}
-    .business-first-next {font-size:14px;line-height:1.5;margin-bottom:10px}
+    .business-first-next {font-size:18px;line-height:1.5;margin-bottom:12px}
     .business-first-tip,.business-first-loading,.business-first-error {font-size:14px;line-height:1.7;color:#536b8c}
-    .overview-stat>div>span {font-size:16px;line-height:1.5}
+    .overview-stats {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .overview-stat {display:grid;grid-template-columns:36px minmax(0,1fr);align-content:start;align-items:center;gap:10px;min-width:0;min-height:128px;padding:14px 12px}
+    .overview-stat.secondary-metric {display:none}
+    .overview-stat.secondary-metric:only-child {display:grid;grid-column:1/-1}
+    .overview-stat>div {display:contents}
+    .overview-stat-icon {grid-column:1;grid-row:1;width:36px;height:40px}
+    .overview-stat strong {grid-column:2;grid-row:1;min-width:0;font-size:28px;line-height:1.3;overflow-wrap:anywhere}
+    .overview-stat>div>span {grid-column:1/-1;grid-row:2;min-width:0;max-width:100%;margin:0;font-size:16px;line-height:1.5;white-space:normal;overflow-wrap:anywhere;word-break:normal}
 
     .overview-bottom {
       .panel {min-width:0;padding:20px 18px}
@@ -103,4 +120,40 @@
     .data-table-actions::before {flex-basis:100%}
     .data-table-actions .table-action {min-width:100px;min-height:48px;margin:0;padding:10px 14px;font-size:16px;line-height:1.5;white-space:normal}
   }
+
+  html .commercial-page {
+    .page-header p,.commercial-body-copy {font-size:18px;line-height:1.7}
+    .commercial-subscription-summary p {font-size:18px;line-height:1.65}
+    .commercial-subscription-summary dt {font-size:16px;line-height:1.6}
+    .commercial-subscription-summary dd {font-size:18px;line-height:1.6}
+    .commercial-summary-heading h2 {font-size:24px;line-height:1.4}
+    .commercial-label {font-size:14px;line-height:1.5}
+    .commercial-plan h3 {font-size:23px;line-height:1.4}
+    .commercial-plan-price {flex-wrap:wrap}
+    .commercial-plan-price strong {font-size:36px;line-height:1.3}
+    .commercial-plan-price>span {font-size:18px}
+    .commercial-plan-equivalent {font-size:16px;line-height:1.65}
+    .commercial-plan li {font-size:18px;line-height:1.65;align-items:flex-start;gap:10px;min-width:0;overflow-wrap:anywhere}
+    .commercial-plan li svg {width:20px;height:20px;margin-top:5px}
+    .commercial-plan>button,.commercial-checkout-link {font-size:18px;line-height:1.5;min-height:52px}
+    .commercial-plan-ribbon {font-size:14px;line-height:1.5}
+    .commercial-section-title p,.commercial-panel-head p,.commercial-small-note,
+    .commercial-plan-manager,.commercial-checkout-unavailable {font-size:16px;line-height:1.7}
+    .commercial-panel-head {align-items:flex-start}
+    .commercial-panel-head h2 {font-size:23px;line-height:1.4}
+    .empty p {font-size:18px;line-height:1.7;overflow-wrap:anywhere}
+  }
+}
+
+// The Android root already reserves the system navigation and keyboard areas.
+// Keep this footer at the WebView edge without adding those insets a second time.
+html[data-petcore-native='android'] {
+  .content-wrap {padding-bottom:108px}
+  .mobile-bottom-nav {
+    display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    position:fixed;inset:auto 0 0;z-index:6;
+    height:76px;padding:8px 10px 10px;gap:4px;background:#fff;
+  }
+  .mobile-bottom-nav button {display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:54px;margin:0;padding:0 4px;font-size:14px;line-height:1.3;gap:4px}
+  .mobile-bottom-nav button svg {width:25px;height:25px;flex-shrink:0}
 }
