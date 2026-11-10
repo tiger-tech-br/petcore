@@ -212,8 +212,8 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     {selected&&<FormDialog title={detailsTitle} description={`${selected.tutor_name} · ${selected.professional_name} · ${dateTime(selected.starts_at)}`} onClose={closeDetails} busy={saving} error={dialogError} wide>
       {step==='details'&&<>
         <Status status={selected.status}/>
-        <p>{selected.services.map(service=>service.name).join(' + ')} · {selected.services.reduce((sum,service)=>sum+service.duration_minutes,0)} minutos</p>
-        <div className="action-row">
+        <p className="calendar-detail-description">{selected.services.map(service=>service.name).join(' + ')} · {selected.services.reduce((sum,service)=>sum+service.duration_minutes,0)} minutos</p>
+        <div className="action-row calendar-detail-actions">
           {selected.status==='pending'&&<button type="button" className="primary-btn" disabled={saving} onClick={()=>changeStatus(selected.id,'confirmed')}>Confirmar</button>}
           {selected.status==='confirmed'&&<button type="button" className="primary-btn" disabled={saving} onClick={()=>changeStatus(selected.id,'in_progress')}>Iniciar atendimento</button>}
           {selected.status==='in_progress'&&<button type="button" className="primary-btn" disabled={saving} onClick={()=>changeStatus(selected.id,'done')}>Concluir atendimento</button>}

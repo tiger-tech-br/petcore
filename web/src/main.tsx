@@ -26,9 +26,10 @@ function App(){
  const[session,setSession]=useState<Session|null>(null),[checking,setChecking]=useState(true),[view,setView]=useState<MenuKey>('overview'),[drawer,setDrawer]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[searchQuery,setSearchQuery]=useState(''),[newBooking,setNewBooking]=useState(false);
  const [legalView,setLegalView]=useState<'privacy'|'terms'|null>(()=>location.pathname==='/privacy'?'privacy':location.pathname==='/terms'?'terms':null);
  const legalBack=useRef('/');
+ const [supportTicketId,setSupportTicketId]=useState<string|null>(null);
  function readLegal(kind:'privacy'|'terms'){legalBack.current=location.pathname+location.search;history.pushState(null,'',`/${kind}`);setLegalView(kind);}
  function closeLegal(){history.replaceState(null,'',legalBack.current);setLegalView(null);}
- function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setError('');setMessage('');}
+ function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setSupportTicketId(null);setError('');setMessage('');}
  useEffect(()=>listenNativeBack(()=>{
   if(legalView){closeLegal();return true;}
   if(session&&session.user.role!=='platform'&&view!=='overview'){navigate('overview');return true;}
@@ -66,8 +67,8 @@ function App(){
    {view==='finance'&&permitted('finance')&&<FinancePage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='reports'&&permitted('finance')&&<ReportsPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='privacy'&&user.role==='admin'&&<PrivacyPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
-   {view==='subscription'&&<SubscriptionPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
-   {view==='support'&&<SupportPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
+   {view==='subscription'&&<SubscriptionPage key={user.tenantId} setMessage={setMessage} setError={setError} onOpenSupport={id=>{navigate('support');setSupportTicketId(id);}}/>}
+   {view==='support'&&<SupportPage key={user.tenantId} setMessage={setMessage} setError={setError} initialTicketId={supportTicketId}/>}
    {view==='team'&&permitted('team')&&<TeamPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
   </>}
  </AppShell>{termsRequired?<TermsConsentDialog version={session.legal!.version} onAccepted={()=>void refresh()} onRead={readLegal} onLogout={()=>void logout()}/>:needsPlan?<PlanOnboardingDialog onDone={async(plan)=>{await refresh();navigate(plan&&plan!=='free'?'subscription':'overview');}} onLogout={()=>void logout()}/>:null}</>;

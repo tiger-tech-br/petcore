@@ -32,11 +32,13 @@ Preserve o visual oficial das referências `pet-core-login.png` e `painel-petcor
 
 Os formulários usam `FormDialog`: tela inteira até 780 px e modal centralizado no computador, sem formulários escondidos abaixo das listas. Foco, fechamento e rolagem do fundo são controlados. **Os avisos gerais de sucesso e erro mantêm a posição e o comportamento originais**, conforme pedido do usuário.
 
+As correções móveis desta revisão organizam as ações do atendimento em uma grade com botões de pelo menos 48 px, sem palavras partidas por letra. O guia inicial e os cartões de resumo usam corpo de 16 px e textos secundários de pelo menos 14 px. Os cadastros passam a ser cartões com rótulos no celular: nome, telefone, e-mail e ações ficam disponíveis, inclusive endereços longos, sem rolagem lateral nem conteúdo escondido. `web/src/styles/_mobile-usability.scss`, importado após os ajustes Android, aplica essas correções ao navegador móvel e ao APK. A explicação longa de funcionamento do PagBank foi retirada da página de assinatura.
+
 ## Aplicativo Android
 
 Foi gerado o APK release assinado **PetCore 1.0.0**, em `releases/PetCore-1.0.0.apk`, para Android **8.0 ou superior**. Ele abre o mesmo sistema no endereço de homologação do Railway e precisa de internet. O modo Android tem textos maiores, áreas de toque ampliadas, espaçamento e formulários responsivos; preserva o cachorro inteiro no login e os avisos existentes. Fotos e exportações CSV/JSON usam os seletores do Android, e o botão Voltar fecha primeiro formulários e menus.
 
-As políticas nativas passaram em 7 testes Java e a integração web em 8 testes unitários; build release e verificação de assinatura passaram, e `lintRelease` terminou sem erros, com avisos. O ensaio responsivo no navegador conferiu 320 × 568, 360 × 740 e 412 × 892, além de criar um agendamento fictício local. O uso em aparelho/emulador ainda não foi testado. Os ajustes web precisam ser publicados antes de usar o APK conectado a eles. A chave privada de atualização está em `.android-signing/`, fora do Git, e precisa ser preservada em cópia privada. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
+Na geração do APK, as políticas nativas passaram em 7 testes Java e a integração web em 8 testes unitários; build release e verificação de assinatura passaram, e `lintRelease` terminou sem erros, com avisos. O ensaio responsivo no navegador conferiu 320 × 568, 360 × 740 e 412 × 892, além de criar um agendamento fictício local. Depois, o usuário instalou o aplicativo e enviou capturas de uso; isso não equivale a um ensaio completo de teclado, seletores e navegação no aparelho. As correções web desta revisão ainda dependem de compilação final e publicação. O APK continua em 1.0.0, com o mesmo hash; a camada nativa não mudou. A chave privada de atualização está em `.android-signing/`, fora do Git, e precisa ser preservada em cópia privada. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
 
 O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e salão de beleza. Melhorias futuras para pet shops pertencem ao mesmo PetCore; táxi dog segue fora do escopo implementado.
 
@@ -46,9 +48,13 @@ O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e
 - **Plano Mensal:** R$ 35.
 - **Plano Anual:** R$ 350.
 
-É possível escolher um plano pago imediatamente, sem aguardar o teste. O pagamento acontece no checkout externo do PagBank. Escolher um plano ou voltar do checkout não comprova pagamento e não ativa acesso pago. A plataforma confere o recebimento no PagBank e registra a conciliação.
+É possível escolher um plano pago imediatamente, sem aguardar o teste. **Assinar agora** solicita autorização à API e abre o endereço de checkout retornado por ela; se a abertura for bloqueada, oferece um link para continuar. O pagamento acontece no PagBank. Escolher um plano ou voltar do checkout não comprova pagamento e não ativa acesso pago. A plataforma confere o recebimento no PagBank e registra a conciliação.
 
-A conta atual é PagBank PF. Este fluxo usa links recorrentes hospedados e não precisa de token de produção da API de assinaturas. Os links atuais foram conferidos, sem compra: [PetCore Mensal — R$ 35](https://pag.ae/82jFKCTjo) e [PetCore Anual — R$ 350](https://pag.ae/82jFLbrjr). A revisão dos planos está aprovada no cadastro. Os links antigos de “sistema de demandas” não devem ser reutilizados. A publicação jurídica continua desativada; ela ainda é uma condição para liberar o checkout aos clientes pelo aplicativo.
+A conta atual é PagBank PF. Este fluxo usa links recorrentes hospedados e não precisa de token de produção da API de assinaturas. Os links atuais foram conferidos, sem compra: [PetCore Mensal — R$ 35](https://pag.ae/82jFKCTjo) e [PetCore Anual — R$ 350](https://pag.ae/82jFLbrjr). A revisão dos planos está aprovada no cadastro. Os links antigos de “sistema de demandas” não devem ser reutilizados. Por solicitação do usuário, a disponibilidade do checkout revisado não depende de `legal.published`; isso não publica documentos nem resolve a revisão jurídica pendente para a oferta comercial.
+
+**Cancelar assinatura** registra um pedido de suporte. Na conta PF atual, o vendedor precisa cancelar a recorrência real no painel do PagBank e depois confirmar esse fato na operação da plataforma, com senha, referência e motivo. A confirmação confere o período pago esperado para recusar um formulário antigo após um novo recebimento. Ela registra a data de cancelamento da renovação, resolve os pedidos anteriores daquele ciclo e preserva o acesso já pago. Só depois disso outro checkout pode ser liberado; o plano do período pago muda apenas quando o novo recebimento for conciliado. O PetCore não informa cancelamento automático que não tenha ocorrido no provedor.
+
+O início de checkout fica registrado de forma persistente por empresa em `pending_checkout_at`, para impedir novas tentativas que possam criar recorrências paralelas. Fechar a janela ou recarregar a tela não libera outra assinatura. A recuperação manual de uma tentativa abandonada exige conferência no PagBank, reautenticação e registro da justificativa; não se deve remover a trava por suposição ou pelo tempo decorrido. O procedimento está em [OPERACAO.md](docs/OPERACAO.md).
 
 O Free termina no vencimento, sem os dias de tolerância dos planos pagos. O vencimento bloqueia alterações, preservando consulta, assinatura, suporte e os canais próprios de privacidade. Documentos jurídicos publicados exigem aceite explícito da versão atual.
 
@@ -80,7 +86,7 @@ Integrações exigem `TEST_DATABASE_URL` de banco exclusivo terminado em `_test`
 
 Evidências registradas nesta preparação:
 
-- Rodada completa de 103 testes aprovada: 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload.
+- Rodada completa anterior de 103 testes aprovada: 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload. Esses números não representam uma nova rodada das correções de checkout e interface descritas acima.
 - Restauração local de backup criptografado conferiu 46 tabelas, contagens e proteções contra chave incorreta, destino ocupado e uso da origem. O ensaio não inclui as fotos.
 - Compilação da revisão publicada aprovada. Cadastro de serviço, profissional/jornada, cliente, pet e agendamento percorridos com dados fictícios. Agenda com novos espaçamentos conferida em computador/celular; após agendar, a data resultante fica visível.
 - Ensaio HTTPS atual com 12 verificações aprovado: sessão segura, configuração de recuperação sem envio, Free, origens, isolamento, permissões mínimas, fotos privadas, substituição/exclusão, exportação e anonimização. Todos os registros e objetos fictícios desse ensaio foram removidos.

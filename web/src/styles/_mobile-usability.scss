@@ -1,0 +1,106 @@
+// As mesmas correções se aplicam ao celular no navegador e no APK.
+.commercial-plan .commercial-plan-cancel {margin-top:12px}
+
+@media (max-width:780px) {
+  html .commercial-page .commercial-plan .commercial-plan-cancel {min-height:48px;font-size:16px;line-height:1.5;padding:12px}
+  html .form-dialog .commercial-detail-actions {display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+  html .form-dialog .commercial-detail-actions>button {min-width:0;min-height:48px;font-size:16px;line-height:1.5;padding:12px;white-space:normal;overflow-wrap:normal;word-break:normal}
+
+  html .form-dialog {
+    .calendar-detail-description {font-size:16px;line-height:1.65;margin:12px 0 20px}
+    .calendar-detail-actions {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      align-items:stretch;
+      gap:12px;
+      margin-block:20px 24px;
+
+      >button {
+        width:100%;
+        min-width:0;
+        min-height:48px;
+        padding:12px 10px;
+        font-size:16px;
+        line-height:1.5;
+        white-space:normal;
+        overflow-wrap:normal;
+        word-break:normal;
+      }
+      >.primary-btn,>button:last-child {grid-column:1/-1}
+    }
+  }
+
+  html .overview-page {
+    .business-first-steps {
+      >summary {flex-wrap:wrap;gap:12px;padding:18px 16px}
+      >summary>span:nth-child(2) {flex-basis:160px}
+      summary strong {font-size:18px;line-height:1.5}
+      summary small {font-size:14px;line-height:1.6;color:#536b8c}
+      >ol {gap:14px;padding:0 14px 16px}
+      >ol>li {gap:12px;padding:18px 14px;min-height:0}
+      li strong {display:block;font-size:17px;line-height:1.5;color:#35566f}
+      li p {font-size:16px;line-height:1.7;color:#536b8c;margin:10px 0 12px}
+      li button {font-size:16px;line-height:1.5;min-height:48px;padding-block:8px}
+    }
+    .business-first-number {width:28px;height:28px;font-size:14px}
+    .business-first-progress {font-size:14px;line-height:1.5;white-space:normal}
+    .business-first-next {font-size:14px;line-height:1.5;margin-bottom:10px}
+    .business-first-tip,.business-first-loading,.business-first-error {font-size:14px;line-height:1.7;color:#536b8c}
+    .overview-stat>div>span {font-size:16px;line-height:1.5}
+
+    .overview-bottom {
+      .panel {min-width:0;padding:20px 18px}
+      .panel-head {flex-wrap:wrap;align-items:flex-start;gap:12px;margin-bottom:20px}
+      .panel-head h2 {flex:1 1 100%;font-size:22px;line-height:1.4;gap:12px;min-width:0}
+      .panel-head h2 svg {flex-shrink:0}
+      .text-link {font-size:16px;line-height:1.5;min-height:44px;white-space:normal}
+    }
+    .summary-values {
+      grid-template-columns:minmax(0,1fr);
+      gap:0;
+
+      >div {display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px 12px;min-width:0;padding:12px 0}
+      >div+div {padding-left:0;border-left:0;border-top:1px solid #e7eff7}
+      span {font-size:16px;line-height:1.6;color:#536b8c}
+      strong {font-size:26px;line-height:1.4;white-space:normal;overflow-wrap:anywhere;min-width:0}
+    }
+    .summary-note {font-size:14px;line-height:1.7;color:#536b8c;margin-top:14px}
+    .business-overview-note,.business-overview-retry {font-size:16px;line-height:1.7;color:#536b8c}
+    .record-summary-row {
+      grid-template-columns:minmax(0,1fr) auto 20px;
+      gap:12px;
+      min-height:52px;
+      padding:14px 0;
+      font-size:16px;
+      line-height:1.6;
+
+      >span {min-width:0;overflow-wrap:anywhere}
+      .record-dot {flex-shrink:0}
+      strong {font-size:18px}
+    }
+    .dashboard-footnote {font-size:14px;line-height:1.6}
+  }
+
+  html .data-list-panel {
+    min-width:0;
+
+    .list-tools {display:grid;grid-template-columns:minmax(0,1fr) 48px;align-items:center;gap:14px;margin-bottom:22px}
+    .list-tools .search-box {grid-column:1/-1;width:100%;max-width:none;min-width:0;min-height:48px}
+    .search-box input {font-size:16px;min-width:0;width:100%}
+    .list-tools .count {font-size:14px;line-height:1.5}
+    .list-tools>.icon-button {min-width:48px;min-height:48px;justify-self:end}
+    .data-table-wrap {overflow:visible;max-width:100%;min-width:0}
+    table,tbody {display:block;width:100%;min-width:0}
+    table {table-layout:fixed}
+    thead {position:absolute;width:1px;height:1px;margin:-1px;padding:0;clip:rect(0,0,0,0);clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+    tbody {display:grid;gap:18px}
+    tr {display:grid;grid-template-columns:minmax(0,1fr);gap:14px;min-width:0;padding:18px 16px;border:1px solid #dfeaf1;border-radius:12px}
+    .data-table-wrap td {display:block;min-width:0;max-width:100%;padding:0;border:0;font-size:16px;line-height:1.6;text-align:left;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+    td::before {content:attr(data-label);display:block;margin-bottom:5px;font-size:14px;line-height:1.5;font-weight:600;color:#536b8c}
+    td:first-child strong {font-size:18px;line-height:1.5}
+    td:empty {display:none}
+    .data-table-actions {display:flex;flex-wrap:wrap;gap:10px;padding-top:4px}
+    .data-table-actions::before {flex-basis:100%}
+    .data-table-actions .table-action {min-width:100px;min-height:48px;margin:0;padding:10px 14px;font-size:16px;line-height:1.5;white-space:normal}
+  }
+}

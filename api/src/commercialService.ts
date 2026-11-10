@@ -19,6 +19,13 @@ export function paymentLink(value:string|null) {
  ensure(url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&hosts.some(host=>url.hostname===host||host!=='pag.ae'&&url.hostname.endsWith('.'+host)),422,'Use um link HTTPS criado no painel oficial do PagBank.');
  return url.toString();
 }
+export function reviewedPaymentLink(plan:{checkout_reviewed?:boolean;checkout_url?:string|null}) {
+ if(!plan.checkout_reviewed||!plan.checkout_url)return null;
+ try{return paymentLink(plan.checkout_url);}catch{return null;}
+}
+export async function hasConfirmedSubscriptionPayment(company:string,db:Db=pool) {
+ return Boolean((await db.query('SELECT EXISTS(SELECT 1 FROM subscription_payments WHERE tenant_id=$1 AND voided_at IS NULL) AS confirmed',[company])).rows[0]?.confirmed);
+}
 export async function subscription(company:string,db:Db=pool) {
  await db.query(`INSERT INTO tenant_subscriptions(tenant_id,trial_ends_at)
   SELECT $1,now()+(trial_days*interval '1 day') FROM commercial_settings WHERE singleton=true ON CONFLICT DO NOTHING`,[company]);
