@@ -1,0 +1,127 @@
+// Readable text in the APK. Keep larger headings, prices and plan copy intact.
+html[data-petcore-native='android'] {
+  small,time,dt,th,legend {font-size:14px;line-height:1.6}
+  p,li,td,dd {font-size:16px;line-height:1.7}
+  label {font-size:16px;line-height:1.5}
+
+  .primary-btn,.ghost-btn,.danger-btn,.table-action,.text-link,.nav-item,
+  .resource-tabs button,.business-tabs button,.segmented button,
+  .notification-read,.notification-close,.privacy-danger-button {font-size:16px;line-height:1.5}
+  .eyebrow,.calendar-page>.page-header .eyebrow,.count,.notification-counter {font-size:14px;line-height:1.5}
+  .notification-counter {min-width:24px;height:24px;padding:0 5px;line-height:1}
+  .company-picker {font-size:16px}
+  .alert,.form-dialog__message,.field-title,.history p,.shift-line label,
+  .check-label,.checks label,.break-item,.business-setup-hint,.business-setup-hint strong {font-size:16px;line-height:1.65}
+  .form-dialog .checks label {font-size:16px}
+  .page-header p,.calendar-page>.page-header p {font-size:18px;line-height:1.7}
+  .panel-head p,.form-dialog__header p {font-size:16px;line-height:1.65}
+  .muted,.subtle {font-size:16px;line-height:1.65}
+
+  .mobile-brand .brand-type small,.sidebar-brand .brand-type small,
+  .auth-logo .brand-type small {font-size:14px;line-height:1.4}
+  .auth-logo {width:min(230px,100%)}
+  .auth-field,.auth-text-button,.auth-help-footer,.auth-help-footer .auth-text-button,
+  .auth-help-panel,.auth-help-panel strong,.auth-alert,.auth-invite-terms,
+  .auth-invite-terms button {font-size:16px;line-height:1.6}
+  .auth-logo .brand-type small {white-space:normal}
+  .notification-empty,.notification-error,.notification-entry-text p {font-size:16px;line-height:1.65}
+  .notification-entry-text small,.notification-entry-text time {font-size:14px;line-height:1.6}
+  .global-search-message,.global-search-error,.global-search-result strong {font-size:16px;line-height:1.6}
+  .global-search-group,.global-search-result small {font-size:14px;line-height:1.6}
+
+  .calendar-page .calendar-tools .date-select,
+  .calendar-page .calendar-tools .calendar-professional-filter,
+  .calendar-page .calendar-tools .calendar-period-filter,
+  .calendar-page .calendar-tools .segmented button {font-size:16px;line-height:1.5}
+  .status,.privacy-status,.commercial-label,.mobile-appointment .status,
+  .calendar-page .appointment-line .status {font-size:14px;line-height:1.5;white-space:normal}
+  .calendar-page .empty p,.calendar-page .appointment-line .calendar-client,
+  .calendar-page .appointment-line .appointment-detail small {font-size:16px;line-height:1.65}
+  .business-first-tip,.business-first-loading,.business-first-error {font-size:16px;line-height:1.65}
+  .team-row small,.wait-row small,.invitation small {font-size:14px;line-height:1.6}
+
+  .business-table-scroll td,.business-table-scroll td strong,.business-table-actions button,
+  .business-panel-heading p,.business-retry,.business-form-columns>label,
+  .business-detail-metrics dd,.business-line-list strong,.business-line-list p,
+  .business-line-list .business-money,.business-order-line label,.business-order-total,
+  .business-warning,.business-cash-card p,.business-rank-item>div,
+  .business-report-empty,.business-compact-list li,.business-compact-list li strong,
+  .business-detail-topline,.business-link-button,.business-dialog-tabs button,
+  .business-note,.business-form-hint,.business-body-copy {font-size:16px;line-height:1.65}
+  .business-table-scroll td small,.business-label,.business-count,.business-toolbar label,
+  .business-period label,.business-period>p,.business-detail-metrics dt,
+  .business-product-summary small,.business-line-list small,.business-line-list time,
+  .business-rank-item span,.business-prefixed-input>span,.business-chart-legend,
+  .business-pagination {font-size:14px;line-height:1.6}
+  .business-form .check-label {font-size:16px!important;line-height:1.65}
+  .business-table-actions {flex-wrap:wrap;gap:10px}
+  .business-table-scroll table {font-size:16px}
+  .business-tabs {flex-wrap:wrap}
+  .business-tabs button {min-width:0;flex:1 1 140px;white-space:normal}
+  .business-table-actions button {min-height:44px;white-space:normal}
+  .business-label {max-width:100%;white-space:normal}
+
+  .crm-stat>span>span,.crm-area-switch button,.crm-directory-head p,
+  .crm-client-contact>span,.crm-client-dates dd,.crm-next-step,.crm-open-client,
+  .crm-task-client,.crm-task-card time,.crm-task-card p,.crm-task-actions .ghost-btn,
+  .crm-cancel-task,.crm-retry,.crm-detail-tabs button,.crm-detail-metrics dd,
+  .crm-detail-section>p,.crm-pet-chips strong,.crm-muted,.crm-appointment-list strong,
+  .crm-contact-meta strong,.crm-contact-timeline p,.crm-entry-columns label {font-size:16px;line-height:1.65}
+  .crm-stat small,.crm-count,.crm-filter,.crm-filter-note,.crm-client-heading>div>span,
+  .crm-task-count,.crm-client-dates dt,.crm-pagination,.crm-task-status,.crm-task-card small,
+  .crm-page-note,.crm-detail-profile>div>span,.crm-detail-metrics dt,
+  .crm-detail-section .crm-section-note,.crm-pet-chips span,
+  .crm-appointment-list article>div>span,.crm-appointment-list small,
+  .crm-contact-meta time,.crm-contact-timeline small,.crm-form-note,.crm-inline-loading {font-size:14px;line-height:1.6}
+  .crm-client-contact>span,.crm-detail-profile>div>span {overflow-wrap:anywhere;white-space:normal}
+  .crm-task-actions {flex-wrap:wrap}
+  .crm-task-count {min-width:28px;height:auto;min-height:28px;padding:3px 7px;line-height:1.4}
+
+  .privacy-guidance p,.privacy-guidance strong,.privacy-protected-note,
+  .privacy-destructive-note,.privacy-inbox-head label,.privacy-file-queue li strong,
+  .privacy-empty-error,.privacy-request-list article strong,.privacy-check,
+  .privacy-verified,.privacy-form-note,.privacy-footnote,.privacy-detail-heading p,
+  .privacy-file-queue p,.privacy-history li {font-size:16px;line-height:1.65}
+  .privacy-stat span,.privacy-request-list small,.privacy-file-queue small,
+  .privacy-history li span,.privacy-pagination {font-size:14px;line-height:1.6}
+  .legal-draft,.legal-operator dl>div,.legal-processors li,.legal-processors p {font-size:16px;line-height:1.7}
+  .legal-body,.legal-body p,.legal-body li {font-size:18px;line-height:1.8}
+  .legal-eyebrow,.legal-version,.legal-processors small,.legal-footer {font-size:14px;line-height:1.6}
+
+  .commercial-consent>p,.commercial-onboarding-note,
+  .commercial-onboarding-payment>p,.commercial-conversation p {font-size:18px;line-height:1.7}
+  .commercial-small-note,.commercial-radio-plan>span>span,.commercial-radio-plan strong,
+  .commercial-conversation strong,.commercial-company-list strong,.commercial-ticket-list strong,
+  .commercial-config-summary dd,.commercial-plan-settings strong,.commercial-warning,
+  .commercial-detail-metrics dd,.commercial-confirm-value>span,
+  .commercial-tabs>button,.commercial-settings-tabs button,.commercial-processor legend,
+  .commercial-form-columns>label,.commercial-processor>label,.commercial-external-review {font-size:16px;line-height:1.65}
+  .commercial-radio-plan small,.commercial-radio-plan em,.commercial-conversation time,
+  .commercial-support-detail-top>span:last-child,.commercial-company-list small,
+  .commercial-ticket-list small,.commercial-audit-list strong,.commercial-audit-list time,
+  .commercial-audit-list small,.commercial-audit-list pre,.commercial-config-summary dt,
+  .commercial-plan-settings small,.commercial-plan-settings>article>div>span,
+  .commercial-detail-metrics dt,.commercial-detail-heading>span:last-child {font-size:14px;line-height:1.6}
+  .commercial-check {font-size:16px!important;line-height:1.65}
+  .commercial-form .commercial-document-editor {font-size:16px!important;line-height:1.7}
+  .commercial-radio-plan {min-width:0}
+  .commercial-radio-plan>span,.commercial-conversation article {min-width:0;overflow-wrap:anywhere}
+  .commercial-tabs>button,.commercial-settings-tabs button {white-space:normal;min-height:48px}
+}
+
+@media(max-width:780px) {
+  html[data-petcore-native='android'] {
+    .topbar {grid-template-columns:minmax(0,1fr) auto}
+    .mobile-brand,.mobile-brand .petcore-brand,.mobile-brand .brand-type {min-width:0}
+    .mobile-brand .brand-type small {white-space:normal}
+  }
+  html[data-petcore-native='android'] .crm-stat {
+    display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;
+    align-content:start;align-items:center;min-height:132px;padding:14px 12px;
+    >span:last-child {display:contents}
+    .crm-stat-icon {grid-column:1;grid-row:1;width:36px;height:40px}
+    strong {grid-column:2;grid-row:1;min-width:0;overflow-wrap:anywhere}
+    >span>span {grid-column:1/-1;grid-row:2;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+    small {grid-column:1/-1;grid-row:3;max-width:100%;white-space:normal}
+  }
+}

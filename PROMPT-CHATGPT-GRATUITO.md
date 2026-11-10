@@ -6,6 +6,14 @@ Copie o texto abaixo para a conversa em que o projeto está sendo construído. A
 
 Estou desenvolvendo o **PetCore**, SaaS de gestão interna de pet shops da **Tiger Tech**, na pasta `C:\Users\andre\Desktop\petcore-saas`. Continue a partir dos arquivos atuais, sem recriar o projeto e sem substituir alterações recentes por versões antigas.
 
+## Revisão atual — legibilidade e datas (10/11/2026)
+
+Preserve o ajuste de tipografia exclusivo do APK: corpo de pelo menos 16 px e secundários de pelo menos 14 px, mantendo textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` para manter letras com 14 px reais na largura disponível. Cabeçalhos e abas de relatórios quebram em linhas em telas pequenas. Mantenha a mesma navegação inferior fixa, sem acrescentar rodapé, e não altere posição ou comportamento dos avisos gerais. O cachorro continua inteiro no login.
+
+Novo agendamento, verificação de disponibilidade, reagendamento, antecipação e encaixe efetivo da lista de espera exigem um instante futuro pelo fuso da empresa e pelo relógio do servidor. Preserve consulta da agenda passada, histórico e atualização de situação dos atendimentos existentes. Sugestões devem partir do dia atual ou do dia futuro escolhido; não introduza exemplos ou testes com datas fixas que envelheçam.
+
+Nesta rodada passaram 20 testes unitários e 94 de integração da API, 13 testes unitários web da ponte Android/checkout e 5 testes unitários de datas. O ensaio local de 16 telas com dados fictícios em 320/360 px, incluindo ficha do CRM, conversa de suporte e formulário, não encontrou texto renderizado menor que 14 px nem excesso horizontal em 320 px. O gráfico conferido tinha largura e `viewBox` de 239, com rótulos de 14 px; a agenda rejeitou uma data passada e aceitou o dia seguinte. A publicação desta revisão está pendente; não declare teste em aparelho. A interface e a API são atualizadas remotamente para o APK 1.0.1 após a publicação, sem precisar gerar outro APK. Preserve os metadados de implantação e evidências históricas abaixo até uma nova conferência de publicação.
+
 ## Estado atual
 
 A interface usa React 19, TypeScript, Vite e SCSS; a API usa Node.js 22.12+, Express 5 e PostgreSQL. O banco está no Neon. Autenticação por sessão no servidor, senhas Argon2id, vínculos e permissões por empresa. A sessão usa cookie de oito horas renovável; não acrescente “Manter conectado” sem implementar o comportamento.

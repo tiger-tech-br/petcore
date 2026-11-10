@@ -1,12 +1,13 @@
 import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {ArrowLeft, Clock3, Plus, RefreshCw} from 'lucide-react';
-import {api, dateTime, endIso, money, startIso, today, zonedToISO} from './api';
+import {api, money, today, zonedToISO} from './api';
+import {calendarWallTime,defaultAppointmentTime,minimumAppointmentTime,schedulingTimezone} from './calendarTime';
 import FormDialog from './FormDialog';
 import {Empty, PageHeader, Status} from './ui';
 
 type Choice = {id:string; name:string};
 type Service = Choice & {price_cents:number; duration_minutes:number};
-type Options = {tutors:Choice[]; pets:(Choice & {tutor_id:string})[]; professionals:Choice[]; services:Service[]};
+type Options = {tutors:Choice[]; pets:(Choice & {tutor_id:string})[]; professionals:Choice[]; services:Service[];timezone?:string;server_now?:string};
 type Appointment = {
   id:string; tutor_name:string; pet_name:string; professional_id:string;
   professional_name:string; starts_at:string; status:string; services:Service[];
@@ -32,10 +33,7 @@ type Step = 'details'|'move'|'history';
 export type SetupTarget = 'services'|'professionals'|'tutors'|'pets';
 type Props = {setMessage:(value:string)=>void; setError:(value:string)=>void; initialNew?:boolean; searchQuery?:string; onSetup?:(target:SetupTarget)=>void; canSetup?:(target:SetupTarget)=>boolean; onSaved?:()=>void};
 const blankOptions:Options = {tutors:[], pets:[], professionals:[], services:[]};
-const newForm = (date:string):AppointmentForm => ({tutor_id:'', pet_id:'', professional_id:'', service_ids:[], starts_at:`${date}T09:00`, notes:''});
-const wallTime = (date:string) => new Date(date).toLocaleString('sv-SE', {
-  timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
-}).replace(' ', 'T');
+const newForm = (date:string,timezone=schedulingTimezone,now=Date.now()):AppointmentForm => ({tutor_id:'', pet_id:'', professional_id:'', service_ids:[], starts_at:defaultAppointmentTime(date,timezone,now), notes:''});
 
 export default function CalendarPage({setMessage, setError, initialNew=false, searchQuery='', onSetup, canSetup, onSaved}:Props) {
   const [date,setDate] = useState(today());
@@ -58,8 +56,15 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   const [historyLoading,setHistoryLoading] = useState(false);
   const [saving,setSaving] = useState(false);
   const [dialogError,setDialogErrorState] = useState('');
+  const [clock,setClock] = useState(Date.now);
+  const [clockOffset,setClockOffset] = useState(0);
   const loadRequest = useRef(0);
   const historyRequest = useRef(0);
+  const initializedOptions = useRef(false);
+  const initialDate = useRef(date);
+  const timezone=options.timezone||schedulingTimezone;
+  const minimumTime=minimumAppointmentTime(timezone,clock+clockOffset);
+  const dateTime=(value:string)=>new Date(value).toLocaleString('pt-BR',{timeZone:timezone,dateStyle:'short',timeStyle:'short'});
 
   function setDialogError(value:string) {
     setDialogErrorState(value);
@@ -70,19 +75,32 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     const request = ++loadRequest.current;
     setLoading(true); setLoadError('');
     try {
-      const from = encodeURIComponent(startIso(date)), to = encodeURIComponent(endIso(date,mode==='week'?7:1));
+      const lastDay=new Date(`${date}T12:00:00Z`);lastDay.setUTCDate(lastDay.getUTCDate()+(mode==='week'?7:1));
+      const from = encodeURIComponent(zonedToISO(`${date}T00:00`,timezone)), to = encodeURIComponent(zonedToISO(`${lastDay.toISOString().slice(0,10)}T00:00`,timezone));
       const [items,opts] = await Promise.all([
         api<Appointment[]>(`/calendar/appointments?from=${from}&to=${to}`),
         api<Options>('/calendar/options')
       ]);
-      if (request===loadRequest.current) {setRows(items); setOptions(opts);}
+      if (request===loadRequest.current) {
+        const receivedAt=Date.now(),serverTime=Date.parse(opts.server_now||'');
+        const now=Number.isFinite(serverTime)?serverTime:receivedAt;
+        setRows(items);setOptions(opts);setClock(receivedAt);setClockOffset(now-receivedAt);
+        if(!initializedOptions.current){
+          initializedOptions.current=true;
+          const businessTimezone=opts.timezone||schedulingTimezone;
+          const businessDay=calendarWallTime(now,businessTimezone).slice(0,10);
+          setDate(current=>current===initialDate.current?businessDay:current);
+          setForm(current=>({...current,starts_at:defaultAppointmentTime(businessDay,businessTimezone,now)}));
+        }
+      }
     } catch (error) {
       if (request===loadRequest.current) {setLoadError((error as Error).message); setError((error as Error).message);}
     } finally {
       if (request===loadRequest.current) setLoading(false);
     }
   }
-  useEffect(()=>{void load(); return ()=>{loadRequest.current++;};},[date,mode]);
+  useEffect(()=>{void load(); return ()=>{loadRequest.current++;};},[date,mode,timezone]);
+  useEffect(()=>{const timer=window.setInterval(()=>setClock(Date.now()),30000);return()=>window.clearInterval(timer);},[]);
   useEffect(()=>{if(initialNew) openNew();},[initialNew]);
   useEffect(()=>()=>{historyRequest.current++;},[]);
 
@@ -94,7 +112,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
 
   function openNew() {
     historyRequest.current++;
-    setSelected(null); setStep('details'); setDialogError(''); setForm(newForm(date)); setShowForm(true);
+    setSelected(null); setStep('details'); setDialogError(''); setForm(newForm(date,timezone,Date.now()+clockOffset)); setClock(Date.now());setShowForm(true);
   }
   function openDetails(item:Appointment) {
     historyRequest.current++;
@@ -133,7 +151,9 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     event.preventDefault(); if(saving) return;
     setSaving(true); setDialogError('');
     try {
-      await api('/calendar/appointments','POST',{...form,starts_at:zonedToISO(form.starts_at)});
+      const start=zonedToISO(form.starts_at,timezone);
+      if(Date.parse(start)<=Date.now()+clockOffset)throw Error('Escolha uma data e um horário futuros para o agendamento.');
+      await api('/calendar/appointments','POST',{...form,starts_at:start});
       setMessage('Atendimento agendado e gravado no banco.'); setShowForm(false);
       onSaved?.();
       await showSavedAppointment(form.starts_at,form.professional_id);
@@ -149,15 +169,18 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   }
   function startMove(next:Move) {
     if(!selected) return;
-    setMove(next); setNewTime(wallTime(selected.starts_at)); setNewProfessional(selected.professional_id);
+    const now=Date.now()+clockOffset;
+    setMove(next); setNewTime(Date.parse(selected.starts_at)>now?calendarWallTime(selected.starts_at,timezone):defaultAppointmentTime('',timezone,now)); setNewProfessional(selected.professional_id);setClock(Date.now());
     setReason(''); setConsent(false); setDialogError(''); setStep('move');
   }
   async function saveMove(event:FormEvent) {
     event.preventDefault(); if(saving||!selected) return;
     setSaving(true); setDialogError('');
     try {
+      const start=zonedToISO(newTime,timezone);
+      if(Date.parse(start)<=Date.now()+clockOffset)throw Error('Escolha uma data e um horário futuros para o agendamento.');
       await api(`/calendar/appointments/${selected.id}/move`,'POST',{
-        mode:move,starts_at:zonedToISO(newTime),professional_id:newProfessional,reason,tutor_consent:consent
+        mode:move,starts_at:start,professional_id:newProfessional,reason,tutor_consent:consent
       });
       setSelected(null); setStep('details');
       setMessage(move==='anticipate'?'Atendimento antecipado com autorização registrada.':'Agendamento reagendado; horário anterior liberado.');
@@ -203,7 +226,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
         <button className="icon-button calendar-refresh" onClick={load} title="Atualizar agenda" aria-label="Atualizar agenda" disabled={loading}><RefreshCw size={18}/></button>
       </div>
       {loading?<Empty label="Consultando a agenda..."/>:loadError?<div className="business-setup-hint"><p>Não foi possível consultar a agenda. Tente carregar novamente antes de criar um atendimento.</p><button type="button" className="text-link" onClick={()=>void load()}>Tentar novamente</button></div>:listed.length?<div className="appointment-list">{listed.map(item=><button key={item.id} className={`appointment-line ${selected?.id===item.id?'selected':''}`} onClick={()=>openDetails(item)} aria-haspopup="dialog">
-        <div className="appointment-time"><Clock3 size={16}/>{new Date(item.starts_at).toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit'})}</div>
+        <div className="appointment-time"><Clock3 size={16}/>{new Date(item.starts_at).toLocaleTimeString('pt-BR',{timeZone:timezone,hour:'2-digit',minute:'2-digit'})}</div>
         <div className="appointment-detail"><strong>{item.pet_name}</strong><span className="calendar-client"><span className="calendar-detail-label">Cliente:</span> {item.tutor_name}</span><small><span className="calendar-detail-label">Serviços:</span> {item.services.map(service=>service.name).join(' + ')}</small><small><span className="calendar-detail-label">Profissional:</span> {item.professional_name}</small></div>
         <Status status={item.status}/>
       </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.map(item=>item.description).join('; ')}. Abra Novo agendamento para ver por onde começar.`:'Não há atendimentos no período selecionado. Use Novo agendamento para reservar um horário.'}/>}
@@ -229,8 +252,9 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
         <div className="form-actions"><button type="button" className="ghost-btn" disabled={saving} onClick={closeDetails}>Fechar</button></div>
       </>}
       {step==='move'&&<form className="form-grid" onSubmit={saveMove} aria-busy={saving}>
-        <label>Data e horário<input required type="datetime-local" value={newTime} disabled={saving} onChange={event=>setNewTime(event.target.value)}/></label>
+        <label>Data e horário<input required type="datetime-local" min={minimumTime} value={newTime} disabled={saving} onChange={event=>setNewTime(event.target.value)}/></label>
         <label>Profissional<select required value={newProfessional} disabled={saving} onChange={event=>setNewProfessional(event.target.value)}>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
+        <p className="full-span business-form-hint">Escolha uma data e um horário futuros no fuso da empresa.</p>
         <label className="full-span">Motivo<input required minLength={3} value={reason} disabled={saving} onChange={event=>setReason(event.target.value)}/></label>
         {move==='anticipate'&&<label className="full-span check-label"><input type="checkbox" required checked={consent} disabled={saving} onChange={event=>setConsent(event.target.checked)}/>Confirmo que o tutor concordou com a antecipação.</label>}
         <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={backToDetails}><ArrowLeft size={16}/>Voltar</button><button type="submit" className="primary-btn" disabled={saving}>{saving?'Salvando...':'Salvar novo horário'}</button></div>
@@ -250,7 +274,8 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
         <label>Pet<select required value={form.pet_id} disabled={saving||loading} onChange={event=>setForm({...form,pet_id:event.target.value})}><option value="">Selecione um pet</option>{pets.map(pet=><option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
         {!loading&&!loadError&&form.tutor_id&&!pets.length&&options.pets.length>0&&<div className="full-span business-setup-hint"><p>Este cliente ainda não tem um pet cadastrado. Cadastre o animal e vincule-o ao cliente antes de agendar.</p>{onSetup&&canSetup?.('pets')?<button type="button" className="text-link" disabled={saving} onClick={()=>prepareSetup('pets')}>Ir para Pets</button>:<p>Peça ao responsável pelo pet shop para cadastrar o pet.</p>}</div>}
         <label>Profissional<select required value={form.professional_id} disabled={saving||loading} onChange={event=>setForm({...form,professional_id:event.target.value})}><option value="">Selecione um profissional</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
-        <label>Início (horário da empresa)<input required type="datetime-local" value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
+        <label>Início (horário da empresa)<input required type="datetime-local" min={minimumTime} value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
+        <p className="full-span business-form-hint">Agende a partir de hoje, em um horário futuro no fuso da empresa.</p>
         <div className="full-span"><strong className="field-title">Serviços</strong><div className="checks">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/>{service.name} · {service.duration_minutes} min · {money(service.price_cents)}</label>)}</div><p className="muted">Selecione os serviços. Tempo total: {duration} minutos.</p><p className="business-form-hint">O profissional precisa ter esses serviços habilitados e jornada disponível em Profissionais → Horários.</p></div>
         <label className="full-span">Observações<textarea value={form.notes} disabled={saving} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
         </>}

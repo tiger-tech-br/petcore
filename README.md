@@ -4,6 +4,14 @@ Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
+## Revisão atual — legibilidade e datas (10/11/2026)
+
+O ajuste de tipografia exclusivo do APK estabelece corpo de pelo menos 16 px e textos secundários de pelo menos 14 px, preservando os textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` à largura disponível para manter letras com 14 px reais. Cabeçalhos e abas de relatórios quebram em linhas nas telas pequenas. A navegação inferior fixa permanece a mesma, sem rodapé adicional; os avisos gerais mantêm posição e comportamento, e o cachorro aparece inteiro no login.
+
+Novo agendamento, consulta de disponibilidade, reagendamento, antecipação e encaixe efetivo da lista de espera exigem um instante futuro, considerando o fuso da empresa e o relógio do servidor. Agenda passada, histórico e atualização de situação continuam disponíveis para consulta e operação dos atendimentos existentes. As sugestões partem do dia atual ou do dia futuro escolhido; exemplos e testes não devem depender de datas fixas que envelheçam.
+
+Nesta rodada passaram 20 testes unitários e 94 de integração da API, 13 testes unitários web da ponte Android/checkout e 5 testes unitários de datas. O ensaio local de 16 telas com dados fictícios em 320/360 px, incluindo ficha do CRM, conversa de suporte e formulário, não encontrou texto renderizado menor que 14 px nem excesso horizontal em 320 px. O gráfico conferido tinha largura e `viewBox` de 239, com rótulos de 14 px; a agenda rejeitou uma data passada e aceitou o dia seguinte. A publicação desta revisão está pendente, sem teste em aparelho. As mudanças de interface/API chegam remotamente ao APK 1.0.1 após a publicação, sem gerar outro APK. Os registros anteriores abaixo continuam históricos.
+
 ## O que já existe
 
 | Área | Comportamento implementado |

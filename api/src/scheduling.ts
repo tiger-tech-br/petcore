@@ -1,3 +1,8 @@
+export function assertFutureAppointmentStart(start:Date,now=Date.now()){
+ if(!Number.isFinite(start.valueOf()))throw Object.assign(new Error('Data inválida.'),{status:422});
+ if(start.getTime()<=now)throw Object.assign(new Error('Escolha uma data e um horário futuros para o agendamento.'),{status:422});
+}
+
 export function localSlot(date:Date,duration:number,timezone:string){
  const end=new Date(date.getTime()+duration*60000);
  const fmt=(d:Date)=>new Intl.DateTimeFormat('en-GB',{timeZone:timezone,weekday:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(d);

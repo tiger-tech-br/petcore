@@ -106,6 +106,22 @@ test('duas reservas simultâneas: somente uma pode vencer',async()=>{
  const [a,b]=await Promise.all([createAppoin(when(3,10)),createAppoin(when(3,10))]);
  assert.deepEqual([a.code,b.code].sort(),[201,409]);
 });
+test('novos agendamentos e consulta de disponibilidade recusam datas e horários passados',async()=>{
+ const options=await call('/calendar/options');assert.equal(options.data.timezone,'America/Sao_Paulo');assert.ok(Math.abs(Date.parse(options.data.server_now)-Date.now())<10000);
+ for(const starts_at of [when(-40,10),when(-1,10),new Date(Date.now()-60000).toISOString()]){
+  const created=await createAppoin(starts_at);assert.equal(created.code,422);assert.match(created.data.error,/futuros/);
+  const checked=await call('/calendar/check','POST',{starts_at,professional_id:profA,service_ids:[serviceA]});assert.equal(checked.code,422);assert.match(checked.data.error,/futuros/);
+ }
+});
+test('reagendamento e antecipação recusam o passado sem alterar a reserva e seu histórico',async()=>{
+ const booked=await createAppoin(when(6,10));assert.equal(booked.code,201);
+ for(const mode of ['reschedule','anticipate']){
+  const moved=await call(`/calendar/appointments/${booked.data.id}/move`,'POST',{starts_at:when(-1,10),professional_id:profA,reason:'teste de data passada',mode,tutor_consent:true});
+  assert.equal(moved.code,422);assert.match(moved.data.error,/futuros/);
+ }
+ const row=(await db.query('SELECT starts_at FROM appointments WHERE id=$1',[booked.data.id])).rows[0];assert.equal(new Date(row.starts_at).toISOString(),new Date(when(6,10)).toISOString());
+ const history=await call(`/calendar/appointments/${booked.data.id}/history`);assert.equal(history.data.length,1);assert.equal(history.data[0].kind,'created');
+});
 test('falha de reagendamento mantém horário anterior; antecipação, histórico e jobs',async()=>{
  const second=await createAppoin(when(3,11));assert.equal(second.code,201);
  const id=second.data.id;
@@ -118,11 +134,22 @@ test('falha de reagendamento mantém horário anterior; antecipação, históric
  const reminders=await db.query('SELECT scheduled_for,state FROM reminder_jobs WHERE appointment_id=$1',[id]);assert.equal(reminders.rows[0].state,'queued');assert.equal(new Date(reminders.rows[0].scheduled_for).toISOString(),new Date(new Date(when(3,9)).getTime()-3600000).toISOString());
 });
 test('ausência registrada manualmente preserva histórico e libera vaga',async()=>{
- const booked=await createAppoin(when(-2,14));assert.equal(booked.code,201);
- const absence=await call(`/calendar/appointments/${booked.data.id}/status`,'POST',{status:'no_show',reason:'tutor não compareceu'});assert.equal(absence.code,200);
- assert.equal((await db.query('SELECT status FROM appointments WHERE id=$1',[booked.data.id])).rows[0].status,'no_show');
- const events=await db.query('SELECT kind FROM appointment_events WHERE appointment_id=$1',[booked.data.id]);assert.ok(events.rows.some(x=>x.kind==='no_show'));
- const fitting=await createAppoin(when(-2,14));assert.equal(fitting.code,201);
+ // Histórico existente é uma fixture direta: a API já não cria reservas no passado.
+ const historical=await db.query(`INSERT INTO appointments(tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,created_by)
+ VALUES($1,$2,$3,$4,$5::timestamptz,$5::timestamptz+interval '1 hour',$6) RETURNING id`,[tenantA,tutorA,petA,profA,when(-2,14),userA]);
+ const id=historical.rows[0].id;
+ const absence=await call(`/calendar/appointments/${id}/status`,'POST',{status:'no_show',reason:'tutor não compareceu'});assert.equal(absence.code,200);
+ assert.equal((await db.query('SELECT status FROM appointments WHERE id=$1',[id])).rows[0].status,'no_show');
+ const events=await call(`/calendar/appointments/${id}/history`);assert.equal(events.code,200);assert.ok(events.data.some((x:any)=>x.kind==='no_show'));
+ const listed=await call(`/calendar/appointments?from=${encodeURIComponent(when(-2,8))}&to=${encodeURIComponent(when(-2,18))}`);assert.equal(listed.code,200);assert.ok(listed.data.some((x:any)=>x.id===id));
+ // A restrição de sobreposição continua liberando o horário após a falta.
+ const fitting=await db.query(`INSERT INTO appointments(tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,created_by)
+ SELECT tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,created_by FROM appointments WHERE id=$1 RETURNING id`,[id]);assert.equal(fitting.rowCount,1);
+});
+test('encaixe não confirma horário passado dentro de uma janela antiga ainda aberta',async()=>{
+ const wait=await call('/calendar/waitlist','POST',{tutor_id:tutorA,pet_id:petA,service_id:serviceA,earliest_at:when(-1,8),latest_at:when(2,18),notes:''});assert.equal(wait.code,201);
+ const booked=await call(`/calendar/waitlist/${wait.data.id}/book`,'POST',{starts_at:when(-1,14),professional_id:profA,tutor_consent:true});assert.equal(booked.code,422);assert.match(booked.data.error,/futuros/);
+ const row=(await db.query('SELECT status,appointment_id FROM waitlist WHERE id=$1',[wait.data.id])).rows[0];assert.equal(row.status,'waiting');assert.equal(row.appointment_id,null);
 });
 test('encaixe na lista de espera é transacional e não pode ser confirmado duas vezes',async()=>{
  const w=await call('/calendar/waitlist','POST',{tutor_id:tutorA,pet_id:petA,service_id:serviceA,earliest_at:when(4,13),latest_at:when(4,16),notes:''});assert.equal(w.code,201);

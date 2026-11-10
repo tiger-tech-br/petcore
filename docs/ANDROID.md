@@ -2,6 +2,14 @@
 
 O aplicativo acessa o mesmo PetCore publicado em `https://petcore-homologacao.up.railway.app`, usando um WebView Android. Login, empresas, permissões e dados continuam no serviço, com conexão à internet. Não há uma base de clientes separada nem operação offline. O endereço atual é de homologação; as pendências comerciais do projeto continuam no [checklist de preparação](COMMERCIAL-READINESS.md).
 
+## Revisão atual — legibilidade e datas (10/11/2026)
+
+O ajuste exclusivo do APK usa corpo de pelo menos 16 px e secundários de pelo menos 14 px, preservando os textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` à tela para manter letras com 14 px reais; cabeçalhos e abas de relatórios podem quebrar em linhas. A mesma navegação inferior continua fixa, sem rodapé adicional. Os avisos gerais mantêm posição e comportamento, e o login conserva o cachorro inteiro.
+
+Novos agendamentos, verificações de disponibilidade, reagendamentos, antecipações e encaixes efetivos da lista de espera exigem um instante futuro, calculado com o fuso da empresa e o relógio do servidor. Agenda passada, histórico e atualização de situação dos atendimentos existentes permanecem disponíveis. Sugestões usam o dia atual ou o dia futuro escolhido; exemplos e testes evitam datas fixas que se tornem passadas.
+
+Passaram nesta rodada 20 testes unitários e 94 de integração da API, 13 testes unitários web da ponte Android/checkout e 5 testes unitários de datas. O ensaio local de 16 telas com dados fictícios em 320/360 px, incluindo ficha do CRM, conversa de suporte e formulário, não encontrou texto renderizado menor que 14 px nem excesso horizontal em 320 px. O gráfico conferido tinha largura e `viewBox` de 239, com rótulos de 14 px; a agenda rejeitou uma data passada e aceitou o dia seguinte. A publicação desta revisão está pendente e não houve validação em aparelho. São mudanças remotas de interface/API para o APK 1.0.1 já instalado após a publicação; não exigem gerar outro APK. Os metadados e as evidências anteriores abaixo permanecem históricos.
+
 ## APK gerado
 
 A versão **1.0.1**, código **2**, está em `releases/PetCore-1.0.1.apk`: pacote `br.dev.tigertech.petcore`, Android **8.0 ou superior** (`minSdk 26`, `targetSdk 36`), 1.756.814 bytes. É uma versão release assinada, sem depuração habilitada. A assinatura foi conferida com `apksigner`, com esquemas v2 e v3 válidos.

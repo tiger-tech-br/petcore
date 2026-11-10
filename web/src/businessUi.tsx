@@ -69,10 +69,40 @@ export function BusinessMetric({label,value,help,tone='teal',kind='money'}:{labe
 export type DailyValue={date:string;received_cents:number;expenses_cents:number;refunded_cents?:number};
 export function CashflowChart({daily}:{daily:DailyValue[]}) {
   const [expanded,setExpanded]=useState(false);
+  const chartRef=useRef<HTMLDivElement>(null);
+  const [width,setWidth]=useState(720);
+  useEffect(()=>{
+    const element=chartRef.current;
+    if(!element)return;
+    const resize=()=>setWidth(Math.max(1,element.getBoundingClientRect().width));
+    resize();
+    const observer=new ResizeObserver(resize);
+    observer.observe(element);
+    return()=>observer.disconnect();
+  },[daily.length>0]);
   if(!daily.length)return <Empty label="Nenhuma movimentação no período selecionado."/>;
   const max=Math.max(1,...daily.flatMap(day=>[day.received_cents,day.expenses_cents+(day.refunded_cents??0)]));
-  const plotWidth=620,plotHeight=150,step=plotWidth/daily.length,bar=Math.min(24,Math.max(2,step*.29));
-  return <div className="business-chart"><div className="business-chart-legend"><span><i/>Entradas registradas</span><span><i/>Saídas e estornos</span></div><svg className="business-chart-svg" viewBox="0 0 720 216" role="img" aria-label="Comparação diária de entradas com saídas e estornos. Consulte também a tabela de valores abaixo."><line x1="62" y1="170" x2="694" y2="170" stroke="#dce9ef"/>{[0,.5,1].map(ratio=><g key={ratio}><line x1="62" y1={170-ratio*plotHeight} x2="694" y2={170-ratio*plotHeight} stroke="#edf2f6"/><text x="54" y={174-ratio*plotHeight} textAnchor="end" fill="#7e8da6" fontSize="10">{money(Math.round(max*ratio))}</text></g>)}{daily.map((day,index)=>{const x=68+index*step+step/2;const incoming=day.received_cents/max*plotHeight;const outgoing=(day.expenses_cents+(day.refunded_cents??0))/max*plotHeight;return <g key={day.date}><rect x={x-bar-1} y={170-incoming} width={bar} height={incoming} rx="2" fill="#009ca1"><title>{businessDate(day.date)}: entradas {money(day.received_cents)}</title></rect><rect x={x+1} y={170-outgoing} width={bar} height={outgoing} rx="2" fill="#eab366"><title>{businessDate(day.date)}: saídas e estornos {money(day.expenses_cents+(day.refunded_cents??0))}</title></rect>{(daily.length<=12||index===0||index===daily.length-1||index%Math.ceil(daily.length/8)===0)&&<text x={x} y="191" textAnchor="middle" fill="#8090a8" fontSize="10">{day.date.slice(8)}/{day.date.slice(5,7)}</text>}</g>;})}</svg><button className="text-link" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'Ocultar':'Ver'} valores por dia</button>{expanded&&<div className="business-table-scroll"><table><thead><tr><th>Dia</th><th>Entradas</th><th>Despesas pagas</th><th>Estornos de vendas</th></tr></thead><tbody>{daily.map(day=><tr key={day.date}><td>{businessDate(day.date)}</td><td>{money(day.received_cents)}</td><td>{money(day.expenses_cents)}</td><td>{money(day.refunded_cents??0)}</td></tr>)}</tbody></table></div>}</div>;
+  // Match SVG units to the actual width so a 14px axis label stays 14px on phones.
+  const height=width<480?240:216,bottom=height-44;
+  const axisLabels=[0,.5,1].map(ratio=>money(Math.round(max*ratio)));
+  const left=Math.min(width-80,Math.max(86,...axisLabels.map(label=>label.length*7.8+14)));
+  const plotWidth=Math.max(1,width-left-16),plotHeight=bottom-20,step=plotWidth/daily.length;
+  const bar=Math.min(24,Math.max(.4,step*.29)),tickCount=Math.min(daily.length,Math.max(2,Math.min(5,Math.floor(plotWidth/54))));
+  const dateTicks=new Set(Array.from({length:tickCount},(_,index)=>tickCount===1?0:Math.round(index*(daily.length-1)/(tickCount-1))));
+  return <div className="business-chart" ref={chartRef}>
+    <div className="business-chart-legend"><span><i/>Entradas registradas</span><span><i/>Saídas e estornos</span></div>
+    <svg className="business-chart-svg" viewBox={`0 0 ${width} ${height}`} style={{width:'100%',height}} role="img" aria-label="Comparação diária de entradas com saídas e estornos. Consulte também a tabela de valores abaixo.">
+      <line x1={left} y1={bottom} x2={width-16} y2={bottom} stroke="#dce9ef"/>
+      {[0,.5,1].map((ratio,index)=><g key={ratio}><line x1={left} y1={bottom-ratio*plotHeight} x2={width-16} y2={bottom-ratio*plotHeight} stroke="#edf2f6"/><text x={left-10} y={bottom-ratio*plotHeight+5} textAnchor="end" fill="#536b8c" style={{fontSize:14}}>{axisLabels[index]}</text></g>)}
+      {daily.map((day,index)=>{const x=left+index*step+step/2,incoming=day.received_cents/max*plotHeight,outgoing=(day.expenses_cents+(day.refunded_cents??0))/max*plotHeight;return <g key={day.date}>
+        <rect x={x-bar-1} y={bottom-incoming} width={bar} height={incoming} rx="2" fill="#009ca1"><title>{businessDate(day.date)}: entradas {money(day.received_cents)}</title></rect>
+        <rect x={x+1} y={bottom-outgoing} width={bar} height={outgoing} rx="2" fill="#eab366"><title>{businessDate(day.date)}: saídas e estornos {money(day.expenses_cents+(day.refunded_cents??0))}</title></rect>
+        {dateTicks.has(index)&&<text x={x} y={bottom+26} textAnchor={index===0?'start':index===daily.length-1?'end':'middle'} fill="#536b8c" style={{fontSize:14}}>{day.date.slice(8)}/{day.date.slice(5,7)}</text>}
+      </g>;})}
+    </svg>
+    <button className="text-link" aria-expanded={expanded} onClick={()=>setExpanded(value=>!value)}>{expanded?'Ocultar':'Ver'} valores por dia</button>
+    {expanded&&<div className="business-table-scroll"><table><thead><tr><th>Dia</th><th>Entradas</th><th>Despesas pagas</th><th>Estornos de vendas</th></tr></thead><tbody>{daily.map(day=><tr key={day.date}><td>{businessDate(day.date)}</td><td>{money(day.received_cents)}</td><td>{money(day.expenses_cents)}</td><td>{money(day.refunded_cents??0)}</td></tr>)}</tbody></table></div>}
+  </div>;
 }
 export function PaymentMethod({value,onChange,disabled=false}:{value:string;onChange:(value:string)=>void;disabled?:boolean}) {
   return <label>Forma de pagamento<select value={value} disabled={disabled} onChange={event=>onChange(event.target.value)}><option value="pix">Pix</option><option value="cash">Dinheiro</option><option value="credit_card">Cartão de crédito</option><option value="debit_card">Cartão de débito</option><option value="other">Outro</option></select></label>;

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool,tx,auth,permit,tenant,ensure,allowProfessional,validateAvailability,syncReminder,error,lockTutor } from './core.js';
 import type { PoolClient } from 'pg';
 import {requireSubscriptionWrite} from './commercialService.js';
+import {assertFutureAppointmentStart} from './scheduling.js';
 const r=Router();r.use(auth,requireSubscriptionWrite);
 const datetime=z.iso.datetime({offset:true});
 const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default('')});
@@ -88,12 +89,13 @@ r.patch('/notifications/:id/read',permit('appointments'),async(req,res)=>{
 r.get('/calendar/options',permit('appointments'),async(req,res)=>{
  const c=tenant(req),scoped=req.access!.role==='employee'&&!req.access!.permissions.includes('agenda:all');
  if(scoped)ensure(req.access!.scopeProfessionalId,403,'Vincule sua conta a um profissional.');
- const [tutors,pets,professionals,services]=await Promise.all([
+ const [tutors,pets,professionals,services,settings]=await Promise.all([
   pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 AND anonymized_at IS NULL ORDER BY name',[c]),
   pool.query('SELECT p.id,p.name,p.tutor_id FROM pets p JOIN tutors t ON t.tenant_id=p.tenant_id AND t.id=p.tutor_id WHERE p.tenant_id=$1 AND t.anonymized_at IS NULL ORDER BY p.name',[c]),
   pool.query('SELECT id,name FROM professionals WHERE tenant_id=$1 AND active=true AND ($2::uuid IS NULL OR id=$2) ORDER BY name',[c,scoped?req.access!.scopeProfessionalId:null]),
-  pool.query('SELECT id,name,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND active=true ORDER BY name',[c])
- ]);res.json({tutors:tutors.rows,pets:pets.rows,professionals:professionals.rows,services:services.rows});
+  pool.query('SELECT id,name,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND active=true ORDER BY name',[c]),
+  pool.query('SELECT timezone FROM tenants WHERE id=$1',[c])
+ ]);res.json({tutors:tutors.rows,pets:pets.rows,professionals:professionals.rows,services:services.rows,timezone:settings.rows[0].timezone,server_now:new Date().toISOString()});
 });
 
 async function servicesFor(db:PoolClient,company:string,ids:string[]){
@@ -105,9 +107,11 @@ async function servicesFor(db:PoolClient,company:string,ids:string[]){
 async function putAppointment(db:PoolClient,req:import('express').Request,company:string,data:z.infer<typeof createInput>,kind:string){
  await lockTutor(db,company,data.tutor_id,422);
  allowProfessional(req,data.professional_id);
+ const start=new Date(data.starts_at);assertFutureAppointmentStart(start);
  const svcs=await servicesFor(db,company,data.service_ids);const total=svcs.reduce((n,s)=>n+s.duration_minutes,0);
- const start=new Date(data.starts_at),end=new Date(start.getTime()+total*60000);
+ const end=new Date(start.getTime()+total*60000);
  await validateAvailability(db,company,data.professional_id,start,end,data.service_ids);
+ assertFutureAppointmentStart(start);
  const row=await db.query(`INSERT INTO appointments(tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,notes,created_by)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[company,data.tutor_id,data.pet_id,data.professional_id,start,end,data.notes,req.access!.userId]);
  for(const s of svcs)await db.query(`INSERT INTO appointment_services(tenant_id,appointment_id,service_id,position,price_cents,duration_minutes) VALUES($1,$2,$3,$4,$5,$6)`,[company,row.rows[0].id,s.id,s.position,s.price_cents,s.duration_minutes]);
@@ -141,10 +145,12 @@ r.post('/calendar/check',permit('appointments'),async(req,res)=>{
  const {starts_at,professional_id,service_ids}=z.object({starts_at:datetime,professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1)}).parse(req.body);
  allowProfessional(req,professional_id);
  const c=tenant(req);const result=await tx(async db=>{
-  const svcs=await servicesFor(db,c,service_ids);const start=new Date(starts_at),end=new Date(start.getTime()+svcs.reduce((n,s)=>n+s.duration_minutes,0)*60000);
+  const start=new Date(starts_at);assertFutureAppointmentStart(start);
+  const svcs=await servicesFor(db,c,service_ids);const end=new Date(start.getTime()+svcs.reduce((n,s)=>n+s.duration_minutes,0)*60000);
   await validateAvailability(db,c,professional_id,start,end,service_ids);
   const clash=await db.query(`SELECT 1 FROM appointments WHERE tenant_id=$1 AND professional_id=$2 AND status=ANY($5::text[])
  AND tstzrange(starts_at,ends_at,'[)') && tstzrange($3::timestamptz,$4::timestamptz,'[)') LIMIT 1`,[c,professional_id,start,end,activeStatuses]);
+  assertFutureAppointmentStart(start);
   return {available:!clash.rowCount,ends_at:end.toISOString()};
  });res.json(result);
 });
@@ -157,10 +163,11 @@ r.post('/calendar/appointments/:id/move',permit('appointments'),async(req,res)=>
   const old=await db.query('SELECT * FROM appointments WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[c,id]);ensure(old.rowCount,404,'Agendamento não encontrado.');
   const before=old.rows[0];allowProfessional(req,before.professional_id);allowProfessional(req,data.professional_id);
   ensure(['pending','confirmed'].includes(before.status),409,'Este atendimento não pode mais ser reagendado.');
-  const start=new Date(data.starts_at);if(data.mode==='anticipate')ensure(start<new Date(before.starts_at),422,'A antecipação precisa ser para horário anterior.');
+  const start=new Date(data.starts_at);assertFutureAppointmentStart(start);if(data.mode==='anticipate')ensure(start<new Date(before.starts_at),422,'A antecipação precisa ser para horário anterior.');
   const svcs=await db.query('SELECT service_id,duration_minutes FROM appointment_services WHERE tenant_id=$1 AND appointment_id=$2',[c,id]);
   const duration=svcs.rows.reduce((n,s)=>n+s.duration_minutes,0);const end=new Date(start.getTime()+duration*60000);
   await validateAvailability(db,c,data.professional_id,start,end,svcs.rows.map(s=>s.service_id));
+  assertFutureAppointmentStart(start);
   const updated=await db.query(`UPDATE appointments SET starts_at=$3,ends_at=$4,professional_id=$5,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING *`,[c,id,start,end,data.professional_id]);
   const event=await db.query(`INSERT INTO appointment_events(tenant_id,appointment_id,actor_user_id,kind,old_start,old_end,new_start,new_end,old_professional_id,new_professional_id,reason,tutor_consent)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,[c,id,req.access!.userId,data.mode,before.starts_at,before.ends_at,start,end,before.professional_id,data.professional_id,data.reason,data.tutor_consent]);

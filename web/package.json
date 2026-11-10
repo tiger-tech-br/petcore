@@ -7,7 +7,8 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "test:native": "node --experimental-strip-types --test tests/nativeAndroid.unit.test.ts tests/checkout.unit.test.ts"
+    "test:native": "node --experimental-strip-types --test tests/nativeAndroid.unit.test.ts tests/checkout.unit.test.ts",
+    "test:scheduling": "node --experimental-strip-types --test tests/calendarTime.unit.test.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
