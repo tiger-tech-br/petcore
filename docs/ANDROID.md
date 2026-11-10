@@ -55,7 +55,7 @@ O número de versão e o código de atualização ficam em `android/app/build.gr
 Evidências desta geração:
 
 - `testDebugUnitTest`: **7 testes Java aprovados**, cobrindo as políticas de navegação e de exportação.
-- `npm run test:native -w web`: **8 testes aprovados** para identificação do modo Android, validação da exportação e respostas da ponte.
+- Na geração inicial, **8 testes** conferiram identificação do modo Android, validação da exportação e respostas da ponte. A rodada web atual de `npm run test:native -w web` aprovou **13 testes**, incluindo os testes do checkout.
 - `lintRelease`: **zero erros**, com avisos de lint remanescentes; isso não é uma declaração de ausência de falhas.
 - `assembleRelease`: compilação aprovada; APK assinado, metadados e assinatura conferidos.
 
@@ -68,10 +68,12 @@ O ensaio visual em navegador usou `web/native-qa.html` e componentes reais da ap
 
 Essas evidências são do navegador com o modo Android ativado pelo ensaio, separadas da validação nativa.
 
+Após as capturas do usuário, o ensaio atual em navegador conferiu a grade dos botões de atendimento em 360 px, os cartões de clientes em 320/360 px sem excesso horizontal e com fonte de 16 px e o guia/resumos com corpo de 16 px e secundários de 14 px. O checkout anual capturou a URL correta em ambiente local sem abrir o PagBank; o pedido de cancelamento e a confirmação fictícia do operador mantiveram Pago até. O cartão usa o botão vermelho Cancelar assinatura e o modal usa Confirmar pedido. Além dos 13 testes web, passaram 25 testes comerciais em PostgreSQL isolado novo com migrations 001–014 e a compilação de API/interface. Não houve cobrança nem cancelamento real no provedor.
+
 Na geração inicial, o agente não realizou instalação ou uso em aparelho/emulador. Posteriormente, o usuário instalou o APK e enviou capturas de telas reais, que motivaram as correções acima. Isso não comprova uma verificação completa: teclado, insets do sistema, seletor de fotos, cancelamento/salvamento de arquivo e navegação Voltar ainda precisam de conferência específica no Android. Não marque esses fluxos como testados somente porque o APK compilou ou uma captura foi enviada.
 
-Os ajustes web Android foram publicados no Railway em 09/11/2026, revisão `1d953fbc`, implantação `1fa762ae-a491-443e-afa5-929d630afe61` com `SUCCESS`. Os arquivos JS/CSS publicados corresponderam byte a byte ao build local; a página e a saúde responderam 200, com banco operacional e sessão sem login recusada com 401. Mudanças somente na interface remota aparecem no aplicativo após a publicação; alterações na camada Android exigem novo APK assinado com a mesma chave. SPF ainda pendente e procedimentos jurídicos/operacionais continuam no checklist comercial: esta entrega não libera automaticamente a comercialização.
+A revisão final de 09/11/2026 foi publicada com SUCCESS às 21h22 de Brasília: commit `d463fa12253c83033b90445c900aaf1954a71bc2`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-C_n1QduZ.js` e `index-DpZQfskv.css` responderam 200 e corresponderam byte a byte ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes. As correções chegam ao mesmo APK 1.0.0 pela interface remota; a camada nativa e seu SHA-256 não mudaram. SPF e procedimentos jurídicos/operacionais continuam pendentes no checklist comercial.
 
-Esse registro se refere à publicação anterior. A compilação final, os testes conclusivos das proteções de cobrança e a publicação das correções posteriores às capturas ainda precisam de registro; não atribua esses resultados à implantação acima.
+Os 25 testes comerciais e 13 testes web atuais e os ensaios locais acima pertencem a esta revisão. Os sete testes Java e a assinatura são evidências da geração original do APK. A rodada anterior de 103 testes e o ensaio de 12 verificações HTTPS não foram repetidos como uma nova suíte completa.
 
 Referências: [WebView no Android](https://developer.android.com/develop/ui/views/layout/webapps/webview), [assinatura de aplicativos](https://developer.android.com/studio/publish/app-signing), [apksigner](https://developer.android.com/tools/apksigner), [segurança de arquivos em WebView](https://developer.android.com/privacy-and-security/risks/webview-unsafe-file-inclusion).

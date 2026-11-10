@@ -1,6 +1,6 @@
 # Publicar o PetCore no Railway
 
-O ambiente de homologação está publicado em HTTPS, com dados de teste. A construção Docker e a implantação `1fa762ae-a491-443e-afa5-929d630afe61` terminaram com `SUCCESS` na revisão `1d953fbc`, em 09/11/2026, incluindo os ajustes web para o APK. A conferência após a publicação aprovou página/saúde/banco, sessão sem login com 401 e comparação SHA-256 dos dois assets com o build local (`index-aMF9JEKv.js` e `index-C7hMQ-l-.css`). O ensaio anterior de 12 verificações foi aprovado na revisão `434a341f`. Os serviços operacionais não tiveram sua fonte alterada nesta entrega Android. A consulta final retornou cinco serviços sem problemas ou falhas recentes e sem alterações pendentes. A abertura comercial ainda depende das pendências operacionais e jurídicas registradas no checklist.
+O ambiente de homologação está publicado em HTTPS, com dados de teste. A revisão final de 09/11/2026 foi publicada com SUCCESS às 21h22 de Brasília: commit `d463fa12253c83033b90445c900aaf1954a71bc2`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-C_n1QduZ.js` e `index-DpZQfskv.css` responderam 200 e corresponderam byte a byte ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes. O ensaio anterior de 12 verificações foi aprovado na revisão `434a341f` e não foi repetido integralmente nesta revisão. A abertura comercial ainda depende das pendências operacionais e jurídicas registradas no checklist.
 
 | Recurso preparado | Identificação |
 |---|---|
@@ -13,7 +13,9 @@ O ambiente de homologação está publicado em HTTPS, com dados de teste. A cons
 | Branch separado no Neon | `petcore-homologacao-20261106` |
 | Serviço de lembretes preparado | `d0f7834d-3b33-4898-8cf2-db1438b9bba8` |
 
-Fotos e backups usam destinos separados. Upload real normalizado, recusa de leitura anônima, autorização entre empresas e exclusão de fotos foram conferidos. O ensaio removeu seus próprios registros e objetos fictícios. Manutenção, backup e restauração remotos também tiveram execução confirmada. Não altere outros projetos Railway. As bases de homologação e original estão nas migrations 001–013; o original foi confirmado como somente testes e atualizado após a cópia de preservação `br-quiet-mountain-b62dyl9j`.
+Fotos e backups usam destinos separados. Upload real normalizado, recusa de leitura anônima, autorização entre empresas e exclusão de fotos foram conferidos. O ensaio removeu seus próprios registros e objetos fictícios. Manutenção, backup e restauração remotos também tiveram execução confirmada. Não altere outros projetos Railway. As bases de homologação e original estão nas migrations **001–014**; o original foi confirmado como somente testes. A 014 foi aplicada no pré-deploy da implantação `2f176aca-c7b5-47a8-9ac1-8a95e9c445d4` e pelo comando de migration no original. A cópia anterior de preservação `br-quiet-mountain-b62dyl9j` permanece registrada.
+
+A revisão posterior às capturas do APK passou em 25 testes comerciais no PostgreSQL isolado novo com migrations 001–014 e 13 testes unitários web; API/interface compilaram. O ensaio de componentes reais conferiu botões, tipografia e clientes sem excesso horizontal em 320/360 px, checkout anual com URL capturada localmente e cancelamento fictício com período pago preservado. Nenhuma cobrança ou cancelamento real foi efetuado no provedor. A implantação final dessa revisão foi concluída e conferida por HTTPS e comparação dos assets, conforme o registro acima.
 
 ## Estrutura da implantação
 
@@ -112,7 +114,9 @@ No painel da plataforma, preencha identificação e contatos reais da operação
 
 Operador informado: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**. Endereço: Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Suporte/privacidade: **tigertechbr@outlook.com**. Domínio institucional/remetente: **tigertech.dev.br**. A identidade já foi preenchida; documentos, fornecedores/regiões e procedimentos ainda exigem revisão e aprovação. A publicação jurídica permanece desativada.
 
-Os planos são Free por 30 dias, Mensal R$ 35 e Anual R$ 350. O Free começa quando confirmado e não recebe tolerância adicional. O pago pode ser escolhido imediatamente, com checkout externo e conciliação manual PagBank PF. Foram conferidos, sem compra, [PetCore Mensal](https://pag.ae/82jFKCTjo) e [PetCore Anual](https://pag.ae/82jFLbrjr); a revisão dos planos está aprovada. Os links antigos de outro produto foram substituídos. A publicação jurídica ainda condiciona sua liberação no aplicativo.
+Os planos são Free por 30 dias, Mensal R$ 35 e Anual R$ 350. O Free começa quando confirmado e não recebe tolerância adicional. O pago pode ser escolhido imediatamente, com checkout externo autorizado pela API e conciliação manual PagBank PF. Foram conferidos, sem compra, [PetCore Mensal](https://pag.ae/82jFKCTjo) e [PetCore Anual](https://pag.ae/82jFLbrjr); a revisão dos planos está aprovada. Os links antigos de outro produto foram substituídos. Por solicitação do usuário, o checkout revisado não depende de `legal.published`. A publicação jurídica continua desativada e permanece como pendência para a oferta comercial.
+
+Não existe cancelamento automático de recorrência pelos links PF. O cliente envia o pedido por Cancelar assinatura → Confirmar pedido; o vendedor encerra no PagBank e concilia com senha/referência/motivo e período pago esperado. O acesso já pago permanece disponível. `pending_checkout_at` bloqueia recorrências paralelas até a conferência da tentativa; a liberação administrativa exige reautenticação, justificativa e o estado esperado da assinatura. Não remova a trava por SQL ou timeout. O procedimento está em [OPERACAO.md](OPERACAO.md).
 
 ## Serviços e agendamentos de operação
 

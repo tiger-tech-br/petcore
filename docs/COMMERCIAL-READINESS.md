@@ -1,6 +1,6 @@
 # PetCore — preparação comercial
 
-Registro de evidências e pendências da preparação comercial. A homologação está publicada; os ajustes posteriores e a aprovação operacional/jurídica ainda precisam de conclusão. Não é uma certificação de conformidade.
+Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
 ## Código implementado
 
@@ -29,7 +29,8 @@ Registro de evidências e pendências da preparação comercial. A homologação
 
 - [x] Rodada completa anterior: 103 testes aprovados, sendo 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload. As integrações são executadas em série no banco exclusivo para evitar sobreposição das configurações globais usadas pela suíte comercial.
 - [x] Autenticação: 11 testes aprovados; lembretes: 8 testes aprovados. Incluídos nos 103 da rodada completa, sem duplicar a contagem.
-- [ ] Registrar a compilação final e os resultados conclusivos das correções móveis e proteções de cobrança, incluindo checkout pendente, conciliação e concorrência; não somar rodadas anteriores para inventar um total final.
+- [x] Correções atuais: 25 testes comerciais de integração aprovados em PostgreSQL isolado novo com migrations 001–014; 13 testes unitários web aprovados para a ponte Android/checkout. API e interface compilaram. Não somar essa rodada aos 103 anteriores como uma nova suíte completa.
+- [x] Ensaio local de interface: botões de atendimento em 360 px; clientes em 320/360 px sem excesso horizontal e com fonte de 16 px; guia/resumos com corpo de 16 px e secundários de 14 px. Checkout anual capturou o endereço correto sem abrir o provedor; cancelamento solicitado e confirmado ficticiamente pelo operador preservou Pago até.
 - [x] Backup local AES-256-GCM e restauração em banco isolado: 46 tabelas e contagens conferidas; chave errada, destino ocupado e origem recusados. Não inclui fotos.
 - [x] Verificações locais anteriores de login, CRM e modais em computador/celular com dados fictícios.
 - [x] Compilação final de API/interface aprovada; TypeScript e Sass conferidos após a reorganização da agenda.
@@ -41,26 +42,26 @@ Não somar execuções sobrepostas. Resultados locais não comprovam entrega de 
 
 ## Evidências da homologação externa
 
-- [x] Imagem Docker construída e serviço HTTPS publicado: implantação `a95f6d9d-c094-49bd-8673-4d51fde633e5`, revisão `434a341f`, estado `SUCCESS`.
+- [x] Revisão final `d463fa12`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`, SUCCESS em 09/11/2026 às 21h22 de Brasília. Página/saúde 200, banco OK, sessão anônima 401 e assets `index-C_n1QduZ.js`/`index-DpZQfskv.css` idênticos ao build local por SHA-256; cinco serviços sem problemas, falhas recentes ou alterações pendentes.
 - [x] Branch Neon de homologação separado: `petcore-homologacao-20261106`.
 - [x] Destinos separados para fotos e backups criados; variáveis de referência configuradas.
 - [x] Configurações diretas do serviço definidas para Dockerfile, início, pré-deploy e saúde.
-- [x] Ensaio HTTPS de 12 verificações: saúde/banco, contato público, cookie seguro, configuração de recuperação sem envio, Free, origens, isolamento/permissões, fotos privadas normalizadas, substituição/exclusão, exportação e anonimização.
+- [x] Ensaio HTTPS anterior de 12 verificações na revisão `434a341f`: saúde/banco, contato público, cookie seguro, configuração de recuperação sem envio, Free, origens, isolamento/permissões, fotos privadas normalizadas, substituição/exclusão, exportação e anonimização.
 - [x] Todos os registros e objetos fictícios desse ensaio foram removidos; nenhuma cobrança ou mensagem foi enviada por ele.
-- [x] Migrations 001–013 presentes na homologação e no banco original, confirmado como somente testes. Atualizações após a cópia de preservação `br-quiet-mountain-b62dyl9j`.
+- [x] Migrations 001–014 presentes na homologação e no banco original, confirmado como somente testes. A 014 foi aplicada pelo pré-deploy `2f176aca-c7b5-47a8-9ac1-8a95e9c445d4` e pelo comando de migration no original. A cópia anterior `br-quiet-mountain-b62dyl9j` permanece registrada.
 - [x] Manutenção a cada 15 minutos e backup diário às 03h de Brasília executados com confirmação.
 - [x] Backup remoto e restauração isolada conferiram 46 tabelas; registro do backup com prefixo `ff3dc3a4` ficou `verified`. O dump não inclui fotos.
 - [x] Um teste de e-mail aceito pelo Resend; usuário confirmou recebimento na pasta Spam.
 - [x] Variáveis de recuperação aplicadas na revisão publicada; configuração conferida sem enviar mensagem real.
 - [x] Serviço de lembretes criado/configurado para cada cinco minutos; autorização do usuário limitada a tutores com opt-in.
-- [x] Revisão `434a341f` publicada na aplicação, manutenção e lembretes. Ensaio atual com 12 verificações HTTPS aprovado, incluindo configuração de recuperação sem enviar e-mail; dados e fotos fictícios removidos.
+- [x] Registro histórico da revisão `434a341f` na aplicação, manutenção e lembretes, com 12 verificações HTTPS aprovadas. A aplicação atual usa a revisão final acima; esse ensaio anterior não foi repetido integralmente nesta entrega.
 - [x] Lembretes ativados por autorização expressa, cron de cinco minutos, até 20 por execução e prazo de 10s por envio. Execução em 06/11/2026 às 22h55 de Brasília: nenhum lembrete autorizado devido, zero mensagens enviadas.
 - [ ] Confirmar registros do remetente no painel Resend e resultados SPF/DKIM/DMARC do e-mail recebido; acompanhar entrega. Ver [EMAIL.md](EMAIL.md).
 - [ ] Conferir retenção, alertas, guarda da chave e recuperação dos objetos de fotos.
 
 Aplicativo HTTPS: [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Esse endereço e a revisão acima já foram conferidos; não comprovam automaticamente a publicação de revisões posteriores.
 
-As capturas do APK enviadas pelo usuário comprovam instalação e uso de algumas telas. A correção posterior dessas telas e do fluxo de assinatura ainda depende de compilação e publicação próprias; não representa nova versão nativa do APK nem nova execução dos ensaios anteriores.
+As capturas do APK enviadas pelo usuário comprovam instalação e uso de algumas telas. As correções posteriores dessas telas e do fluxo de assinatura já passaram pelos testes e compilação locais acima; a publicação final foi concluída e conferida no Railway. Não representam nova versão nativa do APK nem nova execução dos ensaios HTTPS anteriores.
 
 ## Pendências para comercialização
 
