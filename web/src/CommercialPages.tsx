@@ -85,7 +85,7 @@ export function SubscriptionPage({setMessage,setError,onOpenSupport}:BusinessPag
     </>}</BusinessState>
     {cancelOpen&&<FormDialog title="Cancelar assinatura" description="Solicite o encerramento das próximas cobranças." error={cancelError} busy={selecting!==null} onClose={()=>{if(!selecting)setCancelOpen(false);}}>
       <p className="commercial-body-copy">O suporte vai conferir e cancelar a cobrança recorrente no PagBank. Você poderá acompanhar a confirmação por aqui e manterá o período já pago.</p>
-      <div className="form-actions"><button className="ghost-btn" type="button" disabled={selecting!==null} onClick={()=>setCancelOpen(false)}>Voltar</button><button className="danger-btn" type="button" disabled={selecting!==null} onClick={()=>void cancelSubscription()}>{selecting==='cancel'?'Enviando...':'Solicitar cancelamento'}</button></div>
+      <div className="form-actions"><button className="ghost-btn" type="button" disabled={selecting!==null} onClick={()=>setCancelOpen(false)}>Voltar</button><button className="danger-btn" type="button" disabled={selecting!==null} onClick={()=>void cancelSubscription()}>{selecting==='cancel'?'Enviando...':'Confirmar pedido'}</button></div>
     </FormDialog>}
   </div>;
 }
