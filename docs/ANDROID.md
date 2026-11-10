@@ -4,23 +4,25 @@ O aplicativo acessa o mesmo PetCore publicado em `https://petcore-homologacao.up
 
 ## APK gerado
 
-A versão **1.0.0**, código **1**, está em `releases/PetCore-1.0.0.apk`: pacote `br.dev.tigertech.petcore`, Android **8.0 ou superior** (`minSdk 26`, `targetSdk 36`), 1.756.814 bytes. É uma versão release assinada, sem depuração habilitada. A assinatura foi conferida com `apksigner`, com esquemas v2 e v3 válidos.
+A versão **1.0.1**, código **2**, está em `releases/PetCore-1.0.1.apk`: pacote `br.dev.tigertech.petcore`, Android **8.0 ou superior** (`minSdk 26`, `targetSdk 36`), 1.756.814 bytes. É uma versão release assinada, sem depuração habilitada. A assinatura foi conferida com `apksigner`, com esquemas v2 e v3 válidos.
 
 SHA-256 do APK:
 
 ```text
-c80931dbe37cbdad9cd48c4343ec7fa21b4ec6e1cebe3332cd78dd6498dcc962
+e3e26ee49df729278a9623d8adf5310d3570fbcfe603148fad5a0fe0c299d947
 ```
 
-Os metadados públicos e a soma estão em `releases/PetCore-1.0.0.apk.json` e `releases/PetCore-1.0.0.apk.sha256`. O APK, os intermediários de compilação e a chave privada são ignorados pelo Git. Gerar o arquivo não publica o aplicativo na Play Store.
+Os metadados públicos e a soma estão em `releases/PetCore-1.0.1.apk.json` e `releases/PetCore-1.0.1.apk.sha256`. A assinatura usa o mesmo certificado da 1.0.0, SHA-256 `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`. O APK 1.0.0 e seus metadados foram preservados. O APK, os intermediários de compilação e a chave privada são ignorados pelo Git. Gerar o arquivo não publica o aplicativo na Play Store.
+
+**Instale a versão 1.0.1 por cima da anterior para receber a correção nativa.** O contêiner Android mantém a proteção das barras do sistema, recortes e teclado e informa ao WebView que esses espaços já foram tratados. Isso evita descontar a mesma área novamente abaixo de Hoje/Agenda/Clientes/Mais. A correção inclui compatibilidade com recortes no Android 9/10 (API 28–29); uma atualização apenas da interface no servidor não altera o APK instalado.
 
 ## Aparência e uso
 
 A versão Android usa a identidade azul-marinho e turquesa, o mesmo cachorro inteiro no login, conteúdo centralizado e cartões espaçados. O modo Android amplia textos e áreas de toque. Com o teclado aberto, formulários podem rolar para manter os campos e as ações acessíveis.
 
-Após as capturas de uso enviadas pelo usuário em 09/11/2026, esta revisão corrige a grade dos botões de atendimento, usa textos principais de 16 px e secundários de pelo menos 14 px no guia e nos resumos e apresenta os cadastros como cartões completos no celular. E-mails longos podem quebrar de linha; nenhuma ação deve depender de rolagem lateral. As regras de `web/src/styles/_mobile-usability.scss` também atendem ao navegador móvel e preservam os avisos existentes.
+As correções móveis preservam os botões de atendimento em grade e os cadastros como cartões completos, sem rolagem lateral. A revisão de 10/11/2026 amplia Próximo passo para 18 px e mantém os rótulos dos indicadores de Hoje em 16 px, com quebra de linha normal. Na assinatura, os textos principais passam a 18 px e os secundários a 16 px. Hoje/Agenda/Clientes/Mais permanecem fixos junto à borda inferior, inclusive no modo Android em paisagem. As regras de `web/src/styles/_mobile-usability.scss` também atendem ao navegador móvel e preservam os avisos existentes.
 
-Na assinatura, **Assinar agora** abre o checkout devolvido pela API, com link de continuação se a janela não abrir. A explicação longa do PagBank foi retirada. Cancelar uma assinatura já paga abre um pedido de suporte; a confirmação do cancelamento real continua sendo uma tarefa do vendedor no PagBank, sem encurtar o período já pago. O controle persistente de checkout pendente evita liberar recorrências paralelas. A camada Android não mudou: o APK permanece **1.0.0**, com a soma SHA-256 acima. Essas correções chegam ao aplicativo pela atualização da interface no servidor, após compilação e publicação.
+Na assinatura, **Assinar agora** abre o checkout devolvido pela API, com link de continuação se a janela não abrir. A explicação longa do PagBank foi retirada. Cancelar uma assinatura já paga abre um pedido de suporte; a confirmação do cancelamento real continua sendo uma tarefa do vendedor no PagBank, sem encurtar o período já pago. O controle persistente de checkout pendente evita liberar recorrências paralelas. Os ajustes de fonte e layout chegam pela interface no servidor após publicação; a correção dos espaços nativos exige o APK 1.0.1.
 
 Fotos são escolhidas pelo seletor do Android, sem permissão ampla sobre os arquivos. Nas exportações CSV e JSON, o sistema abre o seletor para a pessoa escolher onde salvar. O conteúdo exportado e a mensagem da ponte têm limite de 16 MiB; exportações maiores precisam de um período menor ou do navegador. Links de pagamento e de contato abrem o aplicativo apropriado. O botão Voltar fecha primeiro o formulário ou menu e depois percorre a navegação do PetCore. Os avisos gerais de sucesso e erro conservam a posição e o comportamento existentes.
 
@@ -52,14 +54,15 @@ O número de versão e o código de atualização ficam em `android/app/build.gr
 
 ## Conferência da entrega
 
-Evidências desta geração:
+Evidências da geração 1.0.1 em 10/11/2026:
 
 - `testDebugUnitTest`: **7 testes Java aprovados**, cobrindo as políticas de navegação e de exportação.
-- Na geração inicial, **8 testes** conferiram identificação do modo Android, validação da exportação e respostas da ponte. A rodada web atual de `npm run test:native -w web` aprovou **13 testes**, incluindo os testes do checkout.
-- `lintRelease`: **zero erros**, com avisos de lint remanescentes; isso não é uma declaração de ausência de falhas.
-- `assembleRelease`: compilação aprovada; APK assinado, metadados e assinatura conferidos.
+- `lintRelease`: **zero erros e 9 avisos**; isso não é uma declaração de ausência de falhas.
+- `assembleRelease`: compilação offline aprovada; APK assinado com a chave existente, metadados, soma e assinatura v2/v3 conferidos.
 
-O ensaio visual em navegador usou `web/native-qa.html` e componentes reais da aplicação, com dados fictícios locais, sem pagamentos ou mensagens. Foram conferidos:
+O ensaio atual no navegador, com componentes reais e dados fictícios locais, conferiu Hoje em **320 × 568** e **360 × 800**, sem excesso horizontal na página nem nos indicadores; Próximo passo em 18 px e rótulos dos indicadores em 16 px. Na assinatura em 320 px, os parágrafos principais, benefícios do plano e estado vazio têm 18 px; histórico e valor equivalente têm 16 px. A barra de navegação inferior fixa tem 76 px e permanece na borda inferior no topo e no fim da rolagem; em modo Android **844 × 390**, continua visível e fixa na paisagem. Essas capturas e medições locais não são um novo teste em aparelho.
+
+O ensaio visual anterior em navegador usou `web/native-qa.html` e componentes reais da aplicação, com dados fictícios locais, sem pagamentos ou mensagens. Foram conferidos:
 
 - **320 × 568:** formulário sem excesso horizontal; botões Cancelar/Agendar com 48 px de altura.
 - **360 × 740:** login sem rolagem, com cachorro inteiro usando `object-fit: contain`.
@@ -68,12 +71,12 @@ O ensaio visual em navegador usou `web/native-qa.html` e componentes reais da ap
 
 Essas evidências são do navegador com o modo Android ativado pelo ensaio, separadas da validação nativa.
 
-Após as capturas do usuário, o ensaio atual em navegador conferiu a grade dos botões de atendimento em 360 px, os cartões de clientes em 320/360 px sem excesso horizontal e com fonte de 16 px e o guia/resumos com corpo de 16 px e secundários de 14 px. O checkout anual capturou a URL correta em ambiente local sem abrir o PagBank; o pedido de cancelamento e a confirmação fictícia do operador mantiveram Pago até. O cartão usa o botão vermelho Cancelar assinatura e o modal usa Confirmar pedido. Além dos 13 testes web, passaram 25 testes comerciais em PostgreSQL isolado novo com migrations 001–014 e a compilação de API/interface. Não houve cobrança nem cancelamento real no provedor.
+Na revisão anterior, o ensaio em navegador conferiu a grade dos botões de atendimento em 360 px, os cartões de clientes em 320/360 px sem excesso horizontal e com fonte de 16 px e o guia/resumos com corpo de 16 px e secundários de 14 px. O checkout anual capturou a URL correta em ambiente local sem abrir o PagBank; o pedido de cancelamento e a confirmação fictícia do operador mantiveram Pago até. O cartão usa o botão vermelho Cancelar assinatura e o modal usa Confirmar pedido. Passaram 13 testes web e 25 testes comerciais em PostgreSQL isolado novo com migrations 001–014 e a compilação de API/interface. Não houve cobrança nem cancelamento real no provedor.
 
-Na geração inicial, o agente não realizou instalação ou uso em aparelho/emulador. Posteriormente, o usuário instalou o APK e enviou capturas de telas reais, que motivaram as correções acima. Isso não comprova uma verificação completa: teclado, insets do sistema, seletor de fotos, cancelamento/salvamento de arquivo e navegação Voltar ainda precisam de conferência específica no Android. Não marque esses fluxos como testados somente porque o APK compilou ou uma captura foi enviada.
+Na geração inicial, o agente não realizou instalação ou uso em aparelho/emulador. Posteriormente, o usuário instalou o APK 1.0.0 e enviou capturas de telas reais, que motivaram as correções. A versão 1.0.1 ainda não foi instalada ou testada em aparelho/emulador pelo agente: teclado, insets do sistema, seletor de fotos, cancelamento/salvamento de arquivo e navegação Voltar ainda precisam de conferência específica no Android. Não marque esses fluxos como testados somente porque o APK compilou ou uma captura foi enviada.
 
-A revisão final de 09/11/2026 foi publicada com SUCCESS às 21h22 de Brasília: commit `d463fa12253c83033b90445c900aaf1954a71bc2`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-C_n1QduZ.js` e `index-DpZQfskv.css` responderam 200 e corresponderam byte a byte ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes. As correções chegam ao mesmo APK 1.0.0 pela interface remota; a camada nativa e seu SHA-256 não mudaram. SPF e procedimentos jurídicos/operacionais continuam pendentes no checklist comercial.
+A revisão web de 10/11/2026 terminou com SUCCESS às 19h46 de Brasília: commit `4203d45d83111d911d9d48fd2644d05e0c61df50`, implantação `074c8588-8da6-4fe7-b91e-cb4a69d4a00c`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-B-Yo4f02.js` e `index-BboF3XDV.css` responderam 200 e corresponderam ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes. Os ajustes de fonte e da barra de navegação inferior fixa estão publicados; o ajuste nativo exige instalar o APK 1.0.1. SPF e procedimentos jurídicos/operacionais continuam pendentes no checklist comercial.
 
-Os 25 testes comerciais e 13 testes web atuais e os ensaios locais acima pertencem a esta revisão. Os sete testes Java e a assinatura são evidências da geração original do APK. A rodada anterior de 103 testes e o ensaio de 12 verificações HTTPS não foram repetidos como uma nova suíte completa.
+Os 25 testes comerciais, 13 testes web e ensaios anteriores são registros históricos; não foram somados à geração 1.0.1. Os sete testes Java, lint, build e assinatura foram repetidos no APK atual. A rodada anterior de 103 testes e o ensaio de 12 verificações HTTPS não foram repetidos como uma nova suíte completa.
 
 Referências: [WebView no Android](https://developer.android.com/develop/ui/views/layout/webapps/webview), [assinatura de aplicativos](https://developer.android.com/studio/publish/app-signing), [apksigner](https://developer.android.com/tools/apksigner), [segurança de arquivos em WebView](https://developer.android.com/privacy-and-security/risks/webview-unsafe-file-inclusion).
