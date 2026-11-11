@@ -1,11 +1,11 @@
 import {useEffect, useRef, useState, type ReactNode} from 'react';
-import {BarChart3, Bell, Building2, CalendarClock, CalendarDays, ChevronDown, ContactRound, Headphones, Home, LogOut, Menu, MoreHorizontal, Package, PawPrint, Scissors, Settings2, ShieldCheck, Star, Store, UserRound, UsersRound, Wallet, X} from 'lucide-react';
+import {BarChart3, Bell, Building2, CalendarClock, CalendarDays, ChevronDown, ContactRound, Headphones, Home, LogOut, Menu, MoreHorizontal, Package, PawPrint, Scissors, Settings2, ShieldCheck, Star, Store, Truck, UserRound, UsersRound, Wallet, X} from 'lucide-react';
 import {Brand} from './Brand';
 import GlobalSearch from './GlobalSearch';
 import {api, dateTime, type Session} from './api';
 import {listenNativeBack} from './nativeAndroid';
 
-export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
+export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
 type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;children:ReactNode};
 
 export default function AppShell({session,view,go,onSearch,company,logout,children}:Props) {
@@ -22,6 +22,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,childr
     {key:'professionals',label:'Profissionais',icon:UsersRound,show:can('professionals')},
     {key:'services',label:'Serviços',icon:Scissors,show:can('services')},
     {key:'waitlist',label:'Lista de espera',icon:CalendarClock,show:can('waitlist')},
+    {key:'taxi-dog',label:'Táxi Dog',icon:Truck,show:session.features?.taxi_dog===true&&can('taxi_dog')},
     {key:'inventory',label:'Produtos e estoque',icon:Package,show:can('inventory')},
     {key:'finance',label:'Financeiro',icon:Wallet,show:can('finance')},
     {key:'reports',label:'Relatórios',icon:BarChart3,show:can('finance')}

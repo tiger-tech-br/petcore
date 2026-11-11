@@ -7,6 +7,10 @@ import {requireSubscriptionWrite} from './commercialService.js';
 import {appendLedger,cash,cashSelect,cents,csv,currentCash,dateQuery,expense,expenseColumns,financialSummary,idempotency,inPeriod,ledgerColumns,ledgerEntry,ledgerJoins,movement,movementColumns,movementJoins,moveStock,mutate,pageQuery,paymentMethod,product,productColumns,range,sale,saleSelect} from './businessService.js';
 
 const router=Router();router.use(auth,requireSubscriptionWrite);
+const completedTaxi=`EXISTS(SELECT 1 FROM taxi_bookings tb JOIN taxi_trips tt ON tt.tenant_id=tb.tenant_id AND tt.booking_id=tb.id
+ WHERE tb.tenant_id=a.tenant_id AND tb.appointment_id=a.id AND tb.cancelled_at IS NULL AND tt.status='completed')`;
+const importableAppointment=(row:{status:string;starts_at:string|Date;completed_transport:boolean})=>
+ (row.status==='done'&&new Date(row.starts_at)<=new Date())||(row.status==='cancelled'&&row.completed_transport);
 const page=(input:{page:number;page_size:number})=>({page:input.page,pageSize:input.page_size});
 const listResult=(items:unknown[],total:number,input:{page:number;page_size:number})=>({items,total,...page(input)});
 const productInput=z.object({name:z.string().trim().min(1).max(160),sku:z.string().trim().max(80).default(''),unit:z.string().trim().min(1).max(20).default('un.'),price_cents:cents,cost_cents:cents.default(0),min_stock:z.number().int().min(0).max(1000000).default(0)});
@@ -59,9 +63,10 @@ router.get('/options',permit('finance'),async(req,res)=>{
   pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 AND anonymized_at IS NULL ORDER BY name,id LIMIT 1000',[company]),
   pool.query('SELECT id,name,price_cents FROM services WHERE tenant_id=$1 AND active ORDER BY name,id LIMIT 1000',[company]),
   pool.query('SELECT id,name,sku,price_cents,stock_quantity FROM business_products WHERE tenant_id=$1 AND active ORDER BY name,id LIMIT 1000',[company]),
-  pool.query(`SELECT a.id,a.starts_at,p.name AS pet_name,t.name AS tutor_name FROM appointments a
+  pool.query(`SELECT a.id,a.starts_at,a.status,p.name AS pet_name,t.name AS tutor_name,
+   (SELECT json_build_object('service_name',tb.service_name,'price_cents',tb.price_cents) FROM taxi_bookings tb WHERE tb.tenant_id=a.tenant_id AND tb.appointment_id=a.id AND tb.cancelled_at IS NULL) AS taxi_dog FROM appointments a
    JOIN tutors t ON t.tenant_id=a.tenant_id AND t.id=a.tutor_id JOIN pets p ON p.tenant_id=a.tenant_id AND p.id=a.pet_id
-   WHERE a.tenant_id=$1 AND a.status='done' AND a.starts_at<=now() AND a.starts_at>=now()-interval '366 days' AND t.anonymized_at IS NULL
+   WHERE a.tenant_id=$1 AND ((a.status='done' AND a.starts_at<=now()) OR (a.status='cancelled' AND ${completedTaxi})) AND a.starts_at>=now()-interval '366 days' AND t.anonymized_at IS NULL
     AND NOT EXISTS(SELECT 1 FROM business_sales s WHERE s.tenant_id=a.tenant_id AND s.appointment_id=a.id)
    ORDER BY a.starts_at DESC,a.id LIMIT 1000`,[company]),
   pool.query('SELECT timezone FROM tenants WHERE id=$1',[company])
@@ -97,22 +102,28 @@ router.post('/sales',permit('finance'),async(req,res)=>{
   if(input.appointment_id){
    // Descobre o tutor antes de travar: a privacidade tambem trava tutor antes
    // de limpar textos de atendimentos. A ordem evita deadlock na anonimizacao.
-   const appointment=await db.query("SELECT a.tutor_id,a.status,a.starts_at FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2",[company,input.appointment_id]);
+   const appointment=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2`,[company,input.appointment_id]);
    ensure(appointment.rowCount,404,'Atendimento não encontrado.');
-   ensure(appointment.rows[0].status==='done'&&new Date(appointment.rows[0].starts_at)<=new Date(),422,'Somente atendimentos já concluídos podem originar uma comanda.');
+   ensure(importableAppointment(appointment.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
    ensure(tutorId===null||tutorId===appointment.rows[0].tutor_id,422,'O tutor precisa corresponder ao atendimento.');
    tutorId=appointment.rows[0].tutor_id as string;
    ensure(input.items.every(item=>item.kind==='product'),422,'Os serviços do atendimento já foram importados; acrescente apenas produtos.');
   }
   if(tutorId){const tutor=await db.query('SELECT id,anonymized_at FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,tutorId]);ensure(tutor.rowCount,404,'Tutor não encontrado.');ensure(!tutor.rows[0].anonymized_at,409,'O cadastro deste tutor foi anonimizado e não pode receber novas vendas.');}
   if(input.appointment_id){
-   const locked=await db.query('SELECT tutor_id,status,starts_at FROM appointments WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,input.appointment_id]);
+   const locked=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2 FOR UPDATE OF a`,[company,input.appointment_id]);
    ensure(locked.rowCount&&locked.rows[0].tutor_id===tutorId,409,'O atendimento foi alterado. Atualize a tela.');
-   ensure(locked.rows[0].status==='done'&&new Date(locked.rows[0].starts_at)<=new Date(),422,'Somente atendimentos já concluídos podem originar uma comanda.');
+   ensure(importableAppointment(locked.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
    const previous=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND appointment_id=$2',[company,input.appointment_id]);ensure(!previous.rowCount,409,'Este atendimento já possui uma comanda.');
-   const services=await db.query('SELECT s.id,s.name,a.price_cents FROM appointment_services a JOIN services s ON s.tenant_id=a.tenant_id AND s.id=a.service_id WHERE a.tenant_id=$1 AND a.appointment_id=$2 ORDER BY a.position',[company,input.appointment_id]);
-   ensure(services.rowCount,422,'O atendimento não possui serviços.');
-   for(const row of services.rows)lines.push({kind:'service',product_id:null,service_id:row.id,description:row.name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
+   if(locked.rows[0].status==='done'){
+    const services=await db.query('SELECT s.id,s.name,a.price_cents FROM appointment_services a JOIN services s ON s.tenant_id=a.tenant_id AND s.id=a.service_id WHERE a.tenant_id=$1 AND a.appointment_id=$2 ORDER BY a.position',[company,input.appointment_id]);
+    ensure(services.rowCount,422,'O atendimento não possui serviços.');
+    for(const row of services.rows)lines.push({kind:'service',product_id:null,service_id:row.id,description:row.name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
+   }
+   // Transporte tem preço combinado próprio e não ocupa a agenda do banhista.
+   // A trava da reserva serializa importação, alteração e cancelamento da taxa.
+   const transport=await db.query('SELECT id,service_id,service_name,price_cents FROM taxi_bookings WHERE tenant_id=$1 AND appointment_id=$2 AND cancelled_at IS NULL FOR UPDATE',[company,input.appointment_id]);
+   for(const row of transport.rows)lines.push({kind:'service',product_id:null,service_id:row.service_id,description:row.service_name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
   }
   const duplicates=new Set<string>();
   for(const item of [...input.items].sort((a,b)=>(a.kind==='product'?a.product_id:a.service_id).localeCompare(b.kind==='product'?b.product_id:b.service_id))){

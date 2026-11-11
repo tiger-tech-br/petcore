@@ -34,8 +34,9 @@ router.get('/me',auth,async(req,res)=>{
  const a=req.access!;const memberships=await pool.query(`SELECT t.id,t.name,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=$1 AND m.active=true AND t.active=true ORDER BY t.name`,[a.userId]);
  const config=await settings();
  const acceptance=config.published?await pool.query('SELECT 1 FROM terms_acceptances WHERE user_id=$1 AND version=$2',[a.userId,config.legal_version]):{rowCount:1};
+ const features=a.tenantId?(await pool.query('SELECT taxi_dog_enabled FROM tenants WHERE id=$1',[a.tenantId])).rows[0]:null;
  res.json({user:{id:a.userId,name:a.name,role:a.role,permissions:a.permissions,scopeProfessionalId:a.scopeProfessionalId,tenantId:a.tenantId,companyName:a.companyName},companies:memberships.rows,
-  legal:{required:config.published&&!acceptance.rowCount,version:config.legal_version},subscription:a.tenantId?await subscription(a.tenantId):null});
+  features:{taxi_dog:features?.taxi_dog_enabled??false},legal:{required:config.published&&!acceptance.rowCount,version:config.legal_version},subscription:a.tenantId?await subscription(a.tenantId):null});
 });
 router.post('/select-company',auth,async(req,res)=>{
  const id=z.uuid().parse(req.body.tenantId);

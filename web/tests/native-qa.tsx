@@ -13,6 +13,8 @@ import InventoryPage from '../src/InventoryPage';
 import ReportsPage from '../src/ReportsPage';
 import WaitlistPage from '../src/WaitlistPage';
 import TeamPage from '../src/TeamPage';
+import TaxiDogPage from '../src/TaxiDogPage';
+import type {TaxiBooking,TaxiDriver,TaxiService,TaxiTrip} from '../src/taxiDog';
 import PrivacyPage from '../src/PrivacyPage';
 import {PlanOnboardingDialog,PlatformOperations,SubscriptionPage,SupportPage} from '../src/CommercialPages';
 import {today, type Session} from '../src/api';
@@ -28,8 +30,12 @@ const tutors=[{id:ids.tutorA,name:'Ana Exemplo',phone:'11900000001',email:'ana@e
 const pets=[{id:ids.petA,tutor_id:ids.tutorA,name:'Luna',tutor_name:'Ana Exemplo',species:'Cão'},{id:ids.petB,tutor_id:ids.tutorB,name:'Thor',tutor_name:'Bruno Exemplo',species:'Cão'}];
 const professionals=[{id:ids.professionalA,name:'Juliana Exemplo'},{id:ids.professionalB,name:'Rafael Exemplo'}];
 const services=[{id:ids.serviceA,name:'Banho',price_cents:3500,duration_minutes:30},{id:ids.serviceB,name:'Tosa higiênica',price_cents:2000,duration_minutes:30}];
-const options={tutors,pets,professionals,services};
-const session:Session={user:{id:ids.user,name:'Marina Exemplo',role:'admin',tenantId:ids.company,companyName:'Vila Pet • demonstração',scopeProfessionalId:null,permissions:[]},companies:[{id:ids.company,name:'Vila Pet • demonstração',role:'admin'}],legal:{required:false,version:'qa-unpublished'},subscription:{writable:true,access_until:null,trial_ends_at:null,paid_through:null,status:'trial',onboarding_completed_at:'2026-11-09T12:00:00Z',trial_started_at:'2026-11-09T12:00:00Z',onboarding_plan:'free',trial_days:30}};
+let taxiEnabled=parameters.get('taxi')!=='off';
+const fixtureTaxiServices:TaxiService[]=[{id:'10000000-0000-4000-8000-000000000015',name:'Táxi Dog — busca e entrega',price_cents:2500,transport_mode:'round_trip',service_type:'transport',active:true}];
+const fixtureTaxiDrivers:TaxiDriver[]=[{id:'10000000-0000-4000-8000-000000000016',name:'Pedro Exemplo',phone:'11900000003',active:true},{id:'10000000-0000-4000-8000-000000000017',name:'Carolina Exemplo',phone:'11900000004',active:true}];
+const taxiOptions=()=>({enabled:taxiEnabled,can_manage:true,timezone:'America/Sao_Paulo',server_now:new Date().toISOString(),services:fixtureTaxiServices,drivers:fixtureTaxiDrivers});
+const options=()=>({tutors,pets,professionals,services,timezone:'America/Sao_Paulo',server_now:new Date().toISOString(),taxi_dog:taxiOptions()});
+const session:Session={user:{id:ids.user,name:'Marina Exemplo',role:'admin',tenantId:ids.company,companyName:'Vila Pet • demonstração',scopeProfessionalId:null,permissions:[]},companies:[{id:ids.company,name:'Vila Pet • demonstração',role:'admin'}],features:{taxi_dog:taxiEnabled},legal:{required:false,version:'qa-unpublished'},subscription:{writable:true,access_until:null,trial_ends_at:null,paid_through:null,status:'trial',onboarding_completed_at:'2026-11-09T12:00:00Z',trial_started_at:'2026-11-09T12:00:00Z',onboarding_plan:'free',trial_days:30}};
 const futureDay=(days:number)=>{const date=new Date(today()+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+days);return date.toISOString();};
 const paidBilling=parameters.get('billing')==='paid';
 const checkoutPlans=[{id:'monthly',name:'PetCore Mensal',amount_cents:3500,interval_months:1,checkout_reviewed:true,checkout_url:'https://pag.ae/82jFKCTjo',active:true},{id:'yearly',name:'PetCore Anual',amount_cents:35000,interval_months:12,checkout_reviewed:true,checkout_url:'https://pag.ae/82jFLbrjr',active:true}];
@@ -37,6 +43,10 @@ const localSubscription={tenant_id:ids.company,plan_id:'monthly',plan_name:'PetC
 const fixturePayments=paidBilling?[{id:'qa-fictitious-payment',plan_id:'monthly',amount_cents:3500,provider_reference:'QA-FICTICIO-NAO-E-PAGAMENTO',period_start:new Date().toISOString(),period_end:futureDay(30),received_at:new Date().toISOString(),voided_at:null}]:[];
 
 const qaTimestamp=`${today()}T10:00:00-03:00`;
+const fixtureTaxiBookings:Record<string,TaxiBooking>={};
+const baseTaxiBooking:TaxiBooking={id:'qa-taxi-booking',appointment_id:'qa-appointment-a',service_id:fixtureTaxiServices[0].id,service_name:fixtureTaxiServices[0].name,price_cents:2500,mode:'round_trip',address:'Rua dos Exemplos, 120, Bairro Jardim, Santo André — SP',reference:'Casa com portão azul. Avisar na portaria antes de chegar.',notes:'Pet utiliza caixa de transporte. Conferir o nome do tutor na entrega.',cancelled_at:null,editable:true,trips:[]};
+baseTaxiBooking.trips=(['pickup','dropoff'] as const).map((leg,index)=>({id:`qa-taxi-trip-${leg}`,booking_id:baseTaxiBooking.id,appointment_id:baseTaxiBooking.appointment_id,leg,driver_id:fixtureTaxiDrivers[index].id,driver_name:fixtureTaxiDrivers[index].name,starts_at:`${today()}T${index?'09:30':'08:30'}:00-03:00`,ends_at:`${today()}T${index?'10:00':'09:00'}:00-03:00`,status:'scheduled',pet_name:'Luna',tutor_name:'Ana Exemplo',tutor_phone:tutors[0].phone,address:baseTaxiBooking.address,reference:baseTaxiBooking.reference,notes:baseTaxiBooking.notes,appointment_starts_at:`${today()}T09:00:00-03:00`,appointment_ends_at:`${today()}T09:30:00-03:00`,service_name:baseTaxiBooking.service_name,price_cents:2500}));
+fixtureTaxiBookings[baseTaxiBooking.appointment_id]=baseTaxiBooking;
 const pageOf=<T,>(items:T[])=>({items,total:items.length,page:1,pageSize:20});
 const fixtureProducts=[
   {id:'qa-product-a',name:'Shampoo suave para cães e gatos',sku:'SHAMPOO-500',unit:'frasco',price_cents:4500,cost_cents:2200,min_stock:5,stock_quantity:3,active:true,created_at:qaTimestamp,updated_at:qaTimestamp},
@@ -73,7 +83,7 @@ document.addEventListener('click',event=>{
   if(link&&new URL(link.href,location.href).origin!==location.origin){event.preventDefault();checkoutAttempt(link.href);}
 },true);
 
-type Appointment={id:string;tutor_name:string;pet_name:string;professional_id:string;professional_name:string;starts_at:string;status:string;services:typeof services};
+type Appointment={id:string;tutor_name:string;pet_name:string;professional_id:string;professional_name:string;starts_at:string;status:string;services:typeof services;taxi_dog?:{id:string;mode:string;service_name:string;price_cents:number;cancelled_at:string|null;status:string}|null};
 const localAppointments:Appointment[]=[];
 let sequence=1;
 const reply=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
@@ -82,6 +92,17 @@ const fixturesFor=(day:string):Appointment[]=>[
   {id:'qa-appointment-b',tutor_name:tutors[1].name,pet_name:pets[1].name,professional_id:professionals[1].id,professional_name:professionals[1].name,starts_at:`${day}T10:30:00-03:00`,status:'pending',services:[services[0],services[1]]},
   {id:'qa-appointment-c',tutor_name:tutors[0].name,pet_name:'Mel',professional_id:professionals[0].id,professional_name:professionals[0].name,starts_at:`${day}T11:30:00-03:00`,status:'in_progress',services:[services[1]]}
 ];
+
+function setQaTaxiBooking(appointmentId:string,draft:Record<string,any>|null,appointment?:Appointment){
+ const previous=fixtureTaxiBookings[appointmentId];
+ if(!draft){if(previous){previous.cancelled_at=new Date().toISOString();for(const trip of previous.trips)trip.status='cancelled';}return;}
+ const service=fixtureTaxiServices.find(item=>item.id===draft.service_id);if(!service)throw Error('Escolha um serviço fictício de transporte.');
+ const row:TaxiBooking={id:previous?.id||`qa-taxi-booking-${sequence++}`,appointment_id:appointmentId,service_id:service.id,service_name:service.name,price_cents:service.price_cents,mode:service.transport_mode,address:String(draft.address||''),reference:String(draft.reference||''),notes:String(draft.notes||''),cancelled_at:null,editable:true,trips:[]};
+ const start=appointment?.starts_at||`${today()}T09:00:00-03:00`,end=new Date(Date.parse(start)+(appointment?.services.reduce((sum,item)=>sum+item.duration_minutes,0)||30)*60000).toISOString();
+ for(const leg of ['pickup','dropoff'] as const){const planned=draft[leg] as Record<string,string>|undefined;if(!planned)continue;const staff=fixtureTaxiDrivers.find(item=>item.id===planned.driver_id);if(!staff)throw Error('Escolha um motorista fictício.');row.trips.push({id:`qa-taxi-trip-${sequence++}`,booking_id:row.id,appointment_id:appointmentId,leg,driver_id:staff.id,driver_name:staff.name,starts_at:planned.starts_at,ends_at:planned.ends_at,status:'scheduled',pet_name:appointment?.pet_name||'Luna',tutor_name:appointment?.tutor_name||'Ana Exemplo',tutor_phone:tutors[0].phone,address:row.address,reference:row.reference,notes:row.notes,appointment_starts_at:start,appointment_ends_at:end,service_name:row.service_name,price_cents:row.price_cents});}
+ fixtureTaxiBookings[appointmentId]=row;
+}
+const taxiSummary=(appointmentId:string)=>{const booking=fixtureTaxiBookings[appointmentId];return booking?{id:booking.id,mode:booking.mode,service_name:booking.service_name,price_cents:booking.price_cents,cancelled_at:booking.cancelled_at,status:booking.cancelled_at?'cancelled':booking.trips.every(item=>item.status==='completed')?'completed':booking.trips.some(item=>['en_route','with_pet'].includes(item.status))?'active':'scheduled'}:null;};
 
 // This replaces fetch before any component effect executes. No original fetch is retained.
 window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>{
@@ -92,20 +113,29 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   const path=url.pathname.slice(4);
   let body:Record<string,unknown>={};
   if(typeof init?.body==='string'){try{body=JSON.parse(init.body) as Record<string,unknown>;}catch{return reply({error:'Corpo fictício inválido.'},400);}}
+  if(method==='GET'&&path==='/taxi-dog/options')return reply(taxiOptions());
+  if(method==='GET'&&path==='/taxi-dog/drivers')return reply({items:fixtureTaxiDrivers});
+  if(method==='POST'&&path==='/taxi-dog/drivers'){const item:TaxiDriver={id:`qa-driver-${sequence++}`,name:String(body.name||''),phone:String(body.phone||''),active:body.active!==false};fixtureTaxiDrivers.push(item);return reply(item,201);}
+  if(method==='PATCH'&&/^\/taxi-dog\/drivers\/[^/]+$/.test(path)){const item=fixtureTaxiDrivers.find(item=>item.id===path.split('/')[3]);if(!item)return reply({error:'Motorista fictício não encontrado.'},404);Object.assign(item,{name:String(body.name||''),phone:String(body.phone||''),active:body.active!==false});return reply(item);}
+  if(method==='GET'&&path==='/taxi-dog/trips'){const from=url.searchParams.get('from')||today(),to=url.searchParams.get('to')||from,driver=url.searchParams.get('driver_id'),status=url.searchParams.get('status'),page=Number(url.searchParams.get('page')||1);const items=Object.values(fixtureTaxiBookings).flatMap(item=>item.trips).filter(item=>item.starts_at.slice(0,10)>=from&&item.starts_at.slice(0,10)<=to&&(!driver||item.driver_id===driver)&&(!status||item.status===status));return reply({items:items.slice((page-1)*20,page*20),pagination:{page,pageSize:20,total:items.length,totalPages:Math.max(1,Math.ceil(items.length/20))},timezone:'America/Sao_Paulo'});}
+  if(method==='PATCH'&&/^\/taxi-dog\/trips\/[^/]+\/status$/.test(path)){const trip=Object.values(fixtureTaxiBookings).flatMap(item=>item.trips).find(item=>item.id===path.split('/')[3]);if(!trip)return reply({error:'Viagem fictícia não encontrada.'},404);if(trip.status!==body.expected_status)return reply({error:'A viagem foi alterada. Atualize a prévia.'},409);trip.status=body.status as TaxiTrip['status'];return reply({ok:true});}
+  if(method==='GET'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const booking=fixtureTaxiBookings[path.split('/')[3]];return reply({booking:booking?{...booking,editable:booking.cancelled_at!==null||booking.trips.every(item=>item.status==='scheduled')}:null});}
+  if(method==='PUT'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const id=path.split('/')[3];setQaTaxiBooking(id,body.taxi_dog as Record<string,any>|null,localAppointments.find(item=>item.id===id));return reply({ok:true});}
+  if(method==='PATCH'&&path==='/settings'){taxiEnabled=body.taxi_dog_enabled===true;session.features={taxi_dog:taxiEnabled};return reply({ok:true});}
   if(method==='GET'&&path==='/public/legal')return reply({published:false,version:'qa-unpublished',operator:{brand:'PetCore',supportEmail:'suporte@example.test',privacyEmail:'privacidade@example.test'}});
   if(method==='GET'&&path==='/auth/me')return reply(session);
   if(method==='GET'&&path==='/notifications')return reply({items:[],unreadCount:0});
-  if(method==='GET'&&path==='/calendar/options')return reply(options);
+  if(method==='GET'&&path==='/calendar/options')return reply(options());
   if(method==='GET'&&path==='/data/tutors')return reply(tutors);
   if(method==='GET'&&path==='/data/pets')return reply(pets);
-  if(method==='GET'&&path==='/data/services')return reply(services);
+  if(method==='GET'&&path==='/data/services')return reply([...services,...fixtureTaxiServices.map(item=>({...item,duration_minutes:0}))]);
   if(method==='GET'&&path==='/data/professionals')return reply(professionals.map(item=>({...item,active:true})));
   if(method==='GET'&&path==='/options/pet-tutors')return reply(tutors);
   if(method==='GET'&&path==='/options/professional-accounts')return reply([]);
   if(method==='GET'&&path==='/commercial/setup')return reply({services:2,professionals:2,readyProfessionals:2,tutors:3,pets:2,appointments:3,sales:0,receipts:0});
   if(method==='GET'&&path==='/business/summary')return reply({from:fixtureDaily[0].date,to:today(),timezone:'America/Sao_Paulo',totals:fixtureTotals,daily:fixtureDaily,paymentMethods:[{payment_method:'pix',receipts_cents:307500,refunds_cents:2000}],cash:fixtureCash});
   if(method==='GET'&&path==='/business/products')return reply({...pageOf(fixtureProducts),summary:{products:2,lowStock:1,units:15}});
-  if(method==='GET'&&path==='/business/options')return reply({...options,products:fixtureProducts,appointments:fixturesFor(today()),timezone:'America/Sao_Paulo'});
+  if(method==='GET'&&path==='/business/options')return reply({...options(),services:[...services,...fixtureTaxiServices.map(item=>({...item,duration_minutes:0}))],products:fixtureProducts,appointments:fixturesFor(today()),timezone:'America/Sao_Paulo'});
   if(method==='GET'&&path==='/business/cash')return reply({current:fixtureCash,recent:[fixtureCash],timezone:'America/Sao_Paulo'});
   if(method==='GET'&&path==='/business/sales')return reply(pageOf(fixtureSales));
   if(method==='GET'&&path.startsWith('/business/sales/'))return reply({sale:fixtureSales.find(item=>path.endsWith(item.id))??fixtureSales[0],items:[{id:'qa-line-a',description:'Banho',quantity:1,unit_price_cents:3500,total_cents:3500},{id:'qa-line-b',description:fixtureProducts[0].name,quantity:1,unit_price_cents:4500,total_cents:4500}],payments:[{id:'qa-payment',kind:'sale_payment',amount_cents:2000,payment_method:'pix',created_at:qaTimestamp,created_by_name:'Marina Exemplo'}],timezone:'America/Sao_Paulo'});
@@ -118,7 +148,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/calendar/waitlist')return reply(fixtureWaitlist);
   if(method==='GET'&&/^\/calendar\/waitlist\/[^/]+\/opportunities$/.test(path))return reply({options:[{starts_at:`${today()}T14:00:00-03:00`,professional_id:ids.professionalA,professional_name:'Juliana Exemplo'}]});
   if(method==='GET'&&path==='/team')return reply(fixtureTeam);
-  if(method==='GET'&&path==='/settings')return reply({late_tolerance_minutes:15,reminder_minutes_before:120});
+  if(method==='GET'&&path==='/settings')return reply({late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled});
   if(method==='GET'&&path==='/privacy/requests')return reply({...pageOf(fixturePrivacy),timezone:'America/Sao_Paulo',summary:{open:0,inProgress:1,completed:0,rejected:0,filesPending:1}});
   if(method==='GET'&&path.startsWith('/privacy/requests/'))return reply({request:fixturePrivacy[0],events:[{id:'qa-privacy-event',action:'created',status:'open',created_at:qaTimestamp,actor_name:'Marina Exemplo',reason_code:null}]});
   if(method==='GET'&&path==='/privacy/tutors')return reply({items:tutors.map(item=>({...item,anonymized_at:null}))});
@@ -152,7 +182,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   }
   if(method==='GET'&&path==='/calendar/appointments'){
     const date=(url.searchParams.get('from')||today()).slice(0,10);
-    return reply([...fixturesFor(date),...localAppointments.filter(item=>item.starts_at.slice(0,10)===date)]);
+    return reply([...fixturesFor(date),...localAppointments.filter(item=>item.starts_at.slice(0,10)===date)].map(item=>({...item,taxi_dog:taxiSummary(item.id)})));
   }
   if(method==='GET'&&/^\/calendar\/appointments\/[^/]+\/history$/.test(path))return reply([{id:'qa-history',created_at:`${today()}T08:00:00-03:00`,actor_name:'Equipe fictícia',kind:'created'}]);
   if(method==='POST'&&path==='/auth/login')return reply({ok:true});
@@ -163,6 +193,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
     const chosen=services.filter(item=>Array.isArray(body.service_ids)&&body.service_ids.includes(item.id));
     if(!tutor||!pet||pet.tutor_id!==tutor.id||!professional||!chosen.length||typeof body.starts_at!=='string')return reply({error:'Escolha os cadastros fictícios para completar a prévia.'},422);
     const row:Appointment={id:`qa-local-created-${sequence++}`,tutor_name:tutor.name,pet_name:pet.name,professional_id:professional.id,professional_name:professional.name,starts_at:body.starts_at,status:'pending',services:chosen};
+    if(body.taxi_dog)setQaTaxiBooking(row.id,body.taxi_dog as Record<string,any>,row);
     localAppointments.push(row);return reply(row,201);
   }
   // Deliberately no real e-mail, legal acceptance or fallback to a server.
@@ -174,8 +205,9 @@ function localScreen(screen:'login'|'agenda'|'form'|'overview'|'clients'|'subscr
 }
 function Harness(){
   const requested=new URLSearchParams(location.search).get('screen')||'login';
-  const businessScreens:MenuKey[]=['crm','finance','inventory','reports','waitlist','team','privacy','support'];
-  const initialView:MenuKey=requested==='overview'||requested==='onboarding'?'overview':requested==='clients'?'tutors':requested==='subscription'?'subscription':requested==='platform'?'platform':businessScreens.includes(requested as MenuKey)?requested as MenuKey:'calendar';
+  const businessScreens:MenuKey[]=['taxi-dog','crm','finance','inventory','reports','waitlist','team','privacy','support'];
+  const initialView:MenuKey=requested==='overview'||requested==='onboarding'?'overview':requested==='clients'?'tutors':requested==='subscription'?'subscription':requested==='platform'?'platform':requested==='taxi'?'taxi-dog':businessScreens.includes(requested as MenuKey)?requested as MenuKey:'calendar';
+  const [sessionVersion,setSessionVersion]=useState(0);void sessionVersion;
   const [view,setView]=useState<MenuKey>(initialView),[search,setSearch]=useState(''),[notice,setNotice]=useState(''),[error,setError]=useState(''),[onboarding,setOnboarding]=useState(requested==='onboarding'),[checkout,setCheckout]=useState('');
   useEffect(()=>{const capture=(event:Event)=>setCheckout((event as CustomEvent<string>).detail);window.addEventListener('petcore-qa-checkout',capture);return()=>window.removeEventListener('petcore-qa-checkout',capture);},[]);
   const go=(target:MenuKey)=>{setView(target);setSearch('');};
@@ -187,7 +219,7 @@ function Harness(){
     {notice&&<div className="alert success" role="status">{notice}</div>}
     {checkout&&<aside className="alert success" role="status">Prévia local: destino do pagamento capturado, sem abrir o provedor: <span style={{overflowWrap:'anywhere'}}>{checkout}</span></aside>}
     {onboarding&&<PlanOnboardingDialog onDone={()=>{setOnboarding(false);setView('subscription');}} onLogout={()=>localScreen('login')}/>}
-    {view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'} searchQuery={search} onSaved={()=>setSearch('')}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
+    {view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'||requested==='taxi-form'} canTaxiDog searchQuery={search} onSaved={()=>setSearch('')}/>:view==='taxi-dog'?<TaxiDogPage setMessage={setNotice} setError={setError} onSetup={go} canSetup={()=>true}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError} onSettingsSaved={()=>setSessionVersion(value=>value+1)}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
   </AppShell>;
 }
 

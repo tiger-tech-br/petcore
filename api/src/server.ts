@@ -11,6 +11,7 @@ import dataRoutes from './dataRoutes.js';
 import calendarRoutes from './calendarRoutes.js';
 import fileRoutes from './fileRoutes.js';
 import crmRoutes from './crmRoutes.js';
+import taxiDogRoutes from './taxiDogRoutes.js';
 import businessRoutes from './businessRoutes.js';
 import privacyRoutes from './privacyRoutes.js';
 import commercialRoutes,{publicCommercial} from './commercialRoutes.js';
@@ -47,6 +48,7 @@ export function createApp(){
  app.use('/api/privacy',privacyRoutes);
  app.use('/api/business',businessRoutes);
  app.use('/api/crm',crmRoutes);
+ app.use('/api/taxi-dog',taxiDogRoutes);
  app.use('/api',dataRoutes);
  app.use('/api',calendarRoutes);
  app.use('/api',fileRoutes);

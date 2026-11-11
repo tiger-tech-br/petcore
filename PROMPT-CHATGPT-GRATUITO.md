@@ -6,6 +6,16 @@ Copie o texto abaixo para a conversa em que o projeto está sendo construído. A
 
 Estou desenvolvendo o **PetCore**, SaaS de gestão interna de pet shops da **Tiger Tech**, na pasta `C:\Users\andre\Desktop\petcore-saas`. Continue a partir dos arquivos atuais, sem recriar o projeto e sem substituir alterações recentes por versões antigas.
 
+## Evolução autorizada — Táxi Dog e desktop (11/11/2026)
+
+O Táxi Dog foi implementado no mesmo PetCore, opcional e desativado por padrão em cada pet shop. O administrador ativa em Configurações → Configurar atendimento; os preços/modalidades são cadastrados em Serviços e os motoristas em Táxi Dog. Busca e entrega têm intervalos próprios, separados da agenda do banhista. A reserva é atômica com o atendimento, e a taxa combinada entra uma vez na comanda importada. Há controle de conflitos de motorista, etapas manuais, cancelamento, reagendamento e proteção da taxa após faturamento. Não há GPS, cálculo por distância ou envio automático ao motorista. Não crie outro SaaS.
+
+Preserve as proteções de retorno do pet após banho cancelado, cobrança somente do transporte realizado nesse caso, cancelamento total sem taxa indevida, snapshots de preço, isolamento/permissão `taxi_dog`, exportação e remoção de endereços por privacidade. Uma entrega pendente após chegada registrada impede apagar seu endereço prematuramente. Leia `docs/TAXI-DOG.md`. A migration nova é `015_taxi_dog.sql`; não edite as migrations anteriores já aplicadas.
+
+A fonte pequena do sistema no desktop também foi ampliada: corpo/campos/ações/tabelas em 16 px e secundários em pelo menos 14 px, preservando títulos e preços maiores. O arquivo `_desktop-typography.scss` usa largura mínima de 781 px e exclui o modo Android. Preserve as fontes móveis, a navegação inferior fixa e os avisos gerais nas posições existentes.
+
+Passaram 152 verificações locais (20 unitárias da API, 94 integrações existentes, 20 novas de Táxi Dog e 18 web), compilação e conferência de telas desktop em 1024/1366 px e transporte móvel em 320 px. Houve percurso pela interface com API/banco locais fictícios para ativação, cadastro, reserva e etapas da busca. Nenhuma cobrança ou mensagem real foi enviada; não houve teste em aparelho. A publicação desta revisão ainda será registrada após conferência remota.
+
 ## Revisão atual — legibilidade e datas (10/11/2026)
 
 Preserve o ajuste de tipografia exclusivo do APK: corpo de pelo menos 16 px e secundários de pelo menos 14 px, mantendo textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` para manter letras com 14 px reais na largura disponível. Cabeçalhos e abas de relatórios quebram em linhas em telas pequenas. Mantenha a mesma navegação inferior fixa, sem acrescentar rodapé, e não altere posição ou comportamento dos avisos gerais. O cachorro continua inteiro no login.
@@ -30,9 +40,9 @@ Já existem:
 - **Privacidade:** pedidos, verificação de identidade, exportação, anonimização e auditoria; documentos jurídicos em rascunho até revisão/publicação.
 - Manutenção, fotos privadas e scripts de backup criptografado/restauração.
 
-Produtos e estoque atendem ao balcão e à operação interna. **Não existem loja virtual, compras públicas, táxi dog, entregas ou status de pedidos de comércio eletrônico. Não adicione esses módulos sem solicitação minha.** Emissão fiscal e integração bancária também não foram implementadas.
+Produtos e estoque atendem ao balcão e à operação interna. **O Táxi Dog foi autorizado como evolução do próprio PetCore:** cadastro de serviço de transporte, ativação opcional por pet shop, motoristas, horários e etapas separados do banho/tosa, reserva ligada ao atendimento e taxa na mesma comanda. Leia `docs/TAXI-DOG.md` e os arquivos atuais antes de alterar. Não confunda entrega de pets com entrega de produtos: loja virtual, compras públicas, entrega de produtos e status de pedidos de comércio eletrônico continuam fora do escopo. Emissão fiscal e integração bancária também não foram implementadas.
 
-Meu portfólio terá **um único SaaS por área**: pet shop, barbearia, prontuário e salão de beleza. Se eu pedir melhorias de pet shop no futuro, atualize o mesmo PetCore. Não crie outro SaaS para a mesma área. Táxi dog foi apenas uma dúvida e não está autorizado para implementação.
+Meu portfólio terá **um único SaaS por área**: pet shop, barbearia, prontuário e salão de beleza. Se eu pedir melhorias de pet shop no futuro, atualize o mesmo PetCore. Não crie outro SaaS para a mesma área. A implementação do Táxi Dog foi autorizada depois das conversas iniciais. Não adicione GPS ou coleta de localização em tempo real sem uma nova solicitação: o módulo atual usa horários e etapas informadas pela equipe.
 
 ## Planos confirmados
 

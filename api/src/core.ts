@@ -94,12 +94,12 @@ export async function validateAvailability(db:Db,companyId:string,profId:string,
  ensure(!absences.rowCount,409,'Profissional indisponível neste horário.');
  if(serviceIds.length){const elig=await db.query(`SELECT count(*)::int AS n FROM professional_services ps
    JOIN services s ON s.tenant_id=ps.tenant_id AND s.id=ps.service_id
-   WHERE ps.tenant_id=$1 AND ps.professional_id=$2 AND ps.service_id=ANY($3::uuid[]) AND s.active=true`,[companyId,profId,serviceIds]);
+   WHERE ps.tenant_id=$1 AND ps.professional_id=$2 AND ps.service_id=ANY($3::uuid[]) AND s.active=true AND s.service_type='appointment'`,[companyId,profId,serviceIds]);
   ensure(elig.rows[0].n===new Set(serviceIds).size,422,'Profissional não habilitado para os serviços.');}
 }
 export function sendError(err:unknown,_req:Request,res:Response,_next:NextFunction){
  const e=err as {status?:number;code?:string;message?:string;issues?:unknown};
- if(e.code==='23P01') return res.status(409).json({error:'Este horário acabou de ser reservado por outro atendimento.'});
+ if(e.code==='23P01') return res.status(409).json({error:'Este horário acabou de ser reservado por outro atendimento ou transporte.'});
  if(e.code==='23503'||e.code==='23514'||e.code==='23505'||e.code==='22P02')return res.status(422).json({error:'Referência inválida, registro duplicado ou dados incompatíveis com esta empresa.'});
  if(e.issues)return res.status(422).json({error:'Verifique os dados informados.',details:e.issues});
  if(e.code==='LIMIT_FILE_SIZE')return res.status(413).json({error:'A foto deve ter até 5 MB.'});

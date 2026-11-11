@@ -5,6 +5,7 @@ Registro de evidências e pendências da preparação comercial. A homologação
 ## Código implementado
 
 - [x] Clientes/tutores, pets, profissionais, serviços, jornadas, agenda e lista de espera.
+- [x] Táxi Dog opcional: motoristas, buscas/entregas ligadas ao atendimento, agenda separada, taxa na comanda, cancelamento e proteções de retorno/privacidade. Sem GPS. Evidências locais da revisão de 11/11/2026: 152 testes aprovados, compilação e conferência de fontes desktop/móvel; publicação remota ainda a registrar em [TAXI-DOG.md](TAXI-DOG.md).
 - [x] CRM com carteira, segmentos, contatos manuais e tarefas de retorno.
 - [x] Produtos, movimentos de estoque, concorrência e histórico.
 - [x] Vendas/comandas internas, recebimentos parciais, despesas e caixa.
@@ -79,7 +80,7 @@ Não há cancelamento automático da recorrência pelos links PF. O botão do cl
 
 ## Limites do escopo
 
-O sistema gerencia o pet shop internamente, incluindo vendas no balcão. Não inclui loja virtual, táxi dog, entregas, status de pedidos de comércio eletrônico ou emissão fiscal. Recursos de privacidade não são uma certificação de conformidade.
+O sistema gerencia o pet shop internamente, incluindo vendas no balcão e o Táxi Dog opcional vinculado ao atendimento. Não inclui loja virtual, entrega de produtos, status de pedidos de comércio eletrônico ou emissão fiscal. O transporte usa etapas manuais, sem GPS. Recursos de privacidade não são uma certificação de conformidade. O guia e as evidências de entrega do transporte ficam em [TAXI-DOG.md](TAXI-DOG.md).
 
 A hospedagem começa no endereço do Railway. Um subdomínio futuro da Tiger Tech pode ser configurado depois, sem alterar o site principal agora.
 

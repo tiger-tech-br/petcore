@@ -2,6 +2,8 @@
 
 O aplicativo acessa o mesmo PetCore publicado em `https://petcore-homologacao.up.railway.app`, usando um WebView Android. Login, empresas, permissões e dados continuam no serviço, com conexão à internet. Não há uma base de clientes separada nem operação offline. O endereço atual é de homologação; as pendências comerciais do projeto continuam no [checklist de preparação](COMMERCIAL-READINESS.md).
 
+A revisão de 11/11/2026 acrescenta o [Táxi Dog opcional](TAXI-DOG.md) pela interface/API remotas. A fonte maior para desktop tem um escopo separado e preserva os ajustes do aplicativo. Essas mudanças não alteram o pacote Android nem exigem gerar outro APK; não acrescentam GPS ou permissões de localização ao aparelho.
+
 ## Revisão atual — legibilidade e datas (10/11/2026)
 
 O ajuste exclusivo do APK usa corpo de pelo menos 16 px e secundários de pelo menos 14 px, preservando os textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` à tela para manter letras com 14 px reais; cabeçalhos e abas de relatórios podem quebrar em linhas. A mesma navegação inferior continua fixa, sem rodapé adicional. Os avisos gerais mantêm posição e comportamento, e o login conserva o cachorro inteiro.

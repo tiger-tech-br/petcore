@@ -1,0 +1,54 @@
+@use 'tokens' as *;
+
+.taxi-page,.taxi-fields {min-width:0;font-size:16px;line-height:1.65}
+.taxi-page p,.taxi-fields p,.taxi-confirm p {font-size:16px;line-height:1.7}
+.taxi-page .eyebrow {font-size:14px}
+.taxi-page .primary-btn,.taxi-page .ghost-btn,.taxi-page .danger-btn,.taxi-confirm button,.taxi-driver-form button {font-size:16px;min-height:48px;white-space:normal;line-height:1.5}
+.taxi-tabs {display:flex;flex-wrap:wrap;gap:10px;margin:0 0 24px}
+.taxi-tabs button {display:flex;justify-content:center;align-items:center;gap:9px;padding:12px 18px;min-height:48px;font-size:16px;font-weight:650;line-height:1.5;border:1px solid $border;border-radius:10px;color:#6b80a3;background:#fff}
+.taxi-tabs button.selected {background:#e8f8f5;border-color:#8fd9d3;color:#008e95}
+.taxi-filters {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:20px;margin-bottom:20px}
+.taxi-filters label,.taxi-fields-grid label {display:flex;flex-direction:column;gap:8px;min-width:0;font-size:16px;font-weight:650;line-height:1.5;color:#31446e}
+.taxi-filters input,.taxi-filters select,.taxi-fields input:not([type='checkbox']),.taxi-fields select,.taxi-fields textarea {width:100%;min-width:0;min-height:48px;padding:11px 12px;background:#fff;color:$ink;border:1px solid #d5e1ed;border-radius:9px;font:inherit;font-size:16px;line-height:1.5}
+.taxi-fields textarea {min-height:85px;resize:vertical}
+.taxi-metrics {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.taxi-metrics article {display:flex;align-items:center;gap:15px;min-width:0;padding:20px;background:white;border:1px solid $border;border-radius:12px;color:#00989f}
+.taxi-metrics article>svg {flex-shrink:0}
+.taxi-metrics article>div {min-width:0;display:flex;flex-direction:column;gap:4px}
+.taxi-metrics strong {font-size:28px;color:$ink;line-height:1.25;overflow-wrap:anywhere}
+.taxi-metrics span {font-size:16px;line-height:1.5;color:#7585a5;overflow-wrap:anywhere}
+.taxi-note,.taxi-page .taxi-note,.taxi-fields .taxi-note {font-size:14px;line-height:1.7;color:#6e81a0;margin:14px 0}
+.taxi-trip-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:22px 0}
+.taxi-trip {min-width:0;background:white;border:1px solid $border;border-radius:16px;padding:24px;box-shadow:0 8px 24px #142b5205}
+.taxi-trip-top {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px}
+.taxi-direction {display:inline-flex;gap:8px;align-items:center;font-size:16px;font-weight:700;color:#008d95}
+.taxi-status {display:inline-flex;align-items:center;max-width:100%;padding:6px 10px;border-radius:8px;background:#edf5fa;color:#526e96;font-size:14px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+.taxi-status--scheduled {background:#fff5df;color:#a8791c}.taxi-status--en_route,.taxi-status--with_pet {background:#e2f7fb;color:#007d9c}.taxi-status--completed {background:#e2f6eb;color:#237c5a}.taxi-status--cancelled {background:#f3f4f7;color:#6f7f99}
+.taxi-trip-heading {display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px}
+.taxi-trip-heading>div {min-width:0}.taxi-trip h2 {font-size:23px;line-height:1.35;margin:0;overflow-wrap:anywhere}.taxi-trip-heading p {margin:6px 0 0;color:#7184a4;overflow-wrap:anywhere}
+.taxi-trip-time {display:flex;flex-direction:column;gap:3px;flex-shrink:0;color:$ink;font-size:22px;line-height:1.4;text-align:right}.taxi-trip-time span {font-size:14px;font-weight:500;color:#7587a5}
+.taxi-trip-details {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:0}
+.taxi-trip-details>div {min-width:0}.taxi-detail-wide {grid-column:1/-1}.taxi-trip-details dt {display:flex;align-items:center;gap:7px;color:#7184a3;font-size:14px;line-height:1.5;margin-bottom:5px}.taxi-trip-details dd {margin:0;font-size:16px;line-height:1.65;overflow-wrap:anywhere;white-space:pre-wrap}
+.taxi-trip-notes {padding:13px;background:#f5fafb;border-radius:9px;color:#526d91;white-space:pre-wrap;overflow-wrap:anywhere;margin:18px 0 0}
+.taxi-trip-actions {display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}.taxi-trip-actions button {flex:1 1 180px}
+.taxi-guidance {display:flex;align-items:flex-start;gap:15px;border:1px solid #c5e9e5;border-radius:12px;background:#effaf8;padding:20px;margin:20px 0;color:#466c83}.taxi-guidance>svg {flex-shrink:0;color:#00979c}.taxi-guidance>div {min-width:0}.taxi-guidance strong {display:block;font-size:17px;color:#087f88}.taxi-guidance p {margin:8px 0 12px}.taxi-guidance .text-link {font-size:16px}
+.taxi-empty {padding:20px;text-align:center}.taxi-empty>p {max-width:600px;margin:0 auto 20px;color:#7586a2}
+.taxi-drivers {padding:24px}.taxi-drivers h2 {font-size:22px;margin:0 0 12px}.taxi-drivers>p {color:#7586a2}
+.taxi-driver-list {display:flex;flex-direction:column;margin-top:24px}.taxi-driver-list article {display:flex;align-items:center;gap:15px;padding:20px 0;border-top:1px solid $border;min-width:0}.taxi-driver-list article>div {flex:1;min-width:0}.taxi-driver-list strong {font-size:18px;overflow-wrap:anywhere}.taxi-driver-list p {margin:5px 0 10px;color:#7184a3;overflow-wrap:anywhere}.taxi-driver-avatar {display:grid;place-items:center;flex-shrink:0;width:48px;height:48px;border-radius:15px;background:#e7f8f5;color:#00969c}
+.taxi-fields {border:1px solid #c6e7e4;border-radius:12px;padding:18px;margin:8px 0 0;min-inline-size:0;background:#f7fcfb}.taxi-fields>legend {display:flex;align-items:center;gap:8px;padding:0 8px;font-size:18px;font-weight:750;color:#008c94}.taxi-check {display:flex!important;flex-direction:row!important;gap:12px!important;align-items:flex-start;font-size:16px!important;line-height:1.6!important;font-weight:600}.taxi-check input {width:21px;height:21px;flex-shrink:0;accent-color:#00989e;margin:2px 0 0}.taxi-check span {min-width:0}
+.taxi-fields-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.taxi-fields-grid label:first-child {grid-column:1/-1}
+.taxi-leg-fields {min-inline-size:0;min-width:0;border:1px solid #dcebea;border-radius:10px;background:white;padding:15px;margin:20px 0 0}.taxi-leg-fields legend {font-size:16px;font-weight:700;padding:0 7px;color:#325471}.taxi-leg-fields .taxi-fields-grid {margin-top:4px}
+.taxi-charge {display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:1px solid #d7e9e7;margin:20px 0 0!important}.taxi-charge strong {font-size:18px;color:#008a91}.taxi-charge span {font-size:14px;line-height:1.7;color:#6e81a0}
+.taxi-confirm p {overflow-wrap:anywhere}.taxi-pagination {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:24px 0;font-size:14px;color:#7184a3}.taxi-pagination>div {display:flex;gap:10px}
+.taxi-calendar-summary {display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;line-height:1.6;color:#008c94}.taxi-calendar-summary svg {flex-shrink:0}
+.taxi-booking-details {margin:18px 0;padding:18px;background:#effaf8;border:1px solid #d8ece8;border-radius:10px}.taxi-booking-details p {font-size:16px;line-height:1.65;overflow-wrap:anywhere}.taxi-booking-details strong {font-size:17px}
+.taxi-settings {padding:16px;background:#f0faf8;border:1px solid #d4eae6;border-radius:10px}.taxi-settings p {font-size:14px;line-height:1.7;color:#6e81a0;margin:10px 0 0}
+@media(max-width:1050px){.taxi-trip-list {grid-template-columns:1fr}}
+@media(max-width:780px){
+ .taxi-page .page-header-actions {width:100%}.taxi-page .page-header-actions button {flex:1 1 150px}
+ .taxi-tabs button {flex:1 1 160px}.taxi-filters {grid-template-columns:1fr;padding:18px;gap:18px}
+ .taxi-metrics {gap:10px}.taxi-metrics article {display:grid;gap:10px;padding:15px 12px}.taxi-metrics strong {font-size:25px}.taxi-metrics span {font-size:14px}
+ .taxi-trip {padding:20px 18px}.taxi-trip-heading {flex-wrap:wrap;gap:12px}.taxi-trip-time {text-align:left}.taxi-trip-details {gap:16px}.taxi-trip-actions {flex-direction:column}.taxi-trip-actions button {flex:auto;width:100%;min-height:50px}
+ .taxi-fields {padding:16px 12px}.taxi-fields-grid {grid-template-columns:1fr;gap:18px}.taxi-fields-grid label:first-child {grid-column:auto}.taxi-leg-fields {padding:15px 10px}
+ .taxi-driver-list article {flex-wrap:wrap}.taxi-driver-list article>button {margin-left:63px}.taxi-drivers {padding:20px 18px}.taxi-pagination>div {width:100%}.taxi-pagination button {flex:1}
+}

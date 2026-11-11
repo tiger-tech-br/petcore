@@ -19,6 +19,7 @@ O pet shop precisa de um canal para seus titulares. A Tiger Tech precisa de iden
 - Cancelamento dos atendimentos futuros pendentes/confirmados, tarefas e esperas abertas e lembretes elegíveis quando o cadastro é desidentificado.
 - Revogação da autorização de lembretes e limpeza dos identificadores/textos ligados ao cadastro.
 - Conservação dos valores e lançamentos financeiros, com limpeza de textos pessoais vinculados.
+- Táxi Dog: endereços, referências e orientações de transporte são acessíveis à equipe autorizada por empresa, entram na exportação verificada e são removidos na anonimização. O fluxo aguarda viagens em andamento e entregas pendentes após chegada registrada antes de apagar o endereço. Não há coleta de GPS ou compartilhamento automático com aplicativos de mapas.
 - Fila idempotente para exclusão de fotos no armazenamento ativo, com tentativas e acompanhamento.
 - Documentos públicos versionados, configuráveis e não publicados automaticamente a partir do rascunho.
 

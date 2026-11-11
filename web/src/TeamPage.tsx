@@ -4,10 +4,10 @@ import {api} from './api';
 import FormDialog from './FormDialog';
 import {Empty,PageHeader} from './ui';
 
-type Props={setMessage:(value:string)=>void;setError:(value:string)=>void};
-const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['crm','CRM e relacionamento com clientes'],['waitlist','Lista de espera'],['services','Serviços'],['professionals','Profissionais'],['inventory','Produtos e estoque'],['finance','Financeiro, vendas, caixa e relatórios']];
+type Props={setMessage:(value:string)=>void;setError:(value:string)=>void;onSettingsSaved?:()=>void|Promise<void>};
+const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['crm','CRM e relacionamento com clientes'],['waitlist','Lista de espera'],['taxi_dog','Táxi Dog: endereços, motoristas, buscas e entregas'],['services','Serviços'],['professionals','Profissionais'],['inventory','Produtos e estoque'],['finance','Financeiro, vendas, caixa e relatórios']];
 
-export default function TeamPage({setMessage,setError}:Props) {
+export default function TeamPage({setMessage,setError,onSettingsSaved}:Props) {
   const [rows,setRows]=useState<any[]>([]),[loading,setLoading]=useState(true),[dialog,setDialog]=useState<'invite'|'permissions'|'settings'|null>(null);
   const [editing,setEditing]=useState<any|null>(null),[email,setEmail]=useState(''),[invite,setInvite]=useState(''),[error,setLocalError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
   function setDialogError(value:string){setLocalError(value);if(value)setError(value);}
@@ -29,7 +29,7 @@ export default function TeamPage({setMessage,setError}:Props) {
   return <>
     <PageHeader eyebrow="CONTROLE DE ACESSO" title="Equipe e configurações" subtitle="Gerencie as contas da equipe e as preferências de atendimento." action={<div className="page-header-actions"><button className="ghost-btn" onClick={()=>setDialog('settings')}><Settings2 size={17}/>Configurar atendimento</button><button className="primary-btn" onClick={openInvite}><Mail size={17}/>Convidar funcionário</button></div>}/>
     <section className="panel"><h2>Usuários da empresa</h2>{loading?<Empty label="Carregando equipe..."/>:rows.length?rows.map(item=><div key={item.id} className="team-row"><strong>{item.name}</strong><small>{item.email} · {item.role==='admin'?'Administrador':'Funcionário'}</small>{item.role==='employee'&&<><span className={`status ${item.active?'confirmed':'cancelled'}`}>{item.active?'Conta ativa':'Conta inativa'}</span><div className="action-row"><button className="ghost-btn" onClick={()=>openPermissions(item)} aria-label={`Editar permissões de ${item.name}`}>Editar permissões</button></div></>}</div>):<Empty label="Nenhum usuário encontrado."/>}</section>
-    {dialog==='settings'&&<SettingsDialog onClose={()=>setDialog(null)} setMessage={setMessage} setPageError={setError}/>}
+    {dialog==='settings'&&<SettingsDialog onClose={()=>setDialog(null)} setMessage={setMessage} setPageError={setError} onSaved={onSettingsSaved}/>}
     {dialog==='invite'&&<FormDialog title={invite?'Convite do funcionário':'Convidar funcionário'} description="Cada funcionário usa uma conta individual." busy={busy} error={error} notice={notice} onClose={()=>setDialog(null)}>
       {invite?<><div className="invitation"><strong>Link de convite</strong><textarea readOnly aria-label="Link de convite do funcionário" value={invite}/><button type="button" className="ghost-btn" onClick={()=>void copy()}>Copiar convite</button><small>Envie o link ao funcionário. Nenhuma mensagem automática foi enviada.</small></div><div className="form-actions"><button type="button" className="primary-btn" onClick={()=>setDialog(null)}>Concluir</button></div></>:<form className="stack-form" onSubmit={create}><label>E-mail profissional<input type="email" required disabled={busy} value={email} onChange={e=>setEmail(e.target.value)}/></label><div className="form-actions"><button type="button" className="ghost-btn" disabled={busy} onClick={()=>setDialog(null)}>Cancelar</button><button type="submit" className="primary-btn" disabled={busy}>{busy?'Gerando...':'Gerar convite'}</button></div></form>}
     </FormDialog>}
@@ -39,21 +39,22 @@ export default function TeamPage({setMessage,setError}:Props) {
   </>;
 }
 
-function SettingsDialog({onClose,setMessage,setPageError}:{onClose:()=>void;setMessage:(value:string)=>void;setPageError:(value:string)=>void}) {
+function SettingsDialog({onClose,setMessage,setPageError,onSaved}:{onClose:()=>void;setMessage:(value:string)=>void;setPageError:(value:string)=>void;onSaved?:()=>void|Promise<void>}) {
   const [settings,setSettings]=useState<any|null>(null),[error,setLocalError]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
   function setError(value:string){setLocalError(value);if(value)setPageError(value);}
   async function load(){setLoading(true);setError('');try{setSettings(await api('/settings'));}catch(e){setError((e as Error).message);}finally{setLoading(false);}}
   useEffect(()=>{void load();},[]);
   async function save(event:FormEvent) {
     event.preventDefault();if(busy||!settings)return;setBusy(true);setError('');
-    try {await api('/settings','PATCH',{late_tolerance_minutes:Number(settings.late_tolerance_minutes),reminder_minutes_before:Number(settings.reminder_minutes_before)});setMessage('Configurações de atendimento salvas. Os jobs futuros usam essa antecedência, mas o envio automático depende do worker da próxima etapa.');onClose();}
+    try {await api('/settings','PATCH',{late_tolerance_minutes:Number(settings.late_tolerance_minutes),reminder_minutes_before:Number(settings.reminder_minutes_before),taxi_dog_enabled:settings.taxi_dog_enabled===true});setMessage('Configurações de atendimento salvas.');onClose();await onSaved?.();}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   return <FormDialog title="Configurações de atendimento" description="Defina a tolerância para atrasos e a antecedência dos lembretes." onClose={onClose} busy={busy} error={error}>
     {loading?<Empty label="Carregando configurações..."/>:settings?<form className="form-grid" onSubmit={save}>
       <label>Tolerância para atraso (minutos)<input type="number" min="0" max="120" required disabled={busy} value={settings.late_tolerance_minutes} onChange={e=>setSettings({...settings,late_tolerance_minutes:e.target.value})}/></label>
       <label>Lembrete antes do atendimento (minutos)<input type="number" min="0" max="10080" required disabled={busy} value={settings.reminder_minutes_before} onChange={e=>setSettings({...settings,reminder_minutes_before:e.target.value})}/></label>
-      <p className="muted full-span">O envio automático de lembretes ainda não está ativado.</p>
+      <p className="muted full-span">Os lembretes respeitam a autorização registrada para cada tutor e a configuração de envio da plataforma.</p>
+      <div className="taxi-settings full-span"><label className="taxi-check"><input type="checkbox" disabled={busy} checked={settings.taxi_dog_enabled===true} onChange={event=>setSettings({...settings,taxi_dog_enabled:event.target.checked})}/><span>Ativar Táxi Dog neste pet shop</span></label><p>Libera o planejamento de buscas e entregas ligado aos agendamentos. Cadastre os valores em Serviços e os motoristas em Táxi Dog. A desativação exige concluir ou cancelar as viagens pendentes.</p></div>
       <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>Cancelar</button><button type="submit" className="primary-btn" disabled={busy}>{busy?'Salvando...':'Salvar configurações'}</button></div>
     </form>:<button className="ghost-btn" onClick={()=>void load()}>Tentar novamente</button>}
   </FormDialog>;

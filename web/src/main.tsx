@@ -9,6 +9,7 @@ import DataPage, {type Resource} from './DataPage';
 import CalendarPage from './CalendarPage';
 import WaitlistPage from './WaitlistPage';
 import TeamPage from './TeamPage';
+import TaxiDogPage from './TaxiDogPage';
 import PlatformPage from './PlatformPage';
 import CrmPage from './CrmPage';
 import InventoryPage from './InventoryPage';
@@ -60,7 +61,8 @@ function App(){
    {view==='overview'&&<Overview key={user.tenantId} go={navigate} can={permitted} isAdmin={user.role==='admin'} onNew={()=>{navigate('calendar');setNewBooking(true);}}/>}
    {(view==='tutors'||view==='pets')&&<div className="resource-tabs" aria-label="Cadastros">{permitted('tutors')&&<button className={view==='tutors'?'selected':''} onClick={()=>navigate('tutors')}><UsersRound size={17}/>Clientes</button>}{permitted('pets')&&<button className={view==='pets'?'selected':''} onClick={()=>navigate('pets')}><PawPrint size={17}/>Pets</button>}</div>}
    {(['tutors','pets','professionals','services'] as MenuKey[]).includes(view)&&permitted(view)&&<DataPage key={view+'-'+user.tenantId+'-'+searchQuery} resource={view as Resource} initialSearch={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
-   {view==='calendar'&&permitted('appointments')&&<CalendarPage key={user.tenantId} initialNew={newBooking} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);}}/>}
+   {view==='calendar'&&permitted('appointments')&&<CalendarPage key={user.tenantId} initialNew={newBooking} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} canTaxiDog={permitted('taxi_dog')} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);}}/>}
+   {view==='taxi-dog'&&permitted('taxi_dog')&&<TaxiDogPage key={user.tenantId} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
    {view==='waitlist'&&permitted('waitlist')&&<WaitlistPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='crm'&&permitted('crm')&&<CrmPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='inventory'&&permitted('inventory')&&<InventoryPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
@@ -69,7 +71,7 @@ function App(){
    {view==='privacy'&&user.role==='admin'&&<PrivacyPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='subscription'&&<SubscriptionPage key={user.tenantId} setMessage={setMessage} setError={setError} onOpenSupport={id=>{navigate('support');setSupportTicketId(id);}}/>}
    {view==='support'&&<SupportPage key={user.tenantId} setMessage={setMessage} setError={setError} initialTicketId={supportTicketId}/>}
-   {view==='team'&&permitted('team')&&<TeamPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
+   {view==='team'&&permitted('team')&&<TeamPage key={user.tenantId} setMessage={setMessage} setError={setError} onSettingsSaved={refresh}/>}
   </>}
  </AppShell>{termsRequired?<TermsConsentDialog version={session.legal!.version} onAccepted={()=>void refresh()} onRead={readLegal} onLogout={()=>void logout()}/>:needsPlan?<PlanOnboardingDialog onDone={async(plan)=>{await refresh();navigate(plan&&plan!=='free'?'subscription':'overview');}} onLogout={()=>void logout()}/>:null}</>;
 }

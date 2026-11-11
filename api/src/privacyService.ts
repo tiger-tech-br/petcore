@@ -38,7 +38,9 @@ export async function exportSubject(company:string,requestId:string,user:string)
    (SELECT count(*) FROM appointments WHERE tenant_id=$1 AND tutor_id=$2)+
    (SELECT count(*) FROM crm_contacts WHERE tenant_id=$1 AND tutor_id=$2)+
    (SELECT count(*) FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2)+
-   (SELECT count(*) FROM business_sales WHERE tenant_id=$1 AND tutor_id=$2) AS total`,[company,item.tutor_id]);
+   (SELECT count(*) FROM business_sales WHERE tenant_id=$1 AND tutor_id=$2)+
+   (SELECT count(*) FROM taxi_bookings b JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
+   (SELECT count(*) FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2) AS total`,[company,item.tutor_id]);
   ensure(Number(size.rows[0].total)<=25000,413,'Este histórico precisa de exportação assistida em lotes pelo responsável pelo sistema.');
   const pets=await db.query('SELECT id,name,species,breed,size,birth_date,notes,created_at,photo_key FROM pets WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
   const appointments=await db.query(`SELECT a.id,a.pet_id,p.name AS pet_name,a.starts_at,a.ends_at,a.status,a.notes,
@@ -50,6 +52,14 @@ export async function exportSubject(company:string,requestId:string,user:string)
   const tasks=await db.query('SELECT id,title,notes,due_at,status,created_at,completed_at FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
   const consents=await db.query('SELECT email,action,created_at FROM tutor_email_reminder_consent_events WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY event_order',[company,item.tutor_id]);
   const waitlist=await db.query('SELECT id,pet_id,earliest_at,latest_at,status,notes FROM waitlist WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY earliest_at,id',[company,item.tutor_id]);
+  const taxiBookings=await db.query(`SELECT b.id,b.appointment_id,b.service_id,b.service_name,b.price_cents,b.mode,b.address,b.reference,b.notes,b.cancelled_at,b.created_at,b.updated_at
+   FROM taxi_bookings b JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id
+   WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY b.created_at,b.id`,[company,item.tutor_id]);
+  const taxiTrips=await db.query(`SELECT t.id,t.booking_id,t.leg,d.name AS driver_name,t.starts_at,t.ends_at,t.status,t.created_at,t.updated_at
+   FROM taxi_trips t JOIN taxi_drivers d ON d.tenant_id=t.tenant_id AND d.id=t.driver_id
+   JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id
+   JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id
+   WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY t.starts_at,t.id`,[company,item.tutor_id]);
   const sales=await db.query(`SELECT s.id,s.appointment_id,s.status,s.notes,s.created_at,to_jsonb(s)-'tenant_id'-'created_by' AS financial_record,
     COALESCE((SELECT json_agg(to_jsonb(i)-'tenant_id') FROM business_sale_items i WHERE i.tenant_id=s.tenant_id AND i.sale_id=s.id),'[]'::json) AS items,
     COALESCE((SELECT json_agg(to_jsonb(l)-'tenant_id'-'created_by') FROM business_ledger l WHERE l.tenant_id=s.tenant_id AND l.sale_id=s.id),'[]'::json) AS transactions
@@ -59,7 +69,7 @@ export async function exportSubject(company:string,requestId:string,user:string)
   await recordAudit(db,{tenantId:company,userId:user,action:'privacy.export',entityType:'privacy_request',entityId:requestId,metadata:{tutorId:item.tutor_id}});
   return {format:'petcore.subject-export.v1',exported_at:new Date().toISOString(),request_id:requestId,
    tutor:tutor.rows[0],pets:pets.rows,appointments:appointments.rows,contacts:contacts.rows,tasks:tasks.rows,
-   email_reminder_consent_history:consents.rows,waitlist:waitlist.rows,sales:sales.rows};
+   email_reminder_consent_history:consents.rows,waitlist:waitlist.rows,sales:sales.rows,taxi_dog:{bookings:taxiBookings.rows,trips:taxiTrips.rows}};
  });
  const configured=storage();
  const photoDownloads:{petId:string;url:string|null;expiresAt:string|null;status:string}[]=[];
@@ -93,8 +103,25 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   ensure(item.identity_verified,409,'Verifique a identidade do titular antes de anonimizar.');
   ensure(!['completed','rejected'].includes(item.status),409,'Esta solicitação já foi encerrada.');
   ensure(!tutor.rows[0].anonymized_at,409,'Este cadastro já foi anonimizado.');
-  const appointments=await db.query('SELECT id,status FROM appointments WHERE tenant_id=$1 AND tutor_id=$2 FOR UPDATE',[company,item.tutor_id]);
+  const appointments=await db.query(`SELECT a.id,a.status,
+   EXISTS(SELECT 1 FROM appointment_events e WHERE e.tenant_id=a.tenant_id AND e.appointment_id=a.id AND e.kind='in_progress') AS previously_started
+   FROM appointments a WHERE a.tenant_id=$1 AND a.tutor_id=$2 FOR UPDATE OF a`,[company,item.tutor_id]);
   ensure(!appointments.rows.some(row=>row.status==='in_progress'),409,'Finalize os atendimentos em andamento antes de anonimizar este cadastro.');
+  // Mesma ordem de travas dos transportes: tutor, atendimento, reserva, viagens.
+  const taxiBookings=await db.query(`SELECT b.id,b.mode,b.appointment_id FROM taxi_bookings b JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id
+   WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY b.id FOR UPDATE OF b`,[company,item.tutor_id]);
+  const taxiIds=taxiBookings.rows.map(row=>row.id);
+  const taxiTrips=await db.query('SELECT id,booking_id,leg,status FROM taxi_trips WHERE tenant_id=$1 AND booking_id=ANY($2::uuid[]) ORDER BY id FOR UPDATE',[company,taxiIds]);
+  ensure(!taxiTrips.rows.some(row=>['en_route','with_pet'].includes(row.status)),409,'Finalize o transporte em andamento antes de anonimizar este cadastro.');
+  const custodyAppointments=new Set(appointments.rows.filter(row=>['in_progress','done'].includes(row.status)||row.previously_started).map(row=>row.id));
+  const bookingsById=new Map(taxiBookings.rows.map(row=>[row.id,row]));
+  const completedPickups=new Set(taxiTrips.rows.filter(trip=>trip.leg==='pickup'&&trip.status==='completed').map(trip=>trip.booking_id));
+  const awaitingReturn=taxiTrips.rows.some(trip=>{
+   const booking=bookingsById.get(trip.booking_id);
+   return booking&&booking.mode!=='pickup'&&trip.leg==='dropoff'&&trip.status==='scheduled'&&
+    (custodyAppointments.has(booking.appointment_id)||completedPickups.has(trip.booking_id));
+  });
+  ensure(!awaitingReturn,409,'Há um pet no estabelecimento aguardando a entrega. Conclua a devolução ou registre a retirada pelo tutor antes de anonimizar.');
   const sending=await db.query(`SELECT j.claimed_by,j.claim_expires_at FROM reminder_jobs j JOIN appointments a
    ON a.tenant_id=j.tenant_id AND a.id=j.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2 FOR UPDATE OF j`,[company,item.tutor_id]);
   ensure(!sending.rows.some(row=>row.claimed_by&&row.claim_expires_at&&new Date(row.claim_expires_at)>new Date()),409,
@@ -114,6 +141,10 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   await db.query("UPDATE crm_contacts SET summary='Conteúdo removido por solicitação de privacidade.' WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE crm_tasks SET title='Retorno encerrado por privacidade',notes='',status=CASE WHEN status='open' THEN 'cancelled' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE waitlist SET notes='',status=CASE WHEN status IN ('waiting','offered') THEN 'closed' ELSE status END WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
+  await db.query(`UPDATE taxi_bookings b SET address='',reference='',notes='',updated_at=now(),
+   cancelled_at=CASE WHEN EXISTS(SELECT 1 FROM taxi_trips t WHERE t.tenant_id=b.tenant_id AND t.booking_id=b.id AND t.status='scheduled') THEN COALESCE(b.cancelled_at,now()) ELSE b.cancelled_at END
+   WHERE b.tenant_id=$1 AND b.id=ANY($2::uuid[])`,[company,taxiIds]);
+  await db.query("UPDATE taxi_trips SET status='cancelled',updated_at=now() WHERE tenant_id=$1 AND booking_id=ANY($2::uuid[]) AND status='scheduled'",[company,taxiIds]);
   await db.query('UPDATE tutor_email_reminder_consent_events SET email=NULL WHERE tenant_id=$1 AND tutor_id=$2',[company,item.tutor_id]);
   const cancelled=await db.query(`UPDATE appointments SET notes='',updated_at=now(),status='cancelled'
    WHERE tenant_id=$1 AND tutor_id=$2 AND starts_at>=now() AND status IN ('pending','confirmed') RETURNING id`,[company,item.tutor_id]);

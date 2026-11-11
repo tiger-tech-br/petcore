@@ -4,9 +4,10 @@ import { pool,tx,auth,permit,tenant,ensure,allowProfessional,validateAvailabilit
 import type { PoolClient } from 'pg';
 import {requireSubscriptionWrite} from './commercialService.js';
 import {assertFutureAppointmentStart} from './scheduling.js';
+import {canTaxi,cancelTaxiForAppointment,saveTaxiBooking,taxiDraft,taxiOptions,validateTaxiForAppointmentMove} from './taxiDogService.js';
 const r=Router();r.use(auth,requireSubscriptionWrite);
 const datetime=z.iso.datetime({offset:true});
-const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default('')});
+const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default(''),taxi_dog:taxiDraft.nullable().optional()});
 const activeStatuses=['pending','confirmed','in_progress'];
 const notificationLabels: Record<string,string> = {
   created:'Novo agendamento',
@@ -93,14 +94,14 @@ r.get('/calendar/options',permit('appointments'),async(req,res)=>{
   pool.query('SELECT id,name FROM tutors WHERE tenant_id=$1 AND anonymized_at IS NULL ORDER BY name',[c]),
   pool.query('SELECT p.id,p.name,p.tutor_id FROM pets p JOIN tutors t ON t.tenant_id=p.tenant_id AND t.id=p.tutor_id WHERE p.tenant_id=$1 AND t.anonymized_at IS NULL ORDER BY p.name',[c]),
   pool.query('SELECT id,name FROM professionals WHERE tenant_id=$1 AND active=true AND ($2::uuid IS NULL OR id=$2) ORDER BY name',[c,scoped?req.access!.scopeProfessionalId:null]),
-  pool.query('SELECT id,name,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND active=true ORDER BY name',[c]),
+  pool.query("SELECT id,name,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND active=true AND service_type='appointment' ORDER BY name",[c]),
   pool.query('SELECT timezone FROM tenants WHERE id=$1',[c])
- ]);res.json({tutors:tutors.rows,pets:pets.rows,professionals:professionals.rows,services:services.rows,timezone:settings.rows[0].timezone,server_now:new Date().toISOString()});
+ ]);const taxi=await taxiOptions(pool,c,canTaxi(req));res.json({tutors:tutors.rows,pets:pets.rows,professionals:professionals.rows,services:services.rows,timezone:settings.rows[0].timezone,server_now:new Date().toISOString(),taxi_dog:{...taxi,can_manage:canTaxi(req)}});
 });
 
 async function servicesFor(db:PoolClient,company:string,ids:string[]){
  ensure(new Set(ids).size===ids.length,422,'Serviço repetido no mesmo agendamento.');
- const services=await db.query('SELECT id,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND id=ANY($2::uuid[]) AND active=true',[company,ids]);
+ const services=await db.query("SELECT id,price_cents,duration_minutes FROM services WHERE tenant_id=$1 AND id=ANY($2::uuid[]) AND active=true AND service_type='appointment' ORDER BY id FOR SHARE",[company,ids]);
  ensure(services.rows.length===ids.length,422,'Um ou mais serviços não pertencem à empresa ou estão inativos.');
  return ids.map((id,index)=>({...(services.rows.find(s=>s.id===id)),position:index+1}));
 }
@@ -115,6 +116,7 @@ async function putAppointment(db:PoolClient,req:import('express').Request,compan
  const row=await db.query(`INSERT INTO appointments(tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,notes,created_by)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[company,data.tutor_id,data.pet_id,data.professional_id,start,end,data.notes,req.access!.userId]);
  for(const s of svcs)await db.query(`INSERT INTO appointment_services(tenant_id,appointment_id,service_id,position,price_cents,duration_minutes) VALUES($1,$2,$3,$4,$5,$6)`,[company,row.rows[0].id,s.id,s.position,s.price_cents,s.duration_minutes]);
+ if(data.taxi_dog)await saveTaxiBooking(db,req,company,row.rows[0],data.taxi_dog);
  const event=await db.query(`INSERT INTO appointment_events(tenant_id,appointment_id,actor_user_id,kind,new_start,new_end,new_professional_id)
  VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,[company,row.rows[0].id,req.access!.userId,kind,start,end,data.professional_id]);
  await notifyAppointmentEvent(db,company,event.rows[0].id,data.professional_id);
@@ -126,7 +128,12 @@ r.get('/calendar/appointments',permit('appointments'),async(req,res)=>{
  const scoped=req.access!.role==='employee'&&!req.access!.permissions.includes('agenda:all');
  if(scoped)ensure(req.access!.scopeProfessionalId,403,'Vincule o funcionário a um profissional para acessar a agenda.');
  const result=await pool.query(`SELECT a.*, t.name AS tutor_name,p.name AS pet_name,pr.name AS professional_name,
- COALESCE(json_agg(json_build_object('id',s.id,'name',s.name,'price_cents',acs.price_cents,'duration_minutes',acs.duration_minutes) ORDER BY acs.position) FILTER (WHERE s.id IS NOT NULL),'[]'::json) AS services
+ COALESCE(json_agg(json_build_object('id',s.id,'name',s.name,'price_cents',acs.price_cents,'duration_minutes',acs.duration_minutes) ORDER BY acs.position) FILTER (WHERE s.id IS NOT NULL),'[]'::json) AS services,
+ (SELECT json_build_object('id',b.id,'mode',b.mode,'service_name',b.service_name,'price_cents',b.price_cents,'cancelled_at',b.cancelled_at,
+  'status',CASE WHEN b.cancelled_at IS NOT NULL THEN 'cancelled'
+   WHEN EXISTS(SELECT 1 FROM taxi_trips tr WHERE tr.tenant_id=b.tenant_id AND tr.booking_id=b.id AND tr.status IN ('en_route','with_pet')) THEN 'active'
+   WHEN NOT EXISTS(SELECT 1 FROM taxi_trips tr WHERE tr.tenant_id=b.tenant_id AND tr.booking_id=b.id AND tr.status NOT IN ('completed','cancelled')) THEN 'completed' ELSE 'scheduled' END)
+  FROM taxi_bookings b WHERE b.tenant_id=a.tenant_id AND b.appointment_id=a.id) AS taxi_dog
  FROM appointments a JOIN tutors t ON t.id=a.tutor_id AND t.tenant_id=a.tenant_id
  JOIN pets p ON p.id=a.pet_id AND p.tenant_id=a.tenant_id
  JOIN professionals pr ON pr.id=a.professional_id AND pr.tenant_id=a.tenant_id
@@ -156,7 +163,7 @@ r.post('/calendar/check',permit('appointments'),async(req,res)=>{
 });
 r.post('/calendar/appointments/:id/move',permit('appointments'),async(req,res)=>{
  const id=z.uuid().parse(req.params.id),c=tenant(req);
- const data=z.object({starts_at:datetime,professional_id:z.uuid(),reason:z.string().trim().min(3).max(1000),mode:z.enum(['reschedule','anticipate']),tutor_consent:z.boolean().default(false)}).parse(req.body);
+ const data=z.object({starts_at:datetime,professional_id:z.uuid(),reason:z.string().trim().min(3).max(1000),mode:z.enum(['reschedule','anticipate']),tutor_consent:z.boolean().default(false),taxi_dog:taxiDraft.nullable().optional()}).parse(req.body);
  if(data.mode==='anticipate')ensure(data.tutor_consent,422,'Registre a concordância do tutor.');
  const changed=await tx(async db=>{
   const target=(await db.query('SELECT tutor_id FROM appointments WHERE tenant_id=$1 AND id=$2',[c,id])).rows[0];ensure(target,404,'Agendamento não encontrado.');await lockTutor(db,c,target.tutor_id);
@@ -169,6 +176,8 @@ r.post('/calendar/appointments/:id/move',permit('appointments'),async(req,res)=>
   await validateAvailability(db,c,data.professional_id,start,end,svcs.rows.map(s=>s.service_id));
   assertFutureAppointmentStart(start);
   const updated=await db.query(`UPDATE appointments SET starts_at=$3,ends_at=$4,professional_id=$5,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING *`,[c,id,start,end,data.professional_id]);
+  if(data.taxi_dog!==undefined)await saveTaxiBooking(db,req,c,updated.rows[0],data.taxi_dog);
+  else await validateTaxiForAppointmentMove(db,c,updated.rows[0]);
   const event=await db.query(`INSERT INTO appointment_events(tenant_id,appointment_id,actor_user_id,kind,old_start,old_end,new_start,new_end,old_professional_id,new_professional_id,reason,tutor_consent)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,[c,id,req.access!.userId,data.mode,before.starts_at,before.ends_at,start,end,before.professional_id,data.professional_id,data.reason,data.tutor_consent]);
   await notifyAppointmentEvent(db,c,event.rows[0].id,data.professional_id);
@@ -184,10 +193,16 @@ r.post('/calendar/appointments/:id/status',permit('appointments'),async(req,res)
   const old=await db.query('SELECT * FROM appointments WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[c,id]);ensure(old.rowCount,404,'Agendamento não encontrado.');
   allowProfessional(req,old.rows[0].professional_id);
   ensure(transitions[old.rows[0].status]?.includes(status),409,'Mudança de situação não permitida.');
+  if(status==='in_progress'){
+   const pickup=await db.query(`SELECT t.status FROM taxi_bookings b JOIN taxi_trips t ON t.tenant_id=b.tenant_id AND t.booking_id=b.id
+    WHERE b.tenant_id=$1 AND b.appointment_id=$2 AND b.cancelled_at IS NULL AND t.leg='pickup'`,[c,id]);
+   ensure(!pickup.rowCount||['completed','cancelled'].includes(pickup.rows[0].status),409,'Confirme a chegada do pet ou cancele a busca antes de iniciar o atendimento.');
+  }
   if(status==='no_show'){
    const company=await db.query('SELECT late_tolerance_minutes FROM tenants WHERE id=$1',[c]);
    ensure(Date.now()>=new Date(old.rows[0].starts_at).getTime()+company.rows[0].late_tolerance_minutes*60000,409,'A tolerância para atraso ainda não acabou.');
   }
+  if(['cancelled','no_show'].includes(status))await cancelTaxiForAppointment(db,c,id,status,req.access!.userId);
   const updated=await db.query('UPDATE appointments SET status=$3,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING *',[c,id,status]);
   const event=await db.query('INSERT INTO appointment_events(tenant_id,appointment_id,actor_user_id,kind,old_start,old_end,reason) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[c,id,req.access!.userId,status,old.rows[0].starts_at,old.rows[0].ends_at,reason]);
   await notifyAppointmentEvent(db,c,event.rows[0].id,old.rows[0].professional_id);
@@ -206,7 +221,7 @@ r.get('/calendar/waitlist',permit('waitlist'),async(req,res)=>{
 r.post('/calendar/waitlist',permit('waitlist'),async(req,res)=>{
  const c=tenant(req),i=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),service_id:z.uuid(),professional_id:z.uuid().nullable().optional(),earliest_at:datetime,latest_at:datetime,notes:z.string().max(1000).default('')}).parse(req.body);
  ensure(new Date(i.latest_at)>new Date(i.earliest_at),422,'Período inválido.');
- const row=await tx(async db=>{await lockTutor(db,c,i.tutor_id,422);return db.query(`INSERT INTO waitlist(tenant_id,tutor_id,pet_id,service_id,professional_id,earliest_at,latest_at,notes)
+ const row=await tx(async db=>{await lockTutor(db,c,i.tutor_id,422);const service=await db.query("SELECT 1 FROM services WHERE tenant_id=$1 AND id=$2 AND active=true AND service_type='appointment' FOR SHARE",[c,i.service_id]);ensure(service.rowCount,422,'Escolha um serviço de atendimento ativo. Táxi Dog é configurado junto ao agendamento.');return db.query(`INSERT INTO waitlist(tenant_id,tutor_id,pet_id,service_id,professional_id,earliest_at,latest_at,notes)
  VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[c,i.tutor_id,i.pet_id,i.service_id,i.professional_id??null,i.earliest_at,i.latest_at,i.notes]);});res.status(201).json(row.rows[0]);
 });
 r.get('/calendar/waitlist/:id/opportunities',permit('waitlist'),async(req,res)=>{

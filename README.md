@@ -4,6 +4,12 @@ Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
+## Revisão de Táxi Dog e fontes desktop (11/11/2026)
+
+O Táxi Dog é opcional por pet shop, com preço em Serviços, motoristas, horários separados para busca/entrega e taxa importada uma vez na comanda. Não coleta GPS. O retorno do pet é preservado quando um banho é cancelado após chegada registrada; o Financeiro permite cobrar somente o transporte realizado nesse caso. Endereços são incluídos na exportação verificada e desidentificados pelo fluxo de privacidade, que protege entregas ainda pendentes. Consulte [TAXI-DOG.md](docs/TAXI-DOG.md).
+
+No desktop, textos principais, campos, ações e tabelas usam 16 px e textos secundários, pelo menos 14 px, preservando títulos e preços maiores. A revisão foi conferida em 1024/1366 px; o APK mantém seu ajuste próprio. Compilação e 152 verificações locais passaram (20 unitárias API, 94 integrações existentes, 20 integrações de transporte e 18 web). A publicação desta revisão ainda será registrada após conferência remota. Não houve teste em aparelho nesta rodada; são mudanças remotas para o APK existente.
+
 ## Revisão atual — legibilidade e datas (10/11/2026)
 
 O ajuste de tipografia exclusivo do APK estabelece corpo de pelo menos 16 px e textos secundários de pelo menos 14 px, preservando os textos comerciais de 18 px, títulos e preços maiores. Os gráficos adaptam o `viewBox` à largura disponível para manter letras com 14 px reais. Cabeçalhos e abas de relatórios quebram em linhas nas telas pequenas. A navegação inferior fixa permanece a mesma, sem rodapé adicional; os avisos gerais mantêm posição e comportamento, e o cachorro aparece inteiro no login.
@@ -19,6 +25,7 @@ Nesta rodada passaram 20 testes unitários e 94 de integração da API, 13 teste
 | Acesso e empresas | Login, sessão no PostgreSQL, senhas Argon2id, recuperação por provedor configurado, convites e permissões por empresa |
 | Cadastros e agenda | Clientes/tutores, pets, serviços, profissionais, jornada, pausas, folgas, agenda, reagendamento, antecipação, faltas e histórico |
 | Lista de espera | Registro, sugestões de vaga e encaixe transacional |
+| Táxi Dog | Transporte opcional ligado ao atendimento, com motoristas e horários próprios; consulte [o guia](docs/TAXI-DOG.md) |
 | CRM | Carteira dos tutores existentes, segmentos de inatividade, ficha, contatos manuais e tarefas de retorno |
 | Produtos e estoque | Cadastro, preço/custo, mínimo, movimentos e histórico; controle de saldo e concorrência |
 | Financeiro | Vendas/comandas internas de produtos e serviços, recebimentos parciais, despesas e caixa com fechamento |
@@ -28,7 +35,7 @@ Nesta rodada passaram 20 testes unitários e 94 de integração da API, 13 teste
 | Privacidade | Pedidos de titulares, verificação de identidade, exportação, anonimização e auditoria |
 | Operação | Migrations controladas, manutenção, fotos em armazenamento privado e scripts de backup criptografado/restauração |
 
-Produtos e estoque servem ao balcão e ao consumo interno. Não há loja virtual, compras públicas, táxi dog, entregas ou acompanhamento de pedidos de comércio eletrônico.
+Produtos e estoque servem ao balcão e ao consumo interno. O Táxi Dog organiza a busca e a entrega de pets vinculadas aos atendimentos. Não há loja virtual, compras públicas, entrega de produtos ou acompanhamento de pedidos de comércio eletrônico.
 
 Uma venda aberta ou um serviço agendado não é dinheiro recebido. O Financeiro registra recebimentos informados pela equipe; não precisa acessar a conta bancária do pet shop. Não há integração bancária, emissão fiscal ou captura de cartão no PetCore.
 
@@ -50,7 +57,7 @@ Foi gerado o APK release assinado **PetCore 1.0.1**, código **2**, em `releases
 
 **Instale o APK 1.0.1 por cima da versão anterior:** a correção nativa elimina a aplicação duplicada dos espaços das barras do sistema/teclado no WebView; ela não chega apenas pela atualização da interface no servidor. A geração atual passou em **7 testes Java**, build release offline e verificação da assinatura v2/v3; `lintRelease` terminou com **zero erros e 9 avisos**. O arquivo tem **1.756.814 bytes**, SHA-256 `e3e26ee49df729278a9623d8adf5310d3570fbcfe603148fad5a0fe0c299d947`, e usa o mesmo certificado da 1.0.0, preservada em `releases/`. Não houve instalação ou teste do APK 1.0.1 em aparelho/emulador. A chave privada de atualização está em `.android-signing/`, fora do Git, e precisa ser preservada em cópia privada. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
 
-O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e salão de beleza. Melhorias futuras para pet shops pertencem ao mesmo PetCore; táxi dog segue fora do escopo implementado.
+O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e salão de beleza. Melhorias para pet shops, incluindo Táxi Dog, pertencem ao mesmo PetCore.
 
 ## Planos e cobrança
 

@@ -1,0 +1,198 @@
+// Desktop readability. Keep the mobile/APK scale and larger titles/prices intact.
+@media (min-width:781px) {
+  html:not([data-petcore-native='android']) {
+    body {font-size:16px;line-height:1.6}
+    small,dt,th {font-size:14px;line-height:1.6}
+    .app-shell p,.app-shell li,.app-shell td,.app-shell dd,
+    .form-dialog p,.form-dialog li,.form-dialog td,.form-dialog dd {font-size:16px;line-height:1.65}
+
+    .primary-btn,.ghost-btn,.danger-btn,.table-action,.text-link,.nav-item,
+    .resource-tabs button,.business-tabs button,.segmented button,
+    .notification-read,.notification-popover-foot button,.privacy-danger-button,
+    .profile-dropdown button {font-size:16px;line-height:1.5;min-height:40px;white-space:normal}
+    .nav-item {min-height:49px;overflow-wrap:anywhere}
+    .eyebrow,.calendar-page>.page-header .eyebrow,.count {font-size:14px;line-height:1.6}
+    .page-header p,.calendar-page>.page-header p {font-size:18px;line-height:1.65}
+    .panel-head p,.form-dialog__header p {font-size:16px;line-height:1.6}
+    .alert,.form-dialog__message,.empty p,.muted,.subtle,.field-title,.history p,
+    .search-context,.invitation textarea {font-size:16px;line-height:1.65}
+    .form-dialog .form-grid>label,.form-dialog .stack-form>label,
+    .stack-form label,.form-grid>label,.form-dialog .checks label,
+    .check-label,.checks label,.shift-line label,.break-item {font-size:16px;line-height:1.5}
+    .app-shell input:not([type='checkbox']),.app-shell select,.app-shell textarea,
+    .form-dialog input:not([type='checkbox']),.form-dialog select,.form-dialog textarea,
+    .search-box input,.global-search>input,.shift-line input[type='time'],
+    .business-toolbar input,.business-toolbar select,.business-period input,
+    .business-form-columns input,.business-form-columns select,.business-form-columns textarea,
+    .business-order-line input,.business-order-line select,.crm-search input,.crm-filter select {
+      font-size:16px;line-height:1.5;min-height:44px;
+    }
+    .global-search {height:46px}
+    .global-search>input {min-height:0}
+    .form-dialog label,.business-form-columns>label {min-width:0}
+    .form-actions,.page-header-actions,.business-table-actions {flex-wrap:wrap}
+    .form-actions button,.page-header-actions button {max-width:100%}
+
+    .sidebar-brand .brand-type small,.mobile-brand .brand-type small,
+    .profile-name small,.profile-dropdown>small {font-size:14px;line-height:1.5}
+    .profile-name strong {font-size:16px;line-height:1.5}
+    .company-picker,.company-picker span,.company-picker select {font-size:16px;line-height:1.5}
+    .company-picker {min-height:46px;min-width:0}
+    .topbar {min-height:83px;height:auto;padding-top:12px;padding-bottom:12px}
+    .top-actions,.company-picker {min-width:0}
+    .notification-counter {font-size:14px;min-width:24px;height:24px;padding:0 5px;line-height:1}
+    .notification-popover-head small,.notification-entry-text small,
+    .notification-entry-text time {font-size:14px;line-height:1.6}
+    .notification-entry-text strong,.notification-entry-text p,
+    .notification-empty,.notification-error {font-size:16px;line-height:1.65}
+    .global-search-message,.global-search-error,.global-search-result strong {font-size:16px;line-height:1.6}
+    .global-search-group,.global-search-result small {font-size:14px;line-height:1.6}
+    .global-search-result strong,.global-search-result small {white-space:normal;overflow-wrap:anywhere}
+
+    .overview-stat>div>span {font-size:16px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
+    .overview-stat {align-items:flex-start;min-height:98px}
+    .agenda-actions select {font-size:16px;min-height:44px;max-width:100%}
+    .agenda-actions {flex-wrap:wrap;min-width:0}
+    .today-table th,.data-table-wrap th,.business-table-scroll th {font-size:14px;line-height:1.5;white-space:normal}
+    .today-table td,.today-table .pet-cell strong,.data-table-wrap td,
+    .data-table-wrap td strong,.business-table-scroll td,.business-table-scroll td strong {font-size:16px;line-height:1.6}
+    .pet-cell small,.business-table-scroll td small {font-size:14px;line-height:1.6}
+    .table-action,.business-table-actions button {font-size:16px;line-height:1.5;white-space:normal;min-height:40px}
+    .data-table-wrap td,.business-table-scroll td {overflow-wrap:anywhere}
+    .status,.privacy-status,.commercial-label,.calendar-page .appointment-line .status,
+    .crm-appointment-list .status,.business-label {font-size:14px;line-height:1.5;white-space:normal;max-width:100%}
+    .overview-aside .pending-item strong,.pending-item strong,.pending-item p,
+    .pending-item .text-link,.pending-clear>strong,.pending-clear>p,.pending-empty,
+    .dog-reminder p,.dog-reminder .text-link,.record-summary-row,
+    .business-overview-note,.business-overview-retry {font-size:16px;line-height:1.6}
+    .summary-values span {font-size:14px;line-height:1.6}
+    .summary-values strong {white-space:normal;overflow-wrap:anywhere}
+    .summary-note,.dashboard-footnote {font-size:14px;line-height:1.6}
+    .overview-bottom .panel-head h2 {font-size:20px;line-height:1.4}
+    .record-summary-row {gap:12px;min-width:0}
+    .record-summary-row>span {min-width:0;overflow-wrap:anywhere}
+
+    .business-first-steps summary strong,.business-first-steps li strong,
+    .business-first-steps li p,.business-first-steps li button,
+    .business-first-tip,.business-first-loading,.business-first-error,
+    .business-setup-hint,.business-setup-hint strong {font-size:16px;line-height:1.65}
+    .business-first-steps summary small,.business-first-progress,
+    .business-first-number {font-size:14px;line-height:1.5}
+    .business-first-number {width:28px;height:29px}
+    .business-first-next {font-size:18px;line-height:1.5}
+    .business-first-steps li button {min-height:40px;white-space:normal}
+
+    .calendar-page .calendar-tools .date-select,
+    .calendar-page .calendar-tools .calendar-professional-filter,
+    .calendar-page .calendar-tools .calendar-period-filter,
+    .calendar-page .calendar-tools .segmented button {font-size:16px;line-height:1.5}
+    .calendar-page .calendar-tools .date-select input,
+    .calendar-page .calendar-tools .calendar-professional-filter select {font-size:16px;line-height:1.5;min-height:46px}
+    .calendar-page .calendar-tools {flex-wrap:wrap}
+    .calendar-page .appointment-time,.calendar-page .appointment-detail strong {font-size:17px;line-height:1.5}
+    .calendar-page .calendar-client,.calendar-page .appointment-detail small {font-size:16px;line-height:1.6}
+    .team-row strong,.wait-row strong {font-size:16px;line-height:1.5}
+    .team-row small,.wait-row small,.invitation small {font-size:14px;line-height:1.6}
+
+    .business-panel-heading p,.business-retry,.business-form-columns>label,
+    .business-detail-metrics dd,.business-line-list strong,.business-line-list p,
+    .business-line-list .business-money,.business-order-line label,.business-order-total,
+    .business-warning,.business-cash-card p,.business-rank-item>div,
+    .business-report-empty,.business-compact-list li,.business-compact-list li strong,
+    .business-detail-topline,.business-link-button,.business-dialog-tabs button,
+    .business-note,.business-form-hint,.business-body-copy {font-size:16px;line-height:1.65}
+    .business-metric>div>span,.business-metric small,.business-label,.business-count,
+    .business-toolbar label,.business-period label,.business-period>p,
+    .business-detail-metrics dt,.business-product-summary small,.business-line-list small,
+    .business-line-list time,.business-rank-item span,.business-prefixed-input>span,
+    .business-chart-legend,.business-pagination {font-size:14px;line-height:1.6}
+    .business-form .check-label {font-size:16px!important;line-height:1.65}
+    .business-table-scroll table {font-size:16px}
+    .business-section h3 {font-size:17px;line-height:1.5}
+    .business-panel-heading,.business-detail-topline,.business-dialog-tabs {flex-wrap:wrap}
+    .business-table-actions {gap:10px}
+    .business-tabs button,.business-dialog-tabs button {white-space:normal;min-height:44px}
+    .business-rank-item>div {flex-wrap:wrap;gap:6px 14px}
+    .business-line-list time {white-space:normal}
+
+    .crm-stat>span>span,.crm-area-switch button,.crm-directory-head p,
+    .crm-client-contact>span,.crm-client-dates dd,.crm-next-step,.crm-open-client,
+    .crm-task-client,.crm-task-card time,.crm-task-card p,.crm-task-actions .ghost-btn,
+    .crm-cancel-task,.crm-retry,.crm-detail-tabs button,.crm-detail-metrics dd,
+    .crm-detail-section>p,.crm-pet-chips strong,.crm-muted,.crm-appointment-list strong,
+    .crm-contact-meta strong,.crm-contact-timeline p,.crm-entry-columns label {font-size:16px;line-height:1.65}
+    .crm-stat small,.crm-count,.crm-filter,.crm-filter-note,.crm-client-heading>div>span,
+    .crm-task-count,.crm-client-dates dt,.crm-pagination,.crm-task-status,.crm-task-card small,
+    .crm-page-note,.crm-detail-profile>div>span,.crm-detail-metrics dt,
+    .crm-detail-section .crm-section-note,.crm-pet-chips span,
+    .crm-appointment-list article>div>span,.crm-appointment-list small,
+    .crm-contact-meta time,.crm-contact-timeline small,.crm-form-note,.crm-inline-loading {font-size:14px;line-height:1.6}
+    .crm-task-title h3,.crm-client-heading h3,.crm-detail-section h3 {font-size:17px;line-height:1.5}
+    .crm-client-contact>span,.crm-detail-profile>div>span {overflow-wrap:anywhere;white-space:normal}
+    .crm-task-actions,.crm-detail-actions,.crm-area-switch,.crm-detail-tabs {flex-wrap:wrap}
+    .crm-task-count {min-width:28px;height:auto;min-height:28px;padding:3px 7px;line-height:1.4}
+    .crm-stat small {white-space:normal}
+
+    .privacy-guidance p,.privacy-guidance strong,.privacy-protected-note,
+    .privacy-destructive-note,.privacy-inbox-head label,.privacy-file-queue li strong,
+    .privacy-empty-error,.privacy-request-list article strong,.privacy-check,
+    .privacy-verified,.privacy-form-note,.privacy-footnote,.privacy-detail-heading p,
+    .privacy-file-queue p,.privacy-history li,.privacy-preserve-text {font-size:16px;line-height:1.65}
+    .privacy-stat span,.privacy-request-list small,.privacy-file-queue small,
+    .privacy-history li span,.privacy-pagination {font-size:14px;line-height:1.6}
+    .legal-draft,.legal-operator dl>div,.legal-processors li,.legal-processors p {font-size:16px;line-height:1.7}
+    .legal-body,.legal-body p,.legal-body li {font-size:18px;line-height:1.8}
+    .legal-eyebrow,.legal-version,.legal-processors small,.legal-footer {font-size:14px;line-height:1.6}
+
+    .commercial-readonly-banner strong,.commercial-readonly-banner p,
+    .commercial-readonly-banner>.text-link,.commercial-panel-head p,
+    .commercial-section-title p,.commercial-subscription-summary p,
+    .commercial-subscription-summary dd,.commercial-subscription-summary .commercial-access-note,
+    .commercial-plan li,.commercial-plan-equivalent,.commercial-checkout-link,
+    .commercial-checkout-unavailable,.commercial-plan-manager,.commercial-steps,
+    .commercial-small-note,.commercial-body-copy,.commercial-payments strong,
+    .commercial-payments span:not(.commercial-payment-symbol),.commercial-consent>p,
+    .commercial-onboarding-note,.commercial-onboarding-payment>p,
+    .commercial-radio-plan>span>span,.commercial-radio-plan strong,
+    .commercial-conversation strong,.commercial-conversation p,
+    .commercial-company-list strong,.commercial-ticket-list strong,
+    .commercial-config-summary dd,.commercial-plan-settings strong,
+    .commercial-warning,.commercial-detail-metrics dd,.commercial-confirm-value>span,
+    .commercial-tabs>button,.commercial-settings-tabs button,.commercial-processor legend,
+    .commercial-form-columns>label,.commercial-processor>label,.commercial-external-review,
+    .commercial-legal-links button,.commercial-radio-plans legend {font-size:16px;line-height:1.65}
+    .commercial-subscription-summary dt,.commercial-plan-ribbon,.commercial-plan-price>span,
+    .commercial-payments small,.commercial-radio-plan small,.commercial-radio-plan em,
+    .commercial-conversation time,.commercial-support-detail-top>span:last-child,
+    .commercial-company-list small,.commercial-ticket-list small,
+    .commercial-audit-list strong,.commercial-audit-list time,.commercial-audit-list small,
+    .commercial-audit-list details,.commercial-audit-list pre,.commercial-config-summary dt,
+    .commercial-plan-settings small,.commercial-plan-settings>article>div>span,
+    .commercial-detail-metrics dt,.commercial-detail-heading>span:last-child {font-size:14px;line-height:1.6}
+    .commercial-check {font-size:16px!important;line-height:1.65}
+    .commercial-form .commercial-document-editor {font-size:16px!important;line-height:1.7}
+    .commercial-tabs,.commercial-settings-tabs,.commercial-detail-actions,
+    .commercial-subscription-summary dl,.commercial-readonly-banner {flex-wrap:wrap}
+    .commercial-tabs>button,.commercial-settings-tabs button {white-space:normal;min-height:44px}
+    .commercial-radio-plan,.commercial-radio-plan>span,.commercial-conversation article {min-width:0;overflow-wrap:anywhere}
+
+    .auth-field,.auth-input input {font-size:17px;line-height:1.5}
+    .auth-text-button,.auth-back,.auth-help-footer,.auth-help-footer p,
+    .auth-help-footer .auth-text-button,.auth-help-panel,.auth-help-panel strong,
+    .auth-help-panel p,.auth-alert,.auth-invite-terms,.auth-invite-terms button {font-size:16px;line-height:1.6}
+    .auth-logo .brand-type small {font-size:15px;line-height:1.5}
+    .auth-copyright {font-size:14px;line-height:1.5}
+    .auth-input {min-height:46px}
+    .auth-input input {min-height:44px}
+
+    .taxi-filters label,.taxi-fields-grid label,.taxi-check {font-size:16px;line-height:1.5}
+    .taxi-fields>legend {font-size:18px;line-height:1.5}
+    .taxi-leg-fields legend {font-size:16px;line-height:1.5}
+    .taxi-trip-time {font-size:22px;line-height:1.4}
+    .taxi-trip-time span,.taxi-trip-details dt,.taxi-status,.taxi-note,
+    .taxi-page .taxi-note,.taxi-fields .taxi-note,.taxi-charge span,
+    .taxi-calendar-summary,.taxi-pagination {font-size:14px;line-height:1.65}
+    .taxi-trip-details dd,.taxi-trip-notes,.taxi-trip-heading p,
+    .taxi-trip-actions button,.taxi-tabs button {font-size:16px;line-height:1.6}
+  }
+}
