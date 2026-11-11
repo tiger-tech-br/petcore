@@ -5,7 +5,7 @@ Registro de evidências e pendências da preparação comercial. A homologação
 ## Código implementado
 
 - [x] Clientes/tutores, pets, profissionais, serviços, jornadas, agenda e lista de espera.
-- [x] Táxi Dog opcional: motoristas, buscas/entregas ligadas ao atendimento, agenda separada, taxa na comanda, cancelamento e proteções de retorno/privacidade. Sem GPS. Evidências locais da revisão de 11/11/2026: 152 testes aprovados, compilação e conferência de fontes desktop/móvel; publicação remota ainda a registrar em [TAXI-DOG.md](TAXI-DOG.md).
+- [x] Táxi Dog opcional: motoristas, buscas/entregas ligadas ao atendimento, agenda separada, taxa na comanda, cancelamento e proteções de retorno/privacidade. Sem GPS. Evidências locais da revisão de 11/11/2026: 152 testes aprovados, compilação e conferência de fontes desktop/móvel; publicação remota conferida em [TAXI-DOG.md](TAXI-DOG.md).
 - [x] CRM com carteira, segmentos, contatos manuais e tarefas de retorno.
 - [x] Produtos, movimentos de estoque, concorrência e histórico.
 - [x] Vendas/comandas internas, recebimentos parciais, despesas e caixa.
@@ -43,7 +43,9 @@ Não somar execuções sobrepostas. Resultados locais não comprovam entrega de 
 
 ## Evidências da homologação externa
 
-- [x] Revisão final `d463fa12`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`, SUCCESS em 09/11/2026 às 21h22 de Brasília. Página/saúde 200, banco OK, sessão anônima 401 e assets `index-C_n1QduZ.js`/`index-DpZQfskv.css` idênticos ao build local por SHA-256; cinco serviços sem problemas, falhas recentes ou alterações pendentes.
+- [x] Publicação conferida em 11/11/2026 às 19h41 de Brasília: commit `dd90bd405d67fb353704189bed2d27d8282eb67e`, implantação `2753295b-8d14-4883-910a-c09fc784f329` com SUCCESS. Página e saúde responderam 200, com `{ok:true,database:true}`; sessão e opções de transporte anônimas retornaram 401. Os assets `index-BoZ2FMKK.js` e `index-DyZcqTWU.css` corresponderam ao build local por SHA-256. Os cinco serviços estavam sem problemas, falhas recentes ou alterações pendentes. Migrations 001–015 foram conferidas na homologação e no banco original; o recurso permaneceu desativado e sem reservas fictícias em ambos.
+
+- [x] Revisão histórica `d463fa12`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`, SUCCESS em 09/11/2026 às 21h22 de Brasília. Página/saúde 200, banco OK, sessão anônima 401 e assets `index-C_n1QduZ.js`/`index-DpZQfskv.css` idênticos ao build local por SHA-256; cinco serviços sem problemas, falhas recentes ou alterações pendentes.
 - [x] Branch Neon de homologação separado: `petcore-homologacao-20261106`.
 - [x] Destinos separados para fotos e backups criados; variáveis de referência configuradas.
 - [x] Configurações diretas do serviço definidas para Dockerfile, início, pré-deploy e saúde.
