@@ -28,6 +28,7 @@ function App(){
  const [legalView,setLegalView]=useState<'privacy'|'terms'|null>(()=>location.pathname==='/privacy'?'privacy':location.pathname==='/terms'?'terms':null);
  const legalBack=useRef('/');
  const [supportTicketId,setSupportTicketId]=useState<string|null>(null);
+ const [platformSupportRequest,setPlatformSupportRequest]=useState(0);
  function readLegal(kind:'privacy'|'terms'){legalBack.current=location.pathname+location.search;history.pushState(null,'',`/${kind}`);setLegalView(kind);}
  function closeLegal(){history.replaceState(null,'',legalBack.current);setLegalView(null);}
  function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setSupportTicketId(null);setError('');setMessage('');}
@@ -40,6 +41,16 @@ function App(){
   let me=await api<Session>('/auth/me');
   const invite=new URLSearchParams(location.search).get('invite');
   if(invite&&!me.legal?.required){try{await api('/auth/invite/join','POST',{inviteToken:invite});history.replaceState(null,'','/');me=await api<Session>('/auth/me');}catch(cause){setError((cause as Error).message);}}
+  const incoming=new URL(location.href),ticket=incoming.searchParams.get('support_ticket'),supportCompany=incoming.searchParams.get('support_company');
+  if(ticket&&/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(ticket)&&!me.legal?.required){
+   if(me.user.role!=='platform'&&supportCompany&&me.user.tenantId!==supportCompany){
+    if(me.companies.some(company=>company.id===supportCompany)){await api('/auth/select-company','POST',{tenantId:supportCompany});me=await api<Session>('/auth/me');}
+    else setError('Entre com a conta vinculada ao pet shop para acessar essa solicitação.');
+   }
+   setView(me.user.role==='platform'?'platform':'support');setSupportTicketId(ticket);
+   if(me.user.role==='platform')setPlatformSupportRequest(value=>value+1);
+   incoming.searchParams.delete('support_ticket');incoming.searchParams.delete('support_company');history.replaceState(null,'',incoming.pathname+incoming.search+incoming.hash);
+  }
   setSession(me);
  }catch{setSession(null);}finally{setChecking(false);}}
  useEffect(()=>{void refresh();},[]);
@@ -53,11 +64,11 @@ function App(){
  const permitted=(permission?:string)=>!permission||user.role==='admin'||user.permissions.includes(permission);
  const termsRequired=session.legal?.required===true;
  const needsPlan=user.role==='admin'&&Boolean(user.tenantId)&&Boolean(session.subscription)&&!session.subscription?.onboarding_completed_at;
- return <><AppShell session={session} view={view} go={navigate} onSearch={(target,query)=>{navigate(target);setSearchQuery(query);}} company={company} logout={logout}>
+ return <><AppShell session={session} view={view} go={navigate} onSearch={(target,query)=>{navigate(target);setSearchQuery(query);}} company={company} logout={logout} onOpenPlatformSupport={()=>{navigate('platform');setPlatformSupportRequest(value=>value+1);}}>
   {error&&<div className="alert danger" role="alert"><AlertCircle size={17}/>{error}<button onClick={()=>setError('')} aria-label="Dispensar">×</button></div>}{message&&<div className="alert success" role="status"><CheckCircle2 size={17}/>{message}<button onClick={()=>setMessage('')} aria-label="Dispensar">×</button></div>}
   {user.role!=='platform'&&session.subscription?.onboarding_completed_at&&!session.subscription.writable&&<div className="commercial-readonly-banner" role="status"><AlertCircle size={21}/><div><strong>Seu acesso está disponível para consulta.</strong><p>{user.role==='admin'?'Regularize a assinatura para voltar a cadastrar e alterar informações. Seus dados, suporte e solicitações de privacidade continuam disponíveis.':'Peça ao responsável pelo pet shop para conferir a assinatura. Seus dados continuam disponíveis para consulta.'}</p></div>{view!=='subscription'&&<button type="button" className="text-link" onClick={()=>navigate('subscription')}>Ver assinatura</button>}</div>}
   {searchQuery&&<div className="search-context">Resultados para “{searchQuery}”<button className="text-link" onClick={()=>setSearchQuery('')}><X size={14}/>Limpar busca</button></div>}
-  {user.role==='platform'?<PlatformPage setError={setError} setMessage={setMessage}/>:<>
+  {user.role==='platform'?<PlatformPage setError={setError} setMessage={setMessage} supportRequest={platformSupportRequest} initialTicketId={supportTicketId}/>:<>
    {view==='overview'&&<Overview key={user.tenantId} go={navigate} can={permitted} isAdmin={user.role==='admin'} onNew={()=>{navigate('calendar');setNewBooking(true);}}/>}
    {(view==='tutors'||view==='pets')&&<div className="resource-tabs" aria-label="Cadastros">{permitted('tutors')&&<button className={view==='tutors'?'selected':''} onClick={()=>navigate('tutors')}><UsersRound size={17}/>Clientes</button>}{permitted('pets')&&<button className={view==='pets'?'selected':''} onClick={()=>navigate('pets')}><PawPrint size={17}/>Pets</button>}</div>}
    {(['tutors','pets','professionals','services'] as MenuKey[]).includes(view)&&permitted(view)&&<DataPage key={view+'-'+user.tenantId+'-'+searchQuery} resource={view as Resource} initialSearch={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}

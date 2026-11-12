@@ -16,6 +16,7 @@ import businessRoutes from './businessRoutes.js';
 import privacyRoutes from './privacyRoutes.js';
 import commercialRoutes,{publicCommercial} from './commercialRoutes.js';
 import {createOriginGuard} from './originGuard.js';
+import {startSupportEmailWorker} from './supportEmailService.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
  if(env.NODE_ENV!=='production')return;
@@ -63,9 +64,10 @@ if(process.env.NODE_ENV!=='test'){
  validateRuntimeConfiguration();
  const port=Number(process.env.PORT||4000);
  const server=createApp().listen(port,()=>console.log(`PetCore API disponível na porta ${port}`));
+ const stopSupportEmails=startSupportEmailWorker();
  let closing=false;
  const shutdown=()=>{
-  if(closing)return;closing=true;
+  if(closing)return;closing=true;stopSupportEmails();
   const deadline=setTimeout(()=>{server.closeAllConnections();process.exit(1);},20000);deadline.unref();
   server.close(error=>{
    if(error)process.exitCode=1;

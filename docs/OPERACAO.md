@@ -22,6 +22,8 @@ O retorno `/api/health` comprova uma resposta da aplicação e do banco naquele 
 
 ## Assinaturas, cancelamento e troca de plano
 
+Os avisos de pedidos e respostas estão documentados em [SUPPORT-EMAILS.md](SUPPORT-EMAILS.md). O e-mail serve de alerta; a conferência e o atendimento continuam no painel da plataforma. Acompanhe o sino de solicitações pendentes e os estados da fila, incluindo falhas e resultados incertos.
+
 A conta atual do PagBank é de pessoa física. O PetCore usa links recorrentes hospedados, sem capturar cartão nem usar a API de assinaturas para cancelar automaticamente. **Assinar agora** pede um checkout autorizado à API e abre o endereço devolvido. O retorno do navegador não confirma pagamento: a plataforma precisa conferir o recebimento no PagBank antes de registrá-lo no PetCore. Uma escolha de plano não deve substituir o plano do período já pago.
 
 O cliente pode usar o botão vermelho **Cancelar assinatura** e depois **Confirmar pedido** no modal para criar um pedido de suporte. Essa solicitação não cancela a recorrência no provedor e não encurta o período de acesso pago. Para uma assinatura que já teve recebimento:

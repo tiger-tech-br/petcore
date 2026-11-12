@@ -4,11 +4,12 @@ import {Brand} from './Brand';
 import GlobalSearch from './GlobalSearch';
 import {api, dateTime, type Session} from './api';
 import {listenNativeBack} from './nativeAndroid';
+import {PlatformSupportBell} from './PlatformSupportAlerts';
 
 export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
-type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;children:ReactNode};
+type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;onOpenPlatformSupport?:()=>void;children:ReactNode};
 
-export default function AppShell({session,view,go,onSearch,company,logout,children}:Props) {
+export default function AppShell({session,view,go,onSearch,company,logout,onOpenPlatformSupport,children}:Props) {
   const [drawer,setDrawer] = useState(false);
   const {user,companies} = session;
   const can=(p?:string)=>!p||user.role==='admin'||user.permissions.includes(p);
@@ -42,7 +43,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,childr
         <div className="mobile-brand"><Brand/></div>
         <div className="company-picker"><Store size={23}/>{companies.length>1?<select aria-label="Trocar de empresa" value={user.tenantId||''} onChange={e=>company(e.target.value)}><option value="" disabled>Escolha uma empresa</option>{companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>:<span>{user.companyName||(user.role==='platform'?'Administração':'Minha empresa')}</span>}<ChevronDown size={17}/></div>
         {user.role!=='platform'&&<GlobalSearch key={user.tenantId} can={can} onNavigate={(target,query)=>{setDrawer(false);onSearch(target,query);}}/>}
-        <div className="top-actions">{user.role!=='platform'&&(can('appointments')?<NotificationCenter key={`${user.id}:${user.tenantId??''}`} view={view} onPending={pending}/>:<button className="icon-button notification-button" aria-label="Ver pendências do dia" title="Ver pendências do dia" onClick={pending}><Bell size={23}/></button>)}<details className="profile-menu"><summary><span className="avatar-small"><UserRound size={23}/></span><span className="profile-name"><strong>{user.name}</strong><small>{role}</small></span><ChevronDown size={15}/></summary><div className="profile-dropdown"><strong>{user.name}</strong><small>{role}</small><button onClick={logout}><LogOut size={16}/>Sair da conta</button></div></details><button className="icon-button mobile-menu-button" aria-label="Abrir menu" aria-expanded={drawer} onClick={()=>setDrawer(true)}><Menu size={24}/></button></div>
+        <div className="top-actions">{user.role==='platform'?<PlatformSupportBell onOpen={()=>onOpenPlatformSupport?onOpenPlatformSupport():navigate('platform')}/>:can('appointments')?<NotificationCenter key={`${user.id}:${user.tenantId??''}`} view={view} onPending={pending}/>:<button className="icon-button notification-button" aria-label="Ver pendências do dia" title="Ver pendências do dia" onClick={pending}><Bell size={23}/></button>}<details className="profile-menu"><summary><span className="avatar-small"><UserRound size={23}/></span><span className="profile-name"><strong>{user.name}</strong><small>{role}</small></span><ChevronDown size={15}/></summary><div className="profile-dropdown"><strong>{user.name}</strong><small>{role}</small><button onClick={logout}><LogOut size={16}/>Sair da conta</button></div></details><button className="icon-button mobile-menu-button" aria-label="Abrir menu" aria-expanded={drawer} onClick={()=>setDrawer(true)}><Menu size={24}/></button></div>
       </header>
       <div className="content-wrap">{children}</div>
     </main>

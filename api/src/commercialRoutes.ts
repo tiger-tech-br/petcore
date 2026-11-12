@@ -5,6 +5,7 @@ import {recordAudit} from './audit.js';
 import {confirmPassword} from './reauth.js';
 import {settings,legalPublic,legalVersion,paymentLink,reviewedPaymentLink,hasConfirmedSubscriptionPayment,subscription} from './commercialService.js';
 import {legalTemplatesFor} from './legalTemplates.js';
+import {enqueueSupportEmails,supportEmailStatus} from './supportEmailService.js';
 
 export const publicCommercial=Router();
 publicCommercial.get('/legal',async(_req,res)=>{res.set('Cache-Control','no-store');res.json(legalPublic(await settings()));});
@@ -48,8 +49,9 @@ router.post('/choose-plan',async(req,res)=>{
    const created=!ticket;
    if(!ticket)ticket=(await db.query("INSERT INTO support_tickets(tenant_id,created_by,subject,category) VALUES($1,$2,$3,'billing') RETURNING id,subject",[company,req.access!.userId,subject])).rows[0];
    if(created||ticket.subject!==subject||Object.entries(requestContext).some(([key,value])=>ticket.request_metadata?.[key]!==value)){
-    await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4)',[company,ticket.id,req.access!.userId,
-     `Solicito a contratação ou regularização do ${plan.name}. O suporte deve conferir a assinatura atual e, se necessário, cancelar a recorrência anterior no PagBank antes de encaminhar outro link. Esta solicitação não confirma cancelamento nem realiza nova cobrança.`]);
+    const message=(await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4) RETURNING id',[company,ticket.id,req.access!.userId,
+     `Solicito a contratação ou regularização do ${plan.name}. O suporte deve conferir a assinatura atual e, se necessário, cancelar a recorrência anterior no PagBank antes de encaminhar outro link. Esta solicitação não confirma cancelamento nem realiza nova cobrança.`])).rows[0];
+    await enqueueSupportEmails(db,{tenantId:company,ticketId:ticket.id,messageId:message.id,event:'request_received'});
     if(!created)await db.query('UPDATE support_tickets SET subject=$2,updated_at=now() WHERE id=$1',[ticket.id,subject]);
     await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'subscription.plan_change_requested',entityType:'support_ticket',entityId:ticket.id,metadata:requestContext});
    }
@@ -75,7 +77,8 @@ router.post('/cancel-subscription',async(req,res)=>{
     AND a.entity_id=t.id AND a.action='subscription.cancellation_requested') ORDER BY t.created_at DESC,t.id DESC LIMIT 1 FOR UPDATE`,[company])).rows[0];
   if(!ticket){
    ticket=(await db.query("INSERT INTO support_tickets(tenant_id,created_by,subject,category) VALUES($1,$2,'Cancelamento da assinatura PetCore','billing') RETURNING id",[company,req.access!.userId])).rows[0];
-   await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4)',[company,ticket.id,req.access!.userId,'Solicito o cancelamento das próximas cobranças da minha assinatura. O suporte deve cancelar a recorrência no PagBank e registrar a confirmação. O período já pago permanece disponível.']);
+   const message=(await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4) RETURNING id',[company,ticket.id,req.access!.userId,'Solicito o cancelamento das próximas cobranças da minha assinatura. O suporte deve cancelar a recorrência no PagBank e registrar a confirmação. O período já pago permanece disponível.'])).rows[0];
+   await enqueueSupportEmails(db,{tenantId:company,ticketId:ticket.id,messageId:message.id,event:'request_received'});
    await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'subscription.cancellation_requested',entityType:'support_ticket',entityId:ticket.id,metadata:{plan:current.plan_id}});
   }
   return {ok:true,action:'support' as const,ticket_id:ticket.id,message:'Pedido enviado ao suporte. Aguarde a confirmação do cancelamento no PagBank antes de assinar outro plano. Seu período já pago será mantido.'};
@@ -158,6 +161,16 @@ router.get('/platform/subscriptions',platform,async(req,res)=>{
   SELECT (SELECT count(*)::int FROM companies) AS total,COALESCE((SELECT json_agg(r) FROM (SELECT * FROM companies ORDER BY lower(name),id LIMIT $2 OFFSET $3) r),'[]') AS items`,[q,page_size,(page-1)*page_size]);
  res.json({...result.rows[0],page,pageSize:page_size});
 });
+router.get('/platform/support-summary',platform,async(_req,res)=>{
+ const [tickets,emails]=await Promise.all([
+  pool.query("SELECT count(*)::int AS pending_count FROM support_tickets WHERE status IN ('open','in_progress')"),
+  pool.query(`SELECT count(*) FILTER(WHERE state='queued')::int AS queued,count(*) FILTER(WHERE state='sending')::int AS sending,
+   count(*) FILTER(WHERE state='sent')::int AS sent,count(*) FILTER(WHERE state='failed')::int AS failed,
+   count(*) FILTER(WHERE state='uncertain')::int AS uncertain FROM support_email_notifications`)
+ ]);
+ const emailStatus=supportEmailStatus();
+ res.json({pending_count:tickets.rows[0].pending_count,emails:emails.rows[0],notifications_enabled:emailStatus.enabled,email_configured:emailStatus.configured,email_configuration_error:emailStatus.errorCode});
+});
 router.get('/platform/subscriptions/:id',platform,async(req,res)=>{
  const company=z.uuid().parse(req.params.id);
  const record=(await pool.query('SELECT id,name,active FROM tenants WHERE id=$1',[company])).rows[0];ensure(record,404,'Empresa não encontrada.');
@@ -197,8 +210,9 @@ router.post('/platform/subscriptions/:id/cancel-recurring',platform,async(req,re
    AND t.status IN ('open','in_progress') AND EXISTS(SELECT 1 FROM audit_events a WHERE a.tenant_id=t.tenant_id
     AND a.entity_id=t.id AND a.action='subscription.cancellation_requested') FOR UPDATE`,[company])).rows;
   for(const ticket of tickets){
-   await db.query(`INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,from_platform,body)
-    VALUES($1,$2,$3,true,$4)`,[company,ticket.id,req.access!.userId,`Cancelamento da renovação confirmado no painel do PagBank. Referência: ${input.provider_reference}. O período já pago permanece disponível.`]);
+   const message=(await db.query(`INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,from_platform,body)
+    VALUES($1,$2,$3,true,$4) RETURNING id`,[company,ticket.id,req.access!.userId,`Cancelamento da renovação confirmado no painel do PagBank. Referência: ${input.provider_reference}. O período já pago permanece disponível.`])).rows[0];
+   await enqueueSupportEmails(db,{tenantId:company,ticketId:ticket.id,messageId:message.id,event:'platform_reply'});
    await db.query("UPDATE support_tickets SET status='resolved',updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,ticket.id]);
   }
   await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'subscription.recurrence_cancellation_confirmed',entityType:'subscription',metadata:{provider_reference:input.provider_reference,reason:input.reason,confirmed_in_pagbank:true}});
@@ -260,7 +274,7 @@ router.get('/audit',async(req,res)=>{
 
 async function ticketAccess(req:import('express').Request,id:string) {
  const scope=req.access!.role==='platform'?null:tenant(req),user=req.access!.role==='employee'?req.access!.userId:null;
- const result=await pool.query('SELECT * FROM support_tickets WHERE id=$1 AND ($2::uuid IS NULL OR tenant_id=$2) AND ($3::uuid IS NULL OR created_by=$3)',[id,scope,user]);
+ const result=await pool.query('SELECT s.*,t.name AS company_name FROM support_tickets s JOIN tenants t ON t.id=s.tenant_id WHERE s.id=$1 AND ($2::uuid IS NULL OR s.tenant_id=$2) AND ($3::uuid IS NULL OR s.created_by=$3)',[id,scope,user]);
  ensure(result.rowCount,404,'Solicitação não encontrada.');return result.rows[0];
 }
 router.get('/support',async(req,res)=>{
@@ -273,19 +287,21 @@ router.get('/support',async(req,res)=>{
 router.post('/support',async(req,res)=>{
  const company=tenant(req),input=z.object({subject:z.string().trim().min(3).max(160),category:z.enum(['access','billing','technical','privacy','other']),body:z.string().trim().min(5).max(4000)}).strict().parse(req.body);
  const ticket=await tx(async db=>{const row=(await db.query('INSERT INTO support_tickets(tenant_id,created_by,subject,category) VALUES($1,$2,$3,$4) RETURNING *',[company,req.access!.userId,input.subject,input.category])).rows[0];
-  await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4)',[company,row.id,req.access!.userId,input.body]);
+  const message=(await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,body) VALUES($1,$2,$3,$4) RETURNING id',[company,row.id,req.access!.userId,input.body])).rows[0];
+  await enqueueSupportEmails(db,{tenantId:company,ticketId:row.id,messageId:message.id,event:'request_received'});
   await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'support.created',entityType:'support_ticket',entityId:row.id});return row;});res.status(201).json(ticket);
 });
 router.get('/support/:id',async(req,res)=>{
  const id=z.uuid().parse(req.params.id),ticket=await ticketAccess(req,id);
- const messages=await pool.query(`SELECT m.id,m.body,m.from_platform,m.created_at FROM support_messages m
-  WHERE tenant_id=$1 AND ticket_id=$2 ORDER BY created_at,id LIMIT 200`,[ticket.tenant_id,id]);res.json({ticket,messages:messages.rows});
+ const messages=await pool.query(`SELECT * FROM (SELECT m.id,m.body,m.from_platform,m.created_at FROM support_messages m
+  WHERE tenant_id=$1 AND ticket_id=$2 ORDER BY created_at DESC,id DESC LIMIT 200) recent ORDER BY created_at,id`,[ticket.tenant_id,id]);res.json({ticket,messages:messages.rows});
 });
 router.post('/support/:id/messages',async(req,res)=>{
  const id=z.uuid().parse(req.params.id),ticket=await ticketAccess(req,id),input=z.object({body:z.string().trim().min(1).max(4000),status:z.enum(['open','in_progress','resolved']).optional()}).strict().parse(req.body);
  ensure(input.status===undefined||req.access!.role==='platform',403,'Somente o suporte pode alterar a situação da solicitação.');
- await tx(async db=>{await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,from_platform,body) VALUES($1,$2,$3,$4,$5)',[ticket.tenant_id,id,req.access!.userId,req.access!.role==='platform',input.body]);
-  await db.query('UPDATE support_tickets SET updated_at=now(),status=COALESCE($2,status) WHERE id=$1',[id,input.status??null]);
+ await tx(async db=>{const message=(await db.query('INSERT INTO support_messages(tenant_id,ticket_id,actor_user_id,from_platform,body) VALUES($1,$2,$3,$4,$5) RETURNING id',[ticket.tenant_id,id,req.access!.userId,req.access!.role==='platform',input.body])).rows[0];
+  await enqueueSupportEmails(db,{tenantId:ticket.tenant_id,ticketId:id,messageId:message.id,event:req.access!.role==='platform'?'platform_reply':'customer_message'});
+  await db.query("UPDATE support_tickets SET updated_at=now(),status=COALESCE($2,CASE WHEN $3 THEN status ELSE 'open' END) WHERE id=$1",[id,input.status??null,req.access!.role==='platform']);
   await recordAudit(db,{tenantId:ticket.tenant_id,userId:req.access!.userId,action:'support.message_added',entityType:'support_ticket',entityId:id});});res.status(201).json({ok:true});
 });
 export default router;
