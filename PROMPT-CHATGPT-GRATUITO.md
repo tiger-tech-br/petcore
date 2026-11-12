@@ -6,6 +6,16 @@ Copie o texto abaixo para a conversa em que o projeto está sendo construído. A
 
 Estou desenvolvendo o **PetCore**, SaaS de gestão interna de pet shops da **Tiger Tech**, na pasta `C:\Users\andre\Desktop\petcore-saas`. Continue a partir dos arquivos atuais, sem recriar o projeto e sem substituir alterações recentes por versões antigas.
 
+## Revisão de assinatura — navegação e ativação (12/11/2026)
+
+O atalho “Ver assinatura” permanece nas outras telas e não aparece dentro da própria página de assinatura, pois já era o destino aberto. Quando uma tentativa de pagamento exige suporte, a ação “Conferir pagamento com suporte” abre diretamente o chamado retornado pela API; não reabre o link genérico do PagBank nem remove a trava de checkout pendente. Uma assinatura cujo primeiro acesso ainda não foi confirmado aparece como “Ativação pendente”, sem apresentar a data provisória como vencimento real do Free. Um teste iniciado continua mostrando sua validade. Pagamento pendente continua aguardando confirmação, sem ativar acesso pela escolha do plano. A posição e o comportamento dos avisos gerais foram preservados.
+
+Compilação da interface e 18 testes existentes (13 de ponte/checkout e 5 de datas) passaram. O navegador local com API fictícia conferiu navegação, administrador e funcionário, teste ativo/expirado, ativação ainda pendente e abertura do chamado em modal, incluindo 1366 px e 320 px sem excesso horizontal. Nenhum pagamento, mensagem real ou alteração de assinatura/banco foi realizado. A publicação desta revisão deve ser conferida antes de ser declarada concluída.
+
+## Próxima evolução planejada — GPS e rotas (11/11/2026)
+
+Foi preparado o [prompt específico para acrescentar GPS e rotas ao Táxi Dog](PROMPT-GPS-TAXI-DOG.md). **O recurso ainda não foi implementado ou ativado.** Quando eu solicitar essa implementação, use esse documento: prevê motorista autenticado com acesso às próprias viagens, localização compartilhada explicitamente durante o trajeto, mapa e rotas dentro do PetCore, escolha de fornecedor com custos verificados e nova versão do APK para o serviço nativo de localização. O navegador terá as limitações de captura em primeiro plano. Não confunda esse planejamento com um recurso já publicado.
+
 ## Evolução autorizada — Táxi Dog e desktop (11/11/2026)
 
 O Táxi Dog foi implementado no mesmo PetCore, opcional e desativado por padrão em cada pet shop. O administrador ativa em Configurações → Configurar atendimento; os preços/modalidades são cadastrados em Serviços e os motoristas em Táxi Dog. Busca e entrega têm intervalos próprios, separados da agenda do banhista. A reserva é atômica com o atendimento, e a taxa combinada entra uma vez na comanda importada. Há controle de conflitos de motorista, etapas manuais, cancelamento, reagendamento e proteção da taxa após faturamento. Não há GPS, cálculo por distância ou envio automático ao motorista. Não crie outro SaaS.
