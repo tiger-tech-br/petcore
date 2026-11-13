@@ -128,3 +128,9 @@ O teste de integração exige `TEST_DATABASE_URL` exclusivo terminado em `_test`
 Este recurso não certifica conformidade com a LGPD e não publica os documentos jurídicos. Atualize as informações sobre comunicações transacionais e fornecedores e conclua a revisão da operação antes de afirmar prontidão comercial.
 
 Referência do provedor: [Idempotency Keys — Resend](https://resend.com/docs/dashboard/emails/idempotency-keys).
+
+## Evidência de publicação em 12/11/2026
+
+Versão `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`, implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, SUCCESS às 20h59 de Brasília. Flags ativas somente no serviço principal escolhido. Página/saúde 200, banco OK, endpoints privados anônimos 401 e assets idênticos ao build local por SHA-256. Migration 017 conferida na homologação e no banco original de testes; a 016 separada não foi incluída. Passaram 168 verificações únicas: 23 unitárias API, 127 integrações API e 18 web.
+
+Um único teste real autorizado foi aceito pelo Resend às 21h00, em uma tentativa, para o endereço do operador. O worker usou um banco local isolado, com assunto e texto de teste sem cliente real, e os registros fictícios foram removidos após o aceite. O usuário informou que a mensagem ainda não chegou. Não há confirmação de entrega; a chave disponível é restrita a envio e não permite consultar o evento pela API. A conferência depende do painel do provedor. Não repetir o teste nem afirmar entrega sem nova evidência.
