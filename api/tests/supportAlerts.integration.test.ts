@@ -25,7 +25,7 @@ const sessions:Record<string,string>={},sent:{body:any;key:string|null}[]=[],une
 let base='',server:ReturnType<ReturnType<typeof createApp>['listen']>|undefined,configSnapshot:any=null;
 let providerMode:'ok'|'error'='ok',genericTicket='',staffTicket='';
 
-async function request(path:string,method='GET',body?:unknown,session=sessions.ownerA){
+async function request(path:string,method='GET',body?:unknown,session=sessions.ownerA):Promise<{code:number;data:any;headers:Headers}>{
  const response=await fetch(base+'/api'+path,{method,headers:{'Content-Type':'application/json','X-PetCore-Request':'1','X-Forwarded-For':sourceIp,Cookie:session??''},body:body===undefined?undefined:JSON.stringify(body)});
  return {code:response.status,data:await response.json(),headers:response.headers};
 }

@@ -11,6 +11,10 @@ if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 40) throw
 export const pool=new Pool({connectionString:process.env.DATABASE_URL, max:12,
  connectionTimeoutMillis:10000,idleTimeoutMillis:30000,statement_timeout:30000,idle_in_transaction_session_timeout:30000,
  ssl:process.env.DATABASE_SSL==='true'?{rejectUnauthorized:true}:undefined});
+// pg removes broken idle clients automatically. Handle the background event so
+// a temporary disconnect does not terminate the API or dump client credentials.
+// Requests/transactions still report their own errors; never replay writes here.
+pool.on('error',()=>console.error(JSON.stringify({event:'database_idle_connection_lost'})));
 export type Db = Pool|PoolClient;
 export const sha=(s:string)=>createHash('sha256').update(s).digest('hex');
 export const token=()=>randomBytes(32).toString('hex');

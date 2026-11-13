@@ -69,6 +69,8 @@ const fixtureWaitlist=[{id:'qa-wait',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo
 const fixtureTeam=[{id:ids.user,name:'Marina Exemplo',email:'marina@example.test',role:'admin',active:true,permissions:[]},{id:'qa-employee',name:'Juliana Exemplo',email:'juliana.atendimento@example.test',role:'employee',active:true,permissions:['appointments','tutors','crm']}];
 const fixturePrivacy=[{id:'qa-privacy',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',anonymized_at:null,kind:'access',status:'in_progress',description:'Solicito uma cópia das informações do meu cadastro e dos atendimentos de Luna.',identity_verified:true,verification_method:'in_person',identity_verified_at:qaTimestamp,resolution:'Identidade conferida presencialmente. Levantamento dos registros em andamento.',created_at:qaTimestamp,updated_at:qaTimestamp,resolved_at:null,created_by_name:'Marina Exemplo'}];
 const fixtureTicket={id:'qa-support',tenant_id:ids.company,company_name:'Vila Pet • demonstração',subject:'Dúvida sobre a organização da agenda',category:'technical',status:'in_progress',created_at:qaTimestamp,updated_at:qaTimestamp};
+let fixtureSupportReads=0;
+const fixtureSupportMessages=[{id:'qa-message-a',from_platform:false,body:'Gostaria de saber como organizar os horários dos profissionais e localizar os atendimentos da semana.',created_at:qaTimestamp},{id:'qa-message-b',from_platform:true,body:'Na Agenda, escolha a visualização Semana e use o filtro de profissional para conferir cada jornada.',created_at:qaTimestamp}];
 
 // Checkout navigation is observed locally, including the asynchronously reserved
 // popup. The harness never opens PagBank or submits a real payment.
@@ -155,7 +157,12 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/privacy/cleanup-queue')return reply({items:[{id:'qa-photo-job',request_id:'qa-privacy',state:'queued',attempt_count:1,next_attempt_at:qaTimestamp,last_error_code:null,created_at:qaTimestamp,finished_at:null}]});
   if(method==='GET'&&path==='/commercial/platform/support-summary')return reply({pending_count:1,emails:{queued:0,sending:0,sent:3,failed:0,uncertain:0},notifications_enabled:true,email_configured:true});
   if(method==='GET'&&path==='/commercial/support')return reply(pageOf([fixtureTicket]));
-  if(method==='GET'&&path==='/commercial/support/qa-support')return reply({ticket:fixtureTicket,messages:[{id:'qa-message-a',from_platform:false,body:'Gostaria de saber como organizar os horários dos profissionais e localizar os atendimentos da semana.',created_at:qaTimestamp},{id:'qa-message-b',from_platform:true,body:'Na Agenda, escolha a visualização Semana e use o filtro de profissional para conferir cada jornada.',created_at:qaTimestamp}]});
+  if(method==='GET'&&path==='/commercial/support/qa-support'){
+    fixtureSupportReads++;
+    if(parameters.get('support-updates')==='error'&&fixtureSupportReads===2)return reply({error:'Falha fictícia ao atualizar. Nenhum servidor foi acessado.'},503);
+    if(parameters.has('support-updates')&&fixtureSupportReads>1){fixtureTicket.status='resolved';fixtureTicket.updated_at=new Date().toISOString();fixtureSupportMessages.push({id:`qa-message-incoming-${fixtureSupportReads}`,from_platform:true,body:`Resposta externa fictícia ${fixtureSupportReads-1}: recebida durante o acompanhamento da conversa.`,created_at:fixtureTicket.updated_at});}
+    return reply({ticket:fixtureTicket,messages:fixtureSupportMessages});
+  }
   if(method==='GET'&&path==='/commercial/me')return reply({subscription:localSubscription,plans:checkoutPlans,payments:fixturePayments,canManage:true,supportEmail:'suporte@example.test',billingMode:'pagbank_recurring_link_manual_reconciliation',trialDays:30,checkoutRequiresSupport:paidBilling&&!localSubscription.recurrence_cancelled_at});
   if(method==='GET'&&path==='/commercial/platform/settings')return reply({brand:'Tiger Tech • QA local',legal_name:'Responsável fictício',support_email:'suporte@example.test',privacy_email:'privacidade@example.test',address:'Endereço fictício da prévia',privacy_text:'Documento fictício não publicado.',terms_text:'Documento fictício não publicado.',published:false,legal_version:'qa-unpublished',effective_date:null,subprocessors:[],trial_days:30,grace_days:3,plans:checkoutPlans});
   if(method==='GET'&&path==='/commercial/platform/subscriptions')return reply({items:[{id:ids.company,name:'Vila Pet • demonstração',active:true,...localSubscription}],page:1,pageSize:20,total:1});
