@@ -2,6 +2,21 @@
 
 Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
+## Publicado — revisão de 13/11/2026
+
+O código `640a96bd7dfabad6e2dde3eb3fa9147201046198` foi validado com 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds e TypeScript completos. Trata o erro de conexão ociosa PostgreSQL sem encerrar o processo nem expor credenciais e acrescenta **Atualizar conversa** no suporte, preservando rascunho, situação e histórico em caso de erro. Cliente/plataforma conferidos localmente em 320/1280 px, sem excesso horizontal, mantendo as fontes móveis.
+
+Implantação `f37f6790-5d72-43a5-b067-9090e62fe66f` **SUCCESS às 18h56min39s de Brasília**. Às 18h56min58s, página/saúde 200 com banco OK, rotas privadas anônimas 401 e assets idênticos ao build local. A consulta final mostrou cinco serviços saudáveis e sem alterações pendentes; a nova API foi aplicada somente no serviço principal. Não há nova migration, e-mail ou cobrança; a 016 permanece excluída. Evidências, hashes e pendências em [REVISAO-20261113.md](REVISAO-20261113.md). As pendências comerciais não foram encerradas por esse rollout.
+
+## Histórico de 12/11 e evidências operacionais de 13/11/2026
+
+- Publicação anterior conferida: `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`; implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, SUCCESS em 12/11 às 20h59 de Brasília. Avisos de suporte estão ativos no serviço principal. Migrations **001–015 e 017** conferidas na homologação e no banco original de testes; **016 não incluída**, por pertencer a trabalho separado.
+- O teste de 12/11 foi adiado por SMTP `451 4.7.0` do Outlook/Office e depois constou como Delivered no Resend em 13/11, com horário exibido de 10h30. O novo teste autorizado de 13/11 foi recebido, conforme confirmação do usuário por volta de 18h35, sem indicação de pasta. SPF TXT/MX e DKIM estavam Verified na consulta de 12/11. Forge opcional pendente não foi identificado como causa. Não houve alteração DNS nem envio além dos testes autorizados.
+- Backup de 13/11 concluído às 03h05 de Brasília: registro `c1a1abe7-6f14-4548-9dc5-53c33d1639b6`, armazenamento privado, 186.193 bytes. A restauração dessa cópia não foi verificada (`restorationVerified:false`); nenhum novo ensaio foi realizado.
+- O retrato do rollout anterior mostrou cinco serviços saudáveis. A inspeção de 13/11 encontrou encerramento da aplicação às 13h46 por erro em conexão ociosa do pool PostgreSQL sem tratamento. A correção foi validada e publicada na revisão de 13/11 acima. SUCCESS e saúde instantânea não significam ausência de todas as falhas futuras.
+
+As evidências datadas abaixo são históricas. Não substituem a conferência da revisão mais recente nem as aprovações de operação e documentos ainda pendentes.
+
 ## Código implementado
 
 - [x] Clientes/tutores, pets, profissionais, serviços, jornadas, agenda e lista de espera.
@@ -15,6 +30,7 @@ Registro de evidências e pendências da preparação comercial. A homologação
 - [x] Validade e conciliação manual: escolher plano/retornar do checkout não comprova pagamento.
 - [x] Free sem tolerância extra; tolerância somente para período pago.
 - [x] Chamados de suporte e respostas da plataforma.
+- [x] Avisos de chamados/troca/cancelamento por e-mail, com fila transacional, destinatários autorizados, deduplicação e limites; sino da plataforma e links autenticados. O e-mail não aprova troca, cancela recorrência ou confirma pagamento.
 - [x] Solicitações de privacidade, verificação, exportação, anonimização e auditoria.
 - [x] Canais de suporte/privacidade: tigertechbr@outlook.com; documentos continuam em rascunho.
 - [x] Identidade informada: José Andrey Pereira Lisboa, pessoa física; marca Tiger Tech — Sites, Sistemas e Soluções Digitais.
@@ -38,6 +54,7 @@ Registro de evidências e pendências da preparação comercial. A homologação
 - [x] Jornada fictícia pela interface: serviço, profissional/jornada, cliente, pet e agendamento no celular. Novo atendimento passa a mostrar sua data automaticamente; filtros antigos não o escondem.
 - [x] Agenda conferida em 360×740 e 1366×850; login com cachorro inteiro em 320×568 e 360×740. Posição dos avisos mantida.
 - [x] Revisão estática concluída; limite de campos multipart do envio de foto corrigido, com reprodução controlada anterior, regressões e revisão independente. Relatório original preserva a versão anterior e não certifica a versão publicada.
+- [x] Rodada de suporte de 12/11: 168 verificações únicas aprovadas — 23 unitárias API, 127 integrações API e 18 web — e compilação. Provedor simulado nas suítes; ensaio local em 1366/320 px e links por papel. Não somar com as rodadas anteriores como uma suíte única.
 
 Não somar execuções sobrepostas. Resultados locais não comprovam entrega de e-mail, permissões remotas, construção Docker ou operação jurídica.
 
@@ -59,7 +76,8 @@ Não somar execuções sobrepostas. Resultados locais não comprovam entrega de 
 - [x] Serviço de lembretes criado/configurado para cada cinco minutos; autorização do usuário limitada a tutores com opt-in.
 - [x] Registro histórico da revisão `434a341f` na aplicação, manutenção e lembretes, com 12 verificações HTTPS aprovadas. A aplicação atual usa a revisão final acima; esse ensaio anterior não foi repetido integralmente nesta entrega.
 - [x] Lembretes ativados por autorização expressa, cron de cinco minutos, até 20 por execução e prazo de 10s por envio. Execução em 06/11/2026 às 22h55 de Brasília: nenhum lembrete autorizado devido, zero mensagens enviadas.
-- [ ] Confirmar registros do remetente no painel Resend e resultados SPF/DKIM/DMARC do e-mail recebido; acompanhar entrega. Ver [EMAIL.md](EMAIL.md).
+- [x] Confirmar registros no painel Resend: SPF TXT/MX e DKIM Verified em 12/11. Em 13/11, teste anterior Delivered no painel e novo recebimento confirmado pelo usuário. Ver [EMAIL.md](EMAIL.md).
+- [ ] Conferir resultados SPF/DKIM/DMARC nos cabeçalhos recebidos e acompanhar classificação/entrega, sem presumir Caixa de Entrada.
 - [ ] Conferir retenção, alertas, guarda da chave e recuperação dos objetos de fotos.
 
 Aplicativo HTTPS: [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Esse endereço e a revisão acima já foram conferidos; não comprovam automaticamente a publicação de revisões posteriores.
@@ -68,6 +86,7 @@ As capturas do APK enviadas pelo usuário comprovam instalação e uso de alguma
 
 ## Pendências para comercialização
 
+- [x] Corrigir e validar o tratamento de erros de conexões ociosas PostgreSQL encontrado em 13/11 e conferir a publicação resultante; ver [REVISAO-20261113.md](REVISAO-20261113.md). Manter o acompanhamento operacional.
 - [ ] Revisão e aprovação dos termos, aviso de privacidade, contrato de operação e fornecedores/regiões efetivos.
 - [ ] Retenção, incidentes, resposta a titulares, encerramento e transferência de administração praticáveis e aprovados.
 - [x] Novos links conferidos sem compra: [PetCore Mensal — R$ 35](https://pag.ae/82jFKCTjo) e [PetCore Anual — R$ 350](https://pag.ae/82jFLbrjr); revisão aprovada no cadastro dos planos. Links antigos substituídos.
@@ -75,6 +94,7 @@ As capturas do APK enviadas pelo usuário comprovam instalação e uso de alguma
 - [ ] Homologar a operação de cancelamento/recuperação de checkout no PagBank com os controles novos: pedido do cliente, cancelamento real pelo vendedor, referência/senha/período esperado, preservação do período pago e liberação posterior.
 - [ ] Proteção da chave de backup e procedimento de recuperação fora do ambiente ativo.
 - [ ] Homologação completa antes de receber clientes reais e anunciar.
+- [ ] Conferir recuperação de senha de ponta a ponta no aplicativo publicado e APK 1.0.1 em aparelho/emulador; os testes de entrega e de navegador existentes não substituem essas etapas.
 
 A conta PagBank atual é PF: checkout externo por links recorrentes e conciliação manual. Não há captura de cartão, integração bancária ou token da API de assinaturas necessário a esse fluxo.
 

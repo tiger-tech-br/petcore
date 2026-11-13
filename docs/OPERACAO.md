@@ -2,6 +2,22 @@
 
 Este roteiro é destinado à pessoa responsável pelo serviço. Comandos de restauração nunca apontam para o banco ativo. Não compartilhe `.env`, endereços com senha, chaves ou arquivos de backup em chats ou chamados.
 
+## Publicação de 13/11/2026
+
+Código `640a96bd7dfabad6e2dde3eb3fa9147201046198`, implantação `f37f6790-5d72-43a5-b067-9090e62fe66f`, **SUCCESS às 18h56min39s de Brasília**. A revisão trata o evento de conexão ociosa PostgreSQL sem encerrar o processo ou registrar credenciais e oferece **Atualizar conversa** no suporte, preservando rascunho/situação e histórico em caso de erro. Passaram 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds e TypeScript completos. O ensaio local de cliente/plataforma em 320/1280 px preservou fontes e não encontrou excesso horizontal nas telas conferidas.
+
+Às 18h56min58s, página/saúde responderam 200 com banco OK, rotas privadas anônimas 401 e assets iguais ao build local. A consulta final mostrou cinco serviços saudáveis, sem alterações pendentes; a atualização da API ocorreu somente no serviço principal. Não houve nova migration, e-mail ou cobrança; a 016 permanece excluída. Continue acompanhando logs e rotinas de operação. Detalhes e hashes em [REVISAO-20261113.md](REVISAO-20261113.md); isso não conclui a preparação comercial.
+
+## Registro operacional de 13/11/2026
+
+A publicação anterior usa o código `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`, implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, SUCCESS em 12/11 às 20h59 de Brasília. Migrations **001–015 e 017** conferidas na homologação e no banco original de testes; a **016 não foi incluída**, pois pertence a trabalho separado. As duas liberações de avisos de suporte estão ativas no serviço principal. Os registros antigos de versões neste roteiro são históricos.
+
+O teste de avisos enviado em 12/11 às 21h00 sofreu adiamentos `451 4.7.0` do Outlook/Office e depois apareceu como Delivered no Resend em 13/11, com horário exibido de 10h30. Um único novo teste autorizado em 13/11 teve recebimento confirmado pelo usuário por volta de 18h35 de Brasília, sem indicação da pasta. SPF TXT/MX e DKIM foram observados como Verified no Resend em 12/11. A configuração opcional Forge pendente não foi identificada como causa do atraso. Não houve alteração DNS, compra ou ampliação de permissão da chave. Ver [EMAIL.md](EMAIL.md).
+
+O backup de 13/11 terminou com sucesso às 03h05 de Brasília em armazenamento privado, registro `c1a1abe7-6f14-4548-9dc5-53c33d1639b6`, 186.193 bytes. Essa cópia está sem restauração verificada (`restorationVerified:false`); nenhum novo ensaio foi feito nesta conferência. O ensaio histórico de outra cópia não transforma todos os backups posteriores em verificados.
+
+A conferência do rollout anterior mostrou cinco serviços saudáveis. Em 13/11, foi identificado encerramento da aplicação às 13h46 por erro em conexão ociosa do pool PostgreSQL sem tratamento; a correção foi validada e publicada na revisão de 13/11 descrita acima. Continue acompanhando os logs após a implantação. Estado SUCCESS e saúde instantânea não comprovam ausência de todas as falhas futuras nem prontidão comercial.
+
 ## Ambientes e responsáveis
 
 Mantenha desenvolvimento, testes e produção identificados e separados. Defina quem acompanha disponibilidade, suporte, cobrança, e-mails, backup, privacidade e incidentes, com um contato alternativo. A troca de administrador ou a venda do projeto precisa transferir os procedimentos e acessos autorizados, não apenas o código.
@@ -42,7 +58,7 @@ O contrato administrativo é `POST /api/commercial/platform/subscriptions/:id/cl
 
 Nesta revisão, passaram 25 testes comerciais de integração em PostgreSQL isolado com migrations 001–014, 13 testes unitários web e a compilação de API/interface. O ensaio local com componentes reais conferiu o pedido de cancelamento e a confirmação fictícia do operador, preservando Pago até, sem efetuar operações no provedor. A publicação final foi concluída e conferida no Railway; esses resultados não comprovam um cancelamento real no PagBank.
 
-Os links revisados podem ser disponibilizados independentemente de `legal.published`, por solicitação do usuário. Isso não publica os documentos jurídicos nem conclui a preparação para oferta comercial. A revisão/aprovação dos termos e dos procedimentos, assim como o SPF pendente, continuam no [checklist comercial](COMMERCIAL-READINESS.md).
+Os links revisados podem ser disponibilizados independentemente de `legal.published`, por solicitação do usuário. Isso não publica os documentos jurídicos nem conclui a preparação para oferta comercial. A revisão/aprovação dos termos e dos procedimentos continua no [checklist comercial](COMMERCIAL-READINESS.md). A pendência antiga de SPF foi superada pela observação de Verified no Resend em 12/11; ainda é necessário acompanhar autenticação das mensagens e entrega, conforme [EMAIL.md](EMAIL.md).
 
 A revisão final de 09/11/2026 foi publicada com SUCCESS às 21h22 de Brasília: commit `d463fa12253c83033b90445c900aaf1954a71bc2`, implantação `00a6dea0-7d32-4b9e-8ac0-7cac9276c9fc`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-C_n1QduZ.js` e `index-DpZQfskv.css` responderam 200 e corresponderam byte a byte ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes.
 

@@ -1,8 +1,24 @@
 # PetCore — gestão para pet shops
 
-Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Publicação conferida em 11/11/2026 às 19h41 de Brasília: commit `dd90bd405d67fb353704189bed2d27d8282eb67e`, implantação `2753295b-8d14-4883-910a-c09fc784f329` com SUCCESS. Página e saúde responderam 200, com `{ok:true,database:true}`; sessão e opções de transporte anônimas retornaram 401. Os assets `index-BoZ2FMKK.js` e `index-DyZcqTWU.css` corresponderam ao build local por SHA-256. Os cinco serviços estavam sem problemas, falhas recentes ou alterações pendentes. Migrations 001–015 foram conferidas na homologação e no banco original; o recurso permaneceu desativado e sem reservas fictícias em ambos. Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
+
+## Publicado — revisão de 13/11/2026
+
+O código `640a96bd7dfabad6e2dde3eb3fa9147201046198` trata a perda de conexão ociosa PostgreSQL sem encerrar o processo nem registrar credenciais e acrescenta **Atualizar conversa** no suporte, preservando rascunho, situação selecionada e mensagens já carregadas em caso de erro. Passaram 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds e TypeScript completos; as telas locais de cliente/plataforma foram conferidas em 320/1280 px, sem excesso horizontal. Não houve nova migration, e-mail ou cobrança; a 016 continua excluída.
+
+A implantação `f37f6790-5d72-43a5-b067-9090e62fe66f` terminou com **SUCCESS às 18h56min39s de Brasília**. Às 18h56min58s, página/saúde responderam 200 com banco OK, rotas privadas anônimas 401 e os novos assets corresponderam ao build local. A consulta final mostrou cinco serviços saudáveis e sem alterações pendentes; a nova API foi aplicada somente ao serviço principal. Detalhes, hashes, limites e pendências em [REVISAO-20261113.md](docs/REVISAO-20261113.md). Isso não declara o produto pronto para comercialização.
+
+## Histórico de 12/11 e evidências operacionais de 13/11/2026
+
+A publicação anterior usa o código `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`, implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, com SUCCESS em 12/11 às 20h59 de Brasília. Ela acrescentou avisos de suporte e assinatura, sino da plataforma e links autenticados para o chamado. Na publicação, página e saúde responderam 200, banco OK, rotas privadas anônimas 401 e assets `index-w4rXGUSS.js`/`index-DyZcqTWU.css` idênticos ao build local por SHA-256. Passaram 168 verificações únicas nessa rodada: 23 unitárias API, 127 integrações API e 18 web. A estrutura aplicada na homologação e no banco original de testes inclui **001–015 e 017**. A migration **016 não foi incluída**: é trabalho separado de contas de motoristas, sem GPS ativado.
+
+O teste de e-mail de 12/11 sofreu adiamentos `451 4.7.0` do Outlook/Office e depois apareceu como Delivered no Resend em 13/11, com horário exibido de 10h30. Um único novo teste autorizado em 13/11 foi recebido, conforme confirmação do usuário por volta de 18h35; a pasta não foi informada. SPF TXT/MX e DKIM estavam Verified na consulta ao Resend de 12/11; Forge opcional pendente não foi identificado como causa do atraso. Nenhum DNS foi alterado. Ver [EMAIL.md](docs/EMAIL.md) e [SUPPORT-EMAILS.md](docs/SUPPORT-EMAILS.md).
+
+O backup de 13/11 terminou com sucesso às 03h05 de Brasília, em armazenamento privado: registro `c1a1abe7-6f14-4548-9dc5-53c33d1639b6`, 186.193 bytes. Sua restauração ainda não foi verificada (`restorationVerified:false`); isso não apaga o ensaio histórico de restauração de outra cópia. Não houve novo ensaio de restauração nesta conferência.
+
+Os cinco serviços estavam saudáveis no retrato do rollout anterior. A inspeção de 13/11 identificou um encerramento da aplicação às 13h46 por erro em conexão ociosa do pool PostgreSQL sem tratamento; a correção foi validada e publicada na revisão de 13/11 acima. Uma resposta de saúde instantânea e o estado SUCCESS não comprovam ausência de todas as falhas futuras. Documentos jurídicos, procedimentos de retenção/recuperação e homologação comercial permanecem pendentes. Os registros das revisões anteriores abaixo são históricos.
 
 ## Revisão de Táxi Dog e fontes desktop (11/11/2026)
 
@@ -120,7 +136,7 @@ Fotos dependem de `OBJECT_STORAGE_*`. A API normaliza a imagem, remove metadados
 
 Recuperação usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`, aplicadas na revisão `434a341f` e conferidas sem mensagem real. Lembretes usam outro processo, `RESEND_*` e duas liberações explícitas. O serviço está ativo a cada cinco minutos, com até 20 mensagens por execução e 10s por envio. A primeira execução não encontrou lembretes autorizados devidos. Somente tutores com autorização registrada podem receber; contatos do CRM não disparam mensagens nem concedem consentimento.
 
-Um único teste de e-mail foi aceito pelo Resend e o usuário confirmou o recebimento na pasta Spam. Isso comprova aquele recebimento, sem garantir entrega na Caixa de Entrada. O diagnóstico DNS e as verificações restantes estão em [EMAIL.md](docs/EMAIL.md).
+O teste inicial mais antigo foi confirmado na pasta Spam. Em 13/11, o teste de avisos de 12/11 já constava como Delivered no Resend e um novo teste autorizado teve recebimento confirmado pelo usuário, sem indicação de pasta. SPF TXT/MX e DKIM estavam Verified na consulta de 12/11. Isso não garante entrega futura na Caixa de Entrada nem substitui o teste de recuperação de senha de ponta a ponta. O diagnóstico e as verificações restantes estão em [EMAIL.md](docs/EMAIL.md).
 
 Suporte e solicitações sobre dados pessoais: **tigertechbr@outlook.com**. O canal de contato não substitui um remetente validado no provedor de e-mail.
 
@@ -128,7 +144,7 @@ A identidade e o endereço foram informados: **José Andrey Pereira Lisboa**, pe
 
 ## Railway e recuperação
 
-O ambiente de homologação usa o Neon e destinos privados separados para fotos e backups. Migrations **001–015** estão aplicadas na homologação e no banco original, confirmado como somente testes. A migration 014 foi aplicada pelo pré-deploy da implantação `2f176aca-c7b5-47a8-9ac1-8a95e9c445d4` e pelo comando de migration no original. A cópia de preservação anterior `br-quiet-mountain-b62dyl9j` permanece registrada. Não use seed ou testes destrutivos quando houver dados reais.
+O ambiente de homologação usa o Neon e destinos privados separados para fotos e backups. Migrations **001–015 e 017** estão aplicadas na homologação e no banco original, confirmado como somente testes; a **016 separada não está incluída**. A migration 014 foi aplicada pelo pré-deploy da implantação `2f176aca-c7b5-47a8-9ac1-8a95e9c445d4` e pelo comando de migration no original. A cópia de preservação anterior `br-quiet-mountain-b62dyl9j` permanece registrada. Não use seed ou testes destrutivos quando houver dados reais.
 
 O serviço usa Dockerfile e configurações diretas no Railway para início, migrations e health check. Não depende de `railway.json` ou `railway.toml`. Não é necessário instalar outro PostgreSQL no Railway: o banco permanece no Neon.
 

@@ -4,6 +4,12 @@ O e-mail serve para avisar que existe uma solicitação no PetCore. **Receber ou
 
 Este recurso é do próprio PetCore. Ele não muda os preços, o período Free, a validade já paga ou as regras de cobrança do PagBank.
 
+## Atualização publicada em 13/11/2026
+
+Código `640a96bd7dfabad6e2dde3eb3fa9147201046198`, implantação `f37f6790-5d72-43a5-b067-9090e62fe66f`, **SUCCESS às 18h56min39s de Brasília**, com conferência HTTPS às 18h56min58s. A conversa agora oferece **Atualizar conversa** para buscar novas respostas sem fechar a tela, apagar rascunho ou substituir a situação escolhida pelo operador. Se a atualização falhar, mantém as mensagens carregadas e o rascunho. O tratamento da conexão ociosa PostgreSQL também foi corrigido, sem encerrar o processo por esse evento nem registrar credenciais.
+
+Passaram 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds/TypeScript completos e ensaio local de cliente/plataforma em 320/1280 px. Página/saúde 200 com banco OK, rotas privadas anônimas 401 e assets conferidos; cinco serviços saudáveis no retrato final. A nova API foi aplicada só ao serviço principal. Não houve nova migration, cobrança ou e-mail real nesta revisão; a 016 permanece excluída. Não há novo APK nem teste em aparelho. Detalhes, hashes e limites em [REVISAO-20261113.md](REVISAO-20261113.md).
+
 ## Onde atender o cliente
 
 Entre com a **conta da plataforma da Tiger Tech**, usada para administrar os pet shops. O caminho é **Gestão da plataforma → Suporte**. O sino da plataforma oferece acesso aos pedidos pendentes. O contador corresponde aos chamados abertos ou em atendimento; ler um chamado não significa resolvê-lo.
@@ -74,7 +80,7 @@ O envio usa uma chave estável de idempotência por aviso e congela o conteúdo 
 
 Uma falha do e-mail não deve apagar o chamado, criar outro checkout, confirmar pagamento ou alterar a validade da assinatura. O cliente e a Tiger Tech continuam podendo acompanhar o atendimento no painel.
 
-**Aceito pelo provedor não significa entregue na caixa de entrada.** A mensagem ainda pode ir para spam ou sofrer outra falha de entrega. Validação do domínio, autenticação do remetente, reputação e situação no provedor precisam ser conferidas. Não considere uma pendência anterior de SPF encerrada sem uma verificação atual.
+**Aceito pelo provedor não significa entregue na caixa de entrada.** A mensagem ainda pode ir para spam ou sofrer outra falha de entrega. Validação do domínio, autenticação do remetente, reputação e situação no provedor precisam ser conferidas. SPF TXT/MX e DKIM foram observados como Verified no Resend em 12/11; isso não garante a classificação de mensagens futuras. Consulte o estado e o histórico em [EMAIL.md](EMAIL.md).
 
 ## Como interpretar os estados
 
@@ -133,10 +139,16 @@ Referência do provedor: [Idempotency Keys — Resend](https://resend.com/docs/d
 
 Versão `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`, implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, SUCCESS às 20h59 de Brasília. Flags ativas somente no serviço principal escolhido. Página/saúde 200, banco OK, endpoints privados anônimos 401 e assets idênticos ao build local por SHA-256. Migration 017 conferida na homologação e no banco original de testes; a 016 separada não foi incluída. Passaram 168 verificações únicas: 23 unitárias API, 127 integrações API e 18 web.
 
-Um único teste real autorizado foi aceito pelo Resend às 21h00, em uma tentativa, para o endereço do operador. O worker usou um banco local isolado, com assunto e texto de teste sem cliente real, e os registros fictícios foram removidos após o aceite. O usuário informou que a mensagem ainda não chegou. Não há confirmação de entrega; a chave disponível é restrita a envio e não permite consultar o evento pela API. A conferência depende do painel do provedor. Não repetir o teste nem afirmar entrega sem nova evidência.
+Um único teste real autorizado foi aceito pelo Resend às 21h00, em uma tentativa, para o endereço do operador. O worker usou um banco local isolado, com assunto e texto de teste sem cliente real, e os registros fictícios foram removidos após o aceite. Naquela noite, o usuário ainda não havia recebido a mensagem. A chave disponível é restrita a envio; a consulta dos eventos foi feita pelo painel autenticado, sem ampliar suas permissões.
 
 ### Diagnóstico do teste no painel
 
-O usuário autenticou a sessão de consulta e o registro exato foi localizado na conta correta. O teste recebeu Sent às 21h00 e Delivery Delayed às 21h10: Recipient Server Error, resposta SMTP `451 4.7.0 Temporary server error` do Outlook/Office. O Resend informou que tentará entregar a mesma mensagem novamente. A entrega ainda não foi confirmada e nenhum outro teste foi enviado. O registro pode ser acompanhado pelo identificador guardado no comprovante privado local.
+O usuário autenticou a sessão de consulta e o registro exato foi localizado na conta correta. O teste recebeu Sent às 21h00 e Delivery Delayed às 21h10: Recipient Server Error, resposta SMTP `451 4.7.0 Temporary server error` do Outlook/Office. O Resend continuou tentando entregar a mesma mensagem. Em 13/11, o painel mostrou **Delivered**, com horário exibido de 10h30 e resposta SMTP de sucesso do servidor destinatário. O identificador está no comprovante privado local. A causa temporária no destino é compatível com instabilidade; não foi comprovada sua ligação específica com a pane global da Microsoft.
 
 DKIM e os registros TXT/MX do SPF aparecem Verified. A configuração opcional Forge tem um CNAME pendente; o painel informa que continua usando o envio anterior até completar a validação. Esse estado não foi identificado como a causa do erro temporário do destinatário. Nenhuma configuração DNS, compra ou alteração de credencial foi realizada nesta conferência.
+
+### Novo teste e recebimento em 13/11/2026
+
+O usuário autorizou uma nova tentativa. Um único e-mail com assunto **PetCore — novo teste de e-mail — 13/11** foi aceito pelo Resend e o usuário confirmou o recebimento por volta de 18h35 de Brasília. O comprovante privado registra o aceite e a confirmação. Não foi informada a pasta de recebimento; não afirmar Caixa de Entrada ou Spam. Nenhum cliente, pagamento ou assinatura real foi alterado. O teste confirma esse recebimento, não a entrega futura de todos os avisos.
+
+Na revisão operacional de 13/11 também foi identificado um encerramento do processo às 13h46, associado a erro em conexão ociosa do pool PostgreSQL sem tratamento. A correção não pertencia à versão `5f46abfd` descrita nesta seção histórica; foi validada e publicada na revisão `640a96bd` registrada no início do documento. O estado SUCCESS da implantação e uma resposta de saúde instantânea não comprovam ausência de todas as falhas futuras nem conclusão da preparação comercial.
