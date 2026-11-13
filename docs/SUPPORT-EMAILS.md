@@ -134,3 +134,9 @@ Referência do provedor: [Idempotency Keys — Resend](https://resend.com/docs/d
 Versão `5f46abfd2b400f69e27ef0c7a9f88a8ba483cf11`, implantação `7a3cd43d-cdbb-4744-974d-51a3693d2ec2`, SUCCESS às 20h59 de Brasília. Flags ativas somente no serviço principal escolhido. Página/saúde 200, banco OK, endpoints privados anônimos 401 e assets idênticos ao build local por SHA-256. Migration 017 conferida na homologação e no banco original de testes; a 016 separada não foi incluída. Passaram 168 verificações únicas: 23 unitárias API, 127 integrações API e 18 web.
 
 Um único teste real autorizado foi aceito pelo Resend às 21h00, em uma tentativa, para o endereço do operador. O worker usou um banco local isolado, com assunto e texto de teste sem cliente real, e os registros fictícios foram removidos após o aceite. O usuário informou que a mensagem ainda não chegou. Não há confirmação de entrega; a chave disponível é restrita a envio e não permite consultar o evento pela API. A conferência depende do painel do provedor. Não repetir o teste nem afirmar entrega sem nova evidência.
+
+### Diagnóstico do teste no painel
+
+O usuário autenticou a sessão de consulta e o registro exato foi localizado na conta correta. O teste recebeu Sent às 21h00 e Delivery Delayed às 21h10: Recipient Server Error, resposta SMTP `451 4.7.0 Temporary server error` do Outlook/Office. O Resend informou que tentará entregar a mesma mensagem novamente. A entrega ainda não foi confirmada e nenhum outro teste foi enviado. O registro pode ser acompanhado pelo identificador guardado no comprovante privado local.
+
+DKIM e os registros TXT/MX do SPF aparecem Verified. A configuração opcional Forge tem um CNAME pendente; o painel informa que continua usando o envio anterior até completar a validação. Esse estado não foi identificado como a causa do erro temporário do destinatário. Nenhuma configuração DNS, compra ou alteração de credencial foi realizada nesta conferência.
