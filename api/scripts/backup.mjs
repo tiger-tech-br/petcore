@@ -7,8 +7,9 @@ import {tmpdir} from 'node:os';
 import {spawn} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 import {Pool} from 'pg';
-import {S3Client,PutObjectCommand} from '@aws-sdk/client-s3';
+import {S3Client,PutObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
 import {encryptBackupFile,hashBackupFile,parseBackupKey} from '../dist/backupCrypto.js';
+import {createPhotoSnapshot,removeUnpublishedPhotoSnapshot,photoStorage,storageFingerprint,PHOTO_BACKUP_LOCK} from '../dist/photoBackup.js';
 config({path:new URL('../../.env',import.meta.url)});
 
 export function failure(code){return Object.assign(new Error(code),{code});}
@@ -18,6 +19,7 @@ export function databaseAddress(raw){
  let url;try{url=new URL(raw);}catch{throw failure('BACKUP_DATABASE_INVALID');}
  if(!['postgres:','postgresql:'].includes(url.protocol)||!url.hostname||decodeURIComponent(url.pathname).length<2)throw failure('BACKUP_DATABASE_INVALID');
  if(url.hostname.endsWith('.neon.tech'))url.hostname=url.hostname.replace(/-pooler(?=\.)/,'');
+ if(/pooler/i.test(url.hostname)||url.port==='6432')throw failure('BACKUP_DIRECT_CONNECTION_REQUIRED');
  const local=['localhost','127.0.0.1','[::1]','::1'].includes(url.hostname);
  const secure=url.hostname.endsWith('.neon.tech')||process.env.DATABASE_SSL==='true'||(process.env.NODE_ENV==='production'&&!local)||Boolean(url.searchParams.get('sslmode')&&url.searchParams.get('sslmode')!=='disable');
  if(secure){url.searchParams.set('sslmode','verify-full');url.searchParams.delete('uselibpqcompat');}
@@ -75,13 +77,19 @@ export async function runBackup(args=process.argv.slice(2)){
  if(!local&&outputAt>=0)throw failure('BACKUP_LOCAL_FLAG_REQUIRED');
  const source=databaseAddress(process.env.DATABASE_DIRECT_URL||process.env.DATABASE_URL);
  if(local&&!decodeURIComponent(source.pathname).endsWith('_test'))throw failure('BACKUP_LOCAL_TEST_DATABASE_REQUIRED');
- const key=parseBackupKey(process.env.BACKUP_ENCRYPTION_KEY),storage=local?null:backupStorage();
- const db=new Pool(databaseOptions(source));let client,temp,backupId,transaction=false,locked=false,schemaLocked=false;
+ const key=parseBackupKey(process.env.BACKUP_ENCRYPTION_KEY),storage=local?null:backupStorage(),photosSource=local?null:photoStorage();
+ if(storage)storage.fingerprint=storageFingerprint(process.env.BACKUP_STORAGE_ENDPOINT,storage.bucket);
+ const db=new Pool(databaseOptions(source));let client,temp,backupId,photos=null,transaction=false,locked=false,schemaLocked=false,photoLocked=false,connectionLost=false,publicationAttempted=false,publicationConfirmed=false;
+ const attemptedObjects=[];
+ const photoAbort=new AbortController();
+ db.on('error',()=>console.error(JSON.stringify({event:'backup_idle_connection_lost'})));
  try{
-  client=await db.connect();locked=(await client.query('SELECT pg_try_advisory_lock(719381009) AS locked')).rows[0].locked;
+  client=await db.connect();client.on('error',()=>{connectionLost=true;photoAbort.abort();});
+  locked=(await client.query('SELECT pg_try_advisory_lock(719381009) AS locked')).rows[0].locked;
   if(!locked)throw failure('BACKUP_ALREADY_RUNNING');
   schemaLocked=(await client.query('SELECT pg_try_advisory_lock_shared(719381000) AS locked')).rows[0].locked;
   if(!schemaLocked)throw failure('BACKUP_SCHEMA_CHANGE_RUNNING');
+  if(!local){photoLocked=(await client.query('SELECT pg_try_advisory_lock_shared($1) AS locked',[PHOTO_BACKUP_LOCK])).rows[0].locked;if(!photoLocked)throw failure('PHOTO_CLEANUP_RUNNING');}
   const dumpPath=process.env.PG_DUMP_PATH||'pg_dump';
   const version=await runProgram(dumpPath,['--version'],programEnvironment(source));
   const match=/\b(\d+)(?:\.\d+)?\b/.exec(version);if(!match||Number(match[1])!==18)throw failure('BACKUP_CLIENT_18_REQUIRED');
@@ -90,14 +98,18 @@ export async function runBackup(args=process.argv.slice(2)){
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');transaction=true;
   const snapshot=(await client.query('SELECT pg_export_snapshot() AS snapshot')).rows[0].snapshot;
   const counts=await rowCounts(client),serverVersion=(await client.query('SHOW server_version')).rows[0].server_version;
+  const prefix=(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,'');
+  if(!/^[a-zA-Z0-9/_-]{1,200}$/.test(prefix)||prefix.split('/').includes('..'))throw failure('BACKUP_STORAGE_PREFIX_INVALID');
+  photos=local?null:await createPhotoSnapshot({db:client,source:photosSource,backup:storage,key,backupId,prefix,directory:temp,signal:AbortSignal.any([photoAbort.signal,AbortSignal.timeout(30*60*1000)])});
   await runProgram(dumpPath,['--format=custom','--compress=6','--no-owner','--no-acl','--snapshot='+snapshot,'--file='+plain],programEnvironment(source));
+  if(connectionLost)throw failure('BACKUP_DATABASE_CONNECTION_LOST');
   await client.query('COMMIT');transaction=false;
   const plaintext=await hashBackupFile(plain),stamp=new Date().toISOString().replace(/[:.]/g,'-'),name=`petcore-${stamp}-${backupId}`;
   const encrypted=join(temp,name+'.dump.enc'),manifestEncrypted=join(temp,name+'.manifest.enc');
   const ciphertext=await encryptBackupFile(plain,encrypted,key);
   const manifest={format:'petcore.backup.v1',backupId,createdAt:new Date().toISOString(),sourceFingerprint:fingerprint(source),serverVersion,clientVersion:version,
    encryption:'aes-256-gcm',keyId:process.env.BACKUP_KEY_ID||'primary',dumpFile:name+'.dump.enc',dumpSha256:ciphertext.sha256,dumpBytes:ciphertext.sizeBytes,
-   plaintextSha256:plaintext.sha256,plaintextBytes:plaintext.sizeBytes,tables:counts,scope:'database-only',objectsIncluded:false};
+   plaintextSha256:plaintext.sha256,plaintextBytes:plaintext.sizeBytes,tables:counts,scope:photos?'database-and-photos':'database-only',objectsIncluded:Boolean(photos),...(photos?{photos}:{})};
   await writeFile(manifestPlain,JSON.stringify(manifest),{mode:0o600,flag:'wx'});const manifestCipher=await encryptBackupFile(manifestPlain,manifestEncrypted,key);
   let objectKey;
   if(local){
@@ -105,24 +117,49 @@ export async function runBackup(args=process.argv.slice(2)){
    await copyFile(encrypted,join(output,basename(encrypted)),constants.COPYFILE_EXCL);await copyFile(manifestEncrypted,join(output,basename(manifestEncrypted)),constants.COPYFILE_EXCL);objectKey='local:'+basename(encrypted);
    console.log(JSON.stringify({event:'backup_local_files',backupId,dumpFile:join(output,basename(encrypted)),manifestFile:join(output,basename(manifestEncrypted))}));
   }else{
-   const prefix=(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,'');
-   if(!/^[a-zA-Z0-9/_-]{1,200}$/.test(prefix)||prefix.split('/').includes('..'))throw failure('BACKUP_STORAGE_PREFIX_INVALID');
    objectKey=`${prefix}/${name}.dump.enc`;
    for(const [file,path,metadata] of [[encrypted,objectKey,ciphertext],[manifestEncrypted,`${prefix}/${name}.manifest.enc`,manifestCipher]]){
-    await storage.client.send(new PutObjectCommand({Bucket:storage.bucket,Key:path,Body:createReadStream(file),ContentLength:metadata.sizeBytes,ContentType:'application/octet-stream',Metadata:{sha256:metadata.sha256,backup_id:backupId}}),{abortSignal:AbortSignal.timeout(15*60*1000)});
+    attemptedObjects.push(path);
+    await storage.client.send(new PutObjectCommand({Bucket:storage.bucket,Key:path,Body:createReadStream(file),ContentLength:metadata.sizeBytes,ContentType:'application/octet-stream',IfNoneMatch:'*',Metadata:{sha256:metadata.sha256,backup_id:backupId}}),{abortSignal:AbortSignal.timeout(15*60*1000)});
    }
   }
-  await client.query("UPDATE backup_runs SET state='uploaded',finished_at=now(),object_key=$2,sha256=$3,size_bytes=$4,error_code=NULL WHERE id=$1",[backupId,objectKey,ciphertext.sha256,ciphertext.sizeBytes]);
-  console.log(JSON.stringify({ok:true,event:'backup_created',backupId,mode:local?'local-test':'private-storage',sha256:ciphertext.sha256,sizeBytes:ciphertext.sizeBytes,restorationVerified:false}));
+  // Once publication is sent, a lost response cannot tell us whether it committed.
+  // Keep the complete artifacts for reconciliation rather than deleting a backup
+  // that PostgreSQL may already advertise as available.
+  publicationAttempted=true;
+  const published=await client.query("UPDATE backup_runs SET state='uploaded',finished_at=now(),object_key=$2,sha256=$3,size_bytes=$4,error_code=NULL WHERE id=$1 AND state='started' RETURNING id",[backupId,objectKey,ciphertext.sha256,ciphertext.sizeBytes]);
+  if(published.rowCount!==1)throw failure('BACKUP_PUBLICATION_RECORD_CHANGED');
+  publicationConfirmed=true;
+  console.log(JSON.stringify({ok:true,event:'backup_created',backupId,mode:local?'local-test':'private-storage',sha256:ciphertext.sha256,sizeBytes:ciphertext.sizeBytes,restorationVerified:false,objectsIncluded:Boolean(photos),photosIncluded:photos?.photoCount??0}));
   return manifest;
  }catch(error){
   if(transaction)await client?.query('ROLLBACK').catch(()=>{});
-  if(backupId)await client?.query("UPDATE backup_runs SET state='failed',finished_at=now(),error_code=$2 WHERE id=$1",[backupId,safeCode(error)]).catch(()=>{});
+  if(publicationAttempted){
+   const code=publicationConfirmed?safeCode(error):'BACKUP_PUBLICATION_UNCERTAIN';
+   console.error(JSON.stringify({event:publicationConfirmed?'backup_published_followup_failed':'backup_publication_uncertain',backupId,code,artifactsPreserved:true}));
+   if(!publicationConfirmed)throw failure('BACKUP_PUBLICATION_UNCERTAIN');
+   throw error;
+  }
+  let cleanupFailed=false;
+  if(storage&&photos&&temp){
+   try{const cleanupDirectory=await mkdtemp(join(temp,'cleanup-'));await removeUnpublishedPhotoSnapshot({snapshot:photos,backup:storage,key,prefix:(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,''),directory:cleanupDirectory});}catch{cleanupFailed=true;}
+  }
+  const cleanupSignal=AbortSignal.timeout(60000);
+  for(const objectKey of attemptedObjects){
+   try{
+    const head=await storage.client.send(new HeadObjectCommand({Bucket:storage.bucket,Key:objectKey}),{abortSignal:cleanupSignal});
+    if(head.Metadata?.backup_id!==backupId)continue;
+    await storage.client.send(new DeleteObjectCommand({Bucket:storage.bucket,Key:objectKey}),{abortSignal:cleanupSignal});
+   }catch(issue){if(issue?.$metadata?.httpStatusCode!==404&&!['NoSuchKey','NotFound'].includes(issue?.name))cleanupFailed=true;}
+  }
+  if(backupId)await client?.query("UPDATE backup_runs SET state='failed',finished_at=now(),error_code=$2 WHERE id=$1 AND state='started'",[backupId,cleanupFailed?'BACKUP_PARTIAL_CLEANUP_REQUIRED':safeCode(error)]).catch(()=>{});
+  if(cleanupFailed)throw failure('BACKUP_PARTIAL_CLEANUP_REQUIRED');
   throw error;
  }finally{
-  if(schemaLocked)await client?.query('SELECT pg_advisory_unlock_shared(719381000)').catch(()=>{});
-  if(locked)await client?.query('SELECT pg_advisory_unlock(719381009)').catch(()=>{});
-  client?.release();await db.end();if(temp)await removeTemporary(temp);
+  if(photoLocked&&!connectionLost)await client?.query('SELECT pg_advisory_unlock_shared($1)',[PHOTO_BACKUP_LOCK]).catch(()=>{});
+  if(schemaLocked&&!connectionLost)await client?.query('SELECT pg_advisory_unlock_shared(719381000)').catch(()=>{});
+  if(locked&&!connectionLost)await client?.query('SELECT pg_advisory_unlock(719381009)').catch(()=>{});
+  client?.release(connectionLost);await db.end();storage?.client.destroy();photosSource?.client.destroy();if(temp)await removeTemporary(temp);
  }
 }
 

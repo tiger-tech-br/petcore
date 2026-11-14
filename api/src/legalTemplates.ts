@@ -1,4 +1,5 @@
 // Rascunhos para o administrador revisar e completar. Nunca são publicados por importação.
+import {operatorPrivacyDraft,operatorTermsDraft} from './operatorLegalDrafts.js';
 export const operatorIdentityDefaults={legal_name:'José Andrey Pereira Lisboa',brand:'Tiger Tech',support_email:'tigertechbr@outlook.com',privacy_email:'tigertechbr@outlook.com',address:'Rua Brasílio Machado, 404, Santo André, São Paulo, CEP 09060-700'} as const;
 export type LegalTemplateIdentity={legal_name?:string|null;brand?:string|null;support_email?:string|null;privacy_email?:string|null;address?:string|null;trial_days?:number;grace_days?:number;plans?:{id:string;amount_cents:number;interval_months:number}[]};
 
@@ -120,7 +121,8 @@ export function legalTemplatesFor(identity:LegalTemplateIdentity={}) {
   EMAIL_PRIVACIDADE:identity.privacy_email?.trim()||operatorIdentityDefaults.privacy_email,
   ENDERECO:identity.address?.trim()||(legalName===operatorIdentityDefaults.legal_name?operatorIdentityDefaults.address:'[ENDERECO]')};
  const render=(source:string)=>source.replace(/\[(NOME_LEGAL|MARCA|APRESENTACAO_MARCA|NATUREZA_DO_PRESTADOR|PRECO_MENSAL|PRECO_ANUAL|DIAS_FREE|REGRA_TOLERANCIA|EMAIL_SUPORTE|EMAIL_PRIVACIDADE|ENDERECO)\]/g,(marker,key:string)=>values[key]??marker);
- return {privacy:render(privacyDraft),terms:render(termsDraft)};
+ const confirmedOperator=legalName===operatorIdentityDefaults.legal_name&&brand===operatorIdentityDefaults.brand;
+ return {privacy:render(confirmedOperator?operatorPrivacyDraft:privacyDraft),terms:render(confirmedOperator?operatorTermsDraft:termsDraft)};
 }
 
 export const privacyTemplate=legalTemplatesFor().privacy;

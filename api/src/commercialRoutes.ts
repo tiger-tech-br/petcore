@@ -6,6 +6,7 @@ import {confirmPassword} from './reauth.js';
 import {settings,legalPublic,legalVersion,paymentLink,reviewedPaymentLink,hasConfirmedSubscriptionPayment,subscription} from './commercialService.js';
 import {legalTemplatesFor} from './legalTemplates.js';
 import {enqueueSupportEmails,supportEmailStatus} from './supportEmailService.js';
+import {createTenantExportHandler,tenantExportRequests} from './tenantExportRoutes.js';
 
 export const publicCommercial=Router();
 publicCommercial.get('/legal',async(_req,res)=>{res.set('Cache-Control','no-store');res.json(legalPublic(await settings()));});
@@ -177,6 +178,8 @@ router.get('/platform/subscriptions/:id',platform,async(req,res)=>{
  const [current,payments,plans]=await Promise.all([subscription(company),pool.query('SELECT * FROM subscription_payments WHERE tenant_id=$1 ORDER BY recorded_at DESC LIMIT 50',[company]),pool.query('SELECT * FROM subscription_plans ORDER BY interval_months')]);
  res.json({company:record,subscription:current,payments:payments.rows,plans:plans.rows});
 });
+router.get('/platform/subscriptions/:id/export-requests',platform,tenantExportRequests);
+router.post('/platform/subscriptions/:id/export',platform,createTenantExportHandler());
 router.post('/platform/subscriptions/:id/payments',platform,async(req,res)=>{
  const company=z.uuid().parse(req.params.id);
  const input=z.object({plan_id:planId,amount_cents:z.number().int().positive(),provider_reference:z.string().trim().min(3).max(160),received_at:z.iso.datetime({offset:true}),idempotency_key:z.uuid(),confirmed_in_pagbank:z.literal(true)}).strict().parse(req.body);

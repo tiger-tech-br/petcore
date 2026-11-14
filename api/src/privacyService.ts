@@ -1,9 +1,11 @@
 import {randomUUID} from 'node:crypto';
 import {S3Client,DeleteObjectCommand,GetObjectCommand} from '@aws-sdk/client-s3';
 import {getSignedUrl} from '@aws-sdk/s3-request-presigner';
-import type {PoolClient} from 'pg';
+import {Pool,type PoolClient} from 'pg';
 import {ensure,pool,tx} from './core.js';
 import {recordAudit} from './audit.js';
+import {PHOTO_BACKUP_LOCK} from './photoBackup.js';
+import {directDatabaseLockOptions} from './databaseLocks.js';
 
 export const requestColumns=`r.id,r.tutor_id,t.name AS tutor_name,t.anonymized_at,r.kind,r.status,
  r.description,r.identity_verified,r.verification_method,r.identity_verified_at,
@@ -177,6 +179,14 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
 export async function processObjectDeletionJobs(options:{tenantId?:string;limit?:number}={}){
  const configured=storage();
  ensure(configured,503,'Configure o armazenamento privado para processar exclusões de fotos.');
+ const abort=new AbortController();let guardPool:Pool|undefined,guard:PoolClient|undefined,guardLost=false,locked=false;
+ const disconnected=()=>{guardLost=true;abort.abort();};
+ try{
+  guardPool=new Pool(directDatabaseLockOptions());
+  guardPool.on('error',()=>console.error(JSON.stringify({event:'photo_deletion_guard_connection_lost'})));
+  guard=await guardPool.connect();guard.on('error',disconnected);
+  locked=(await guard.query('SELECT pg_try_advisory_lock($1) AS locked',[PHOTO_BACKUP_LOCK])).rows[0].locked;
+  if(!locked)return {processed:0,completed:0,failed:0,deferred:true};
  const limit=Math.max(1,Math.min(options.limit??10,20)),claim=randomUUID();
  const jobs=await tx(async db=>{
   const selected=await db.query(`SELECT id FROM object_deletion_jobs WHERE ($1::uuid IS NULL OR tenant_id=$1)
@@ -191,7 +201,8 @@ export async function processObjectDeletionJobs(options:{tenantId?:string;limit?
  for(const job of jobs){
   try{
    ensure(job.object_key.startsWith(`tenants/${job.tenant_id}/`),409,'Chave fora da empresa.');
-   await configured.client.send(new DeleteObjectCommand({Bucket:configured.bucket,Key:job.object_key}));
+   ensure(!guardLost,503,'A exclusão foi adiada para preservar a cópia de segurança.');
+   await configured.client.send(new DeleteObjectCommand({Bucket:configured.bucket,Key:job.object_key}),{abortSignal:AbortSignal.any([abort.signal,AbortSignal.timeout(15000)])});
    await pool.query("UPDATE object_deletion_jobs SET state='done',finished_at=now(),last_error_code=NULL,claimed_by=NULL,claimed_at=NULL WHERE id=$1 AND claimed_by=$2",[job.id,claim]);completed++;
   }catch(cause){
    const raw=cause as {name?:string;$metadata?:{httpStatusCode?:number}};
@@ -202,4 +213,10 @@ export async function processObjectDeletionJobs(options:{tenantId?:string;limit?
   }
  }
  return {processed:jobs.length,completed,failed};
+ }finally{
+  if(locked&&!guardLost)await guard?.query('SELECT pg_advisory_unlock($1)',[PHOTO_BACKUP_LOCK]).catch(()=>{});
+  guard?.removeListener('error',disconnected);guard?.release(guardLost);
+  await guardPool?.end();
+  configured.client.destroy();
+ }
 }

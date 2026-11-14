@@ -6,6 +6,8 @@ import {pipeline} from 'node:stream/promises';
 import {Pool} from 'pg';
 import {GetObjectCommand} from '@aws-sdk/client-s3';
 import {decryptBackupFile,parseBackupKey} from '../dist/backupCrypto.js';
+import {verifyPhotoSnapshot,storageFingerprint} from '../dist/photoBackup.js';
+import {BACKUP_RETENTION_LOCK} from '../dist/backupRetention.js';
 import {backupStorage,databaseAddress,databaseOptions,failure,fingerprint,privateTemporary,programEnvironment,removeTemporary,runProgram,safeCode} from './backup.mjs';
 
 function argumentsFor(args){
@@ -41,16 +43,35 @@ export async function checkRestore(args=process.argv.slice(2)){
  const target=databaseAddress(process.env.RESTORE_DATABASE_URL),databaseName=decodeURIComponent(target.pathname.slice(1));
  if(!databaseName.endsWith('_restore_test'))throw failure('RESTORE_ISOLATED_DATABASE_REQUIRED');
  const key=parseBackupKey(process.env.BACKUP_ENCRYPTION_KEY),temporary=await privateTemporary();
- let targetPool,sourcePool,targetClient;
+ let targetPool,sourcePool,targetClient,retentionClient,retentionSourceFingerprint,retentionLocked=false,retentionLost=false;
+ const retentionAbort=new AbortController();
+ async function coordinateRetention(){
+  if(retentionClient||process.env.RESTORE_RETENTION_PAUSED==='YES')return;
+  if(!process.env.DATABASE_DIRECT_URL&&!process.env.DATABASE_URL)throw failure('RESTORE_RETENTION_COORDINATION_REQUIRED');
+  const source=databaseAddress(process.env.DATABASE_DIRECT_URL||process.env.DATABASE_URL);
+  retentionSourceFingerprint=fingerprint(source);
+  sourcePool??=new Pool(databaseOptions(source));sourcePool.on('error',()=>console.error(JSON.stringify({event:'restore_idle_connection_lost'})));
+  retentionClient=await sourcePool.connect();retentionClient.on('error',()=>{retentionLost=true;retentionAbort.abort();});
+  retentionLocked=(await retentionClient.query('SELECT pg_try_advisory_lock_shared($1) AS locked',[BACKUP_RETENTION_LOCK])).rows[0].locked;
+  if(!retentionLocked)throw failure('RESTORE_RETENTION_RUNNING');
+ }
+ async function checkRetentionRecord(manifest){
+  if(!retentionClient)return;
+  if(retentionSourceFingerprint!==manifest.sourceFingerprint)throw failure('RESTORE_RETENTION_SOURCE_MISMATCH');
+  const current=(await retentionClient.query('SELECT state FROM backup_runs WHERE id=$1',[manifest.backupId])).rows[0];
+  if(current?.state==='expired'||current?.state==='expiring')throw failure('RESTORE_BACKUP_EXPIRED');
+  if(!current||!['uploaded','verified'].includes(current.state))throw failure('RESTORE_BACKUP_NOT_AVAILABLE');
+ }
  try{
   let encryptedFile,manifestFile;
   if(options.file){encryptedFile=resolve(options.file);manifestFile=resolve(options.manifest||options.file.replace(/\.dump\.enc$/,'.manifest.enc'));if(encryptedFile===manifestFile)throw failure('RESTORE_MANIFEST_REQUIRED');}
   else{
+   await coordinateRetention();
    const prefix=(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,''),objectKey=options['object-key'];
    if(!/^[a-zA-Z0-9/_-]{1,200}$/.test(prefix)||!objectKey.startsWith(prefix+'/')||objectKey.split('/').includes('..')||!objectKey.endsWith('.dump.enc'))throw failure('RESTORE_OBJECT_KEY_INVALID');
    const storage=backupStorage();encryptedFile=join(temporary,'download.dump.enc');manifestFile=join(temporary,'download.manifest.enc');
    for(const [object,path] of [[objectKey,encryptedFile],[objectKey.replace(/\.dump\.enc$/,'.manifest.enc'),manifestFile]]){
-    const response=await storage.client.send(new GetObjectCommand({Bucket:storage.bucket,Key:object}),{abortSignal:AbortSignal.timeout(15*60*1000)});
+    const response=await storage.client.send(new GetObjectCommand({Bucket:storage.bucket,Key:object}),{abortSignal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(15*60*1000)])});
     if(!response.Body)throw failure('RESTORE_DOWNLOAD_EMPTY');await pipeline(response.Body,createWriteStream(path,{flags:'wx',mode:0o600}));
    }
   }
@@ -58,6 +79,16 @@ export async function checkRestore(args=process.argv.slice(2)){
   const plainManifest=join(temporary,'manifest.json');await decryptBackupFile(manifestFile,plainManifest,key);
   let manifest;try{manifest=JSON.parse(await readFile(plainManifest,'utf8'));}catch{throw failure('RESTORE_MANIFEST_INVALID');}
   if(!manifestIsValid(manifest))throw failure('RESTORE_MANIFEST_INVALID');
+  await checkRetentionRecord(manifest);
+  let photosVerified=0;
+  if(manifest.objectsIncluded){
+   await coordinateRetention();
+   await checkRetentionRecord(manifest);
+   if(!manifest.photos||manifest.photos.backupId!==manifest.backupId)throw failure('PHOTO_BACKUP_MANIFEST_INVALID');
+   const storage=backupStorage();storage.fingerprint=storageFingerprint(process.env.BACKUP_STORAGE_ENDPOINT,storage.bucket);
+   try{const photos=await verifyPhotoSnapshot({snapshot:manifest.photos,backup:storage,key,prefix:(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,''),directory:temporary,signal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(30*60*1000)])});photosVerified=photos.photosVerified;}
+   finally{storage.client.destroy();}
+  }
   if(fingerprint(target)===manifest.sourceFingerprint)throw failure('RESTORE_SOURCE_EQUALS_TARGET');
   const plaintext=join(temporary,'restore.dump'),verified=await decryptBackupFile(encryptedFile,plaintext,key,manifest.dumpSha256);
   if(verified.sha256!==manifest.plaintextSha256||verified.sizeBytes!==manifest.plaintextBytes)throw failure('RESTORE_PLAINTEXT_CHECKSUM_MISMATCH');
@@ -81,12 +112,15 @@ export async function checkRestore(args=process.argv.slice(2)){
   if(options.record){
    const source=databaseAddress(process.env.DATABASE_DIRECT_URL||process.env.DATABASE_URL);
    if(fingerprint(source)!==manifest.sourceFingerprint)throw failure('RESTORE_RECORD_SOURCE_MISMATCH');
-   sourcePool=new Pool(databaseOptions(source));
+   sourcePool??=new Pool(databaseOptions(source));
+   if(!sourcePool.listenerCount('error'))sourcePool.on('error',()=>console.error(JSON.stringify({event:'restore_idle_connection_lost'})));
    const result=await sourcePool.query("UPDATE backup_runs SET state='verified',verified_at=now(),error_code=NULL WHERE id=$1 AND sha256=$2 AND state IN ('uploaded','verified') RETURNING id",[manifest.backupId,manifest.dumpSha256]);
    if(!result.rowCount)throw failure('RESTORE_BACKUP_RECORD_MISSING');recorded=true;
   }
-  const result={ok:true,event:'restore_verified',backupId:manifest.backupId,tablesVerified:actual.length,recorded,objectsIncluded:false,applicationReady:false};console.log(JSON.stringify(result));return result;
+  const result={ok:true,event:'restore_verified',backupId:manifest.backupId,tablesVerified:actual.length,recorded,objectsIncluded:Boolean(manifest.objectsIncluded),photosVerified,photosRestoredToActiveStorage:false,applicationReady:false};console.log(JSON.stringify(result));return result;
  }finally{
+  if(retentionLocked&&!retentionLost)await retentionClient?.query('SELECT pg_advisory_unlock_shared($1)',[BACKUP_RETENTION_LOCK]).catch(()=>{});
+  retentionClient?.release(retentionLost);
   if(targetClient){await targetClient.query('SELECT pg_advisory_unlock(719381010)').catch(()=>{});targetClient.release();}
   await targetPool?.end();await sourcePool?.end();await removeTemporary(temporary);
  }

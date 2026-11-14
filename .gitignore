@@ -21,3 +21,6 @@ coverage/
 /releases/*.apk
 /releases/*.aab
 /releases/*.idsig
+
+# Private deployment configuration, never included in the release source.
+/deploy/private/

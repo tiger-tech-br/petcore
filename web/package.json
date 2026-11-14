@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test:native": "node --experimental-strip-types --test tests/nativeAndroid.unit.test.ts tests/checkout.unit.test.ts",
-    "test:scheduling": "node --experimental-strip-types --test tests/calendarTime.unit.test.ts"
+    "test:scheduling": "node --experimental-strip-types --test tests/calendarTime.unit.test.ts",
+    "test:export": "node --experimental-strip-types --test tests/tenantExportDownload.unit.test.ts",
+    "test": "npm run test:native && npm run test:scheduling && npm run test:export"
   },
   "dependencies": {
     "react": "^19.2.0",

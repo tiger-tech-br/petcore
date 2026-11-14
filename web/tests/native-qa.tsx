@@ -69,6 +69,7 @@ const fixtureWaitlist=[{id:'qa-wait',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo
 const fixtureTeam=[{id:ids.user,name:'Marina Exemplo',email:'marina@example.test',role:'admin',active:true,permissions:[]},{id:'qa-employee',name:'Juliana Exemplo',email:'juliana.atendimento@example.test',role:'employee',active:true,permissions:['appointments','tutors','crm']}];
 const fixturePrivacy=[{id:'qa-privacy',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',anonymized_at:null,kind:'access',status:'in_progress',description:'Solicito uma cópia das informações do meu cadastro e dos atendimentos de Luna.',identity_verified:true,verification_method:'in_person',identity_verified_at:qaTimestamp,resolution:'Identidade conferida presencialmente. Levantamento dos registros em andamento.',created_at:qaTimestamp,updated_at:qaTimestamp,resolved_at:null,created_by_name:'Marina Exemplo'}];
 const fixtureTicket={id:'qa-support',tenant_id:ids.company,company_name:'Vila Pet • demonstração',subject:'Dúvida sobre a organização da agenda',category:'technical',status:'in_progress',created_at:qaTimestamp,updated_at:qaTimestamp};
+const fixtureExportTicket={id:'10000000-0000-4000-8000-000000000021',subject:'Exportação dos dados da Vila Pet • solicitação fictícia do administrador',status:'in_progress',created_at:qaTimestamp};
 let fixtureSupportReads=0;
 const fixtureSupportMessages=[{id:'qa-message-a',from_platform:false,body:'Gostaria de saber como organizar os horários dos profissionais e localizar os atendimentos da semana.',created_at:qaTimestamp},{id:'qa-message-b',from_platform:true,body:'Na Agenda, escolha a visualização Semana e use o filtro de profissional para conferir cada jornada.',created_at:qaTimestamp}];
 
@@ -167,6 +168,16 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/commercial/platform/settings')return reply({brand:'Tiger Tech • QA local',legal_name:'Responsável fictício',support_email:'suporte@example.test',privacy_email:'privacidade@example.test',address:'Endereço fictício da prévia',privacy_text:'Documento fictício não publicado.',terms_text:'Documento fictício não publicado.',published:false,legal_version:'qa-unpublished',effective_date:null,subprocessors:[],trial_days:30,grace_days:3,plans:checkoutPlans});
   if(method==='GET'&&path==='/commercial/platform/subscriptions')return reply({items:[{id:ids.company,name:'Vila Pet • demonstração',active:true,...localSubscription}],page:1,pageSize:20,total:1});
   if(method==='GET'&&path===`/commercial/platform/subscriptions/${ids.company}`)return reply({company:{id:ids.company,name:'Vila Pet • demonstração',active:true},subscription:localSubscription,payments:fixturePayments,plans:checkoutPlans});
+  if(method==='GET'&&path===`/commercial/platform/subscriptions/${ids.company}/export-requests`)return reply({items:parameters.get('export-requests')==='empty'?[]:[fixtureExportTicket]});
+  if(method==='POST'&&path===`/commercial/platform/subscriptions/${ids.company}/export`){
+    if(body.ticket_id!==fixtureExportTicket.id||body.identity_verified!==true||typeof body.password!=='string'||!body.password)return reply({error:'Preencha a autorização fictícia. Não use sua senha real na prévia.'},422);
+    const signal=init?.signal||(input instanceof Request?input.signal:undefined);
+    return await new Promise<Response>((resolve,reject)=>{
+      const cancel=()=>{window.clearTimeout(timer);reject(new DOMException('Preparação fictícia cancelada.','AbortError'));};
+      const timer=window.setTimeout(()=>{signal?.removeEventListener('abort',cancel);resolve(reply({error:'QA local: preparação simulada encerrada sem gerar arquivo ou acessar servidor.'},503));},60000);
+      if(signal?.aborted)cancel();else signal?.addEventListener('abort',cancel,{once:true});
+    });
+  }
   if(method==='POST'&&path===`/commercial/platform/subscriptions/${ids.company}/cancel-recurring`){
     if(body.confirmed_in_pagbank!==true||typeof body.provider_reference!=='string'||body.provider_reference.trim().length<3||typeof body.reason!=='string'||body.reason.trim().length<5||typeof body.password!=='string'||!body.password)return reply({error:'Preencha a confirmação fictícia. Não use sua senha real na prévia.'},422);
     if(body.expected_paid_through!==localSubscription.paid_through)return reply({error:'O período fictício mudou. Consulte a assinatura novamente.'},409);
