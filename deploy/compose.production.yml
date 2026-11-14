@@ -1,0 +1,112 @@
+name: petcore
+
+x-runtime: &runtime
+  image: petcore-runtime:${PETCORE_RELEASE:?Defina a revisão aprovada em deploy/.env}
+  build:
+    context: ..
+    dockerfile: Dockerfile
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,size=1536m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  stop_grace_period: 30s
+  networks:
+    - service
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  app:
+    <<: *runtime
+    env_file:
+      - path: ./private/app.env
+        format: raw
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+    restart: unless-stopped
+    expose:
+      - "4000"
+
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      PETCORE_HOST: ${PETCORE_HOST:?Defina o subdomínio aprovado}
+      ACME_EMAIL: ${ACME_EMAIL:?Defina o contato do certificado}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - service
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  migrate:
+    <<: *runtime
+    profiles: [jobs]
+    env_file:
+      - path: ./private/migration.env
+        format: raw
+    command: [node, api/scripts/migrate.mjs]
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  maintenance:
+    <<: *runtime
+    profiles: [jobs]
+    env_file:
+      - path: ./private/maintenance.env
+        format: raw
+    command: [node, api/dist/maintenance.js, --once]
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  reminders:
+    <<: *runtime
+    profiles: [jobs]
+    env_file:
+      - path: ./private/reminders.env
+        format: raw
+    command: [node, api/dist/reminderDispatcher.js, --run-once]
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  backup:
+    <<: *runtime
+    profiles: [jobs]
+    env_file:
+      - path: ./private/backup.env
+        format: raw
+    command: [node, api/scripts/backup-cycle.mjs]
+    healthcheck:
+      disable: true
+    restart: "no"
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  service:

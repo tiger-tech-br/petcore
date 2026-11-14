@@ -1,54 +1,79 @@
-# Termos de Uso do PetCore — rascunho
+# Termos de Uso do PetCore — versão para revisão final
 
-TERMOS DE USO DO PETCORE — RASCUNHO PARA REVISÃO
+Revisão preparada em 13/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o contrato publicado.
 
-1. Prestador e contratação
-O PetCore é prestado por José Andrey Pereira Lisboa, pessoa física, sob a marca Tiger Tech, com a apresentação institucional Tiger Tech — Sites, Sistemas e Soluções Digitais, no endereço Rua Brasílio Machado, 404, Santo André, São Paulo, CEP 09060-700, com atendimento em tigertechbr@outlook.com. Estes termos disciplinam o uso das funcionalidades contratadas pelo pet shop. A pessoa que contrata ou administra a conta deve possuir poderes para representar o estabelecimento. O endereço, a identificação contratual aplicável e os canais de contato devem estar completos antes da oferta comercial.
+## 1. Prestador
 
-2. Serviço e limites da oferta
-O PetCore oferece ferramentas para a administração interna do pet shop: cadastros de clientes e pets, agenda e lista de espera, serviços e jornadas dos profissionais, equipe e permissões, CRM com contatos e tarefas, produtos e movimentos de estoque, vendas, recebimentos registrados, despesas, caixa e relatórios. O acesso depende das permissões atribuídas à pessoa usuária e da situação da assinatura.
-Os relatórios refletem as informações inseridas pelo estabelecimento. A equipe precisa registrar o recebimento de uma venda para que ele apareça nos controles de recebimentos. O Financeiro não consulta contas bancárias nem processa as compras dos clientes do pet shop. O serviço não substitui assessoria contábil, fiscal ou jurídica e não emite documentos fiscais sem integração específica.
-Recursos disponíveis, preço, período, condições de renovação e eventuais limitações devem coincidir no painel, na oferta e no checkout antes da contratação. Nenhuma condição destes termos afasta direitos legais obrigatórios.
+O PetCore é prestado por **José Andrey Pereira Lisboa**, pessoa física, sob a marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**, na Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Atendimento: **tigertechbr@outlook.com**.
 
-3. Contas e responsabilidades de acesso
-Cada usuário deve usar uma conta individual, manter suas credenciais protegidas e informar ao administrador acessos suspeitos. O administrador do pet shop é responsável por conceder e revogar permissões de sua equipe e pela legitimidade dos registros inseridos. É proibido tentar acessar dados de outra empresa, contornar controles de segurança, introduzir conteúdo malicioso ou utilizar o serviço para atos ilícitos.
+Quem contrata ou administra uma conta deve ter poderes para representar o pet shop. A oferta precisa apresentar a identificação exigível do fornecedor e as condições completas antes da contratação. Estes termos preservam direitos legais obrigatórios.
 
-4. Preços, cobrança e cancelamento
-4.1. Planos e primeiro acesso
-Plano Free: teste gratuito por 30 dias corridos, iniciado quando o administrador confirma essa escolha no primeiro acesso. O Free vem selecionado inicialmente. Não exige cartão, não se renova como outro teste e não gera cobrança automática ao terminar.
-Plano Mensal: R$ 35,00 por período de um mês, com recorrência mensal autorizada no PagBank.
-Plano Anual: R$ 350,00 por período de 12 meses, com recorrência anual autorizada no PagBank. O valor anual é cobrado na contratação de cada período.
-O administrador pode escolher Mensal ou Anual imediatamente, sem iniciar o teste, ou contratar durante o período Free. Nessa escolha, o pagamento acontece no checkout do PagBank. Selecionar um plano no PetCore, por si só, não envia uma cobrança ao cartão.
+## 2. Serviço
 
-4.2. Pagamento, recorrência e conferência
-A operação preparada utiliza conta de pessoa física no PagBank e links externos de pagamento recorrente por cartão de crédito. Os links PetCore Mensal e PetCore Anual tiveram nome, preço e periodicidade conferidos. O pagador informa o cartão e autoriza a recorrência no ambiente do provedor, após conferir as condições apresentadas. As cobranças seguintes seguem a autorização concedida naquele ambiente. A habilitação da oferta permanece condicionada à aprovação dos documentos e das condições operacionais.
-O responsável pelo PetCore confere manualmente o recebimento no PagBank e registra a referência da transação e o período de acesso. A liberação não é instantânea por retorno do checkout ou envio de comprovante. O início e o fim do período confirmado aparecem em Plano e assinatura. Quando ainda existe um período pago válido, uma renovação conferida acrescenta o período contratado ao seu término; caso contrário, o período começa na conferência. [PRAZOS_OPERACIONAIS_DE_CONCILIACAO_E_CANCELAMENTO]
-Os lançamentos e a validade no PetCore precisam corresponder ao recebimento efetivamente confirmado. Invalidar um lançamento no PetCore não executa estorno no cartão; o prestador deve tratar o reembolso cabível no PagBank e ajustar os registros correspondentes.
+O sistema reúne clientes e pets, agenda, lista de espera, profissionais e jornadas, serviços, equipe e permissões, CRM, estoque, vendas e recebimentos registrados, despesas, caixa, relatórios, suporte e controles de privacidade.
 
-4.3. Vencimento e regularização
-Ao acabar o teste sem contratação, ou quando não houver período pago ou tolerância vigente, o sistema limita novos cadastros e alterações. Consultas, assinatura, suporte e os meios previstos para solicitações de privacidade continuam disponíveis enquanto o acesso à conta estiver ativo. A tolerância operacional configurada para regularizar o vencimento de um período pago é de 3 dia(s), conforme exibido em Plano e assinatura. Ela não prolonga o teste Free nem autoriza cobranças.
-A confirmação de um recebimento regulariza o acesso conforme o período registrado. Medidas de segurança ou restrições justificadas devem ser comunicadas quando cabível e preservar os meios necessários ao exercício de direitos. Mudanças de preço e de condições exigem informação adequada antes de nova contratação ou renovação, observando os requisitos legais.
+O Táxi Dog é opcional: registra endereço, motorista e etapas manuais de busca/entrega ligadas ao atendimento, com taxa na comanda. Não oferece GPS ou localização contínua. O estabelecimento responde pela execução do transporte e dos serviços aos seus clientes.
 
-4.4. Como pedir cancelamento ou encerramento
-O administrador pode abrir um pedido na área Suporte ou enviar e-mail para tigertechbr@outlook.com, informando o nome do pet shop, o e-mail da conta e, se disponível, a referência da assinatura. Informe se deseja cancelar futuras renovações, encerrar o uso ou solicitar reembolso. Não envie senha, número completo do cartão ou código de segurança. Guarde uma cópia do pedido e da resposta.
-O prestador deve localizar a assinatura, realizar o cancelamento da recorrência no painel do PagBank e confirmar ao solicitante as providências e o período de acesso remanescente. Desativar um usuário, suspender alterações ou deixar de acessar o PetCore não envia automaticamente uma ordem de cancelamento ao PagBank. O pedido de encerramento deve tratar também da entrega e da conservação dos dados, conforme a seção 7.
-Quando for aplicável uma relação de consumo, serão respeitados o direito de arrependimento previsto no art. 49 do Código de Defesa do Consumidor, inclusive o prazo de sete dias nas hipóteses legais, e os demais direitos obrigatórios. O teste gratuito não substitui esses direitos. Os mesmos canais recebem pedidos de desistência e reembolso. Os valores devidos ao solicitante serão tratados pelo provedor de pagamento, com confirmação da providência. As condições de cancelamento e reembolso fora das hipóteses legais obrigatórias ainda precisam de definição expressa antes da oferta comercial. [REGRAS_DE_REEMBOLSO_E_ENCERRAMENTO]
+O Financeiro reflete os registros da equipe; não consulta bancos nem comprova sozinho o pagamento no provedor. O serviço não inclui loja virtual, entrega de produtos ao público ou emissão fiscal e não substitui obrigações contábeis e jurídicas. O APK acessa o mesmo serviço pela internet; não mantém operação independente offline.
 
-5. Dados e confidencialidade
-José Andrey Pereira Lisboa atua como controlador dos dados usados nas finalidades próprias da plataforma, como relacionamento contratual, cobrança, contas, segurança e suporte. O pet shop decide as finalidades e a base legal dos dados de seus clientes, tutores e equipe. Na prestação dessas funcionalidades, o responsável pelo PetCore atua como operador e deve seguir as instruções legítimas do pet shop, a confidencialidade e o instrumento de tratamento de dados. Nenhuma das partes adquire propriedade sobre os dados pessoais a ponto de poder usá-los livremente ou em finalidade incompatível.
-O pet shop deve coletar apenas dados necessários, atender seus titulares e registrar autorizações específicas quando cabíveis. Lembretes não autorizam campanhas por si só. A Política de Privacidade integra as informações sobre o tratamento e os fornecedores. As responsabilidades por instruções, suboperadores, incidentes, transferências, conservação e devolução dos dados devem constar do contrato de tratamento de dados.
+Cada pessoa deve usar conta individual. O administrador concede e revoga permissões. São proibidos acessos a outras empresas, tentativas de contornar a segurança e utilização ilícita. Não envie senhas, cartão completo ou dados pessoais excessivos pelos campos livres e chamados.
 
-6. Suporte, segurança e continuidade
-O canal de suporte é tigertechbr@outlook.com. A equipe deve avaliar falhas e registrar providências. A operação deve manter atualizações, controles de acesso e backups testados. Limitações ou manutenções relevantes devem ser comunicadas quando cabível. Prazos e níveis de serviço somente podem ser anunciados se puderem ser cumpridos e constarem da oferta ou do contrato.
-O contratante deve conferir seus registros, acompanhar conciliações e exportar as informações necessárias à sua própria continuidade. Isso não afasta as obrigações do prestador sobre segurança e conservação conforme o contrato e a lei.
+## 3. Planos e pagamento
 
-7. Encerramento e transferência de administração
-Solicite a entrega dos dados pelos canais de Suporte ou tigertechbr@outlook.com. O responsável deve verificar a autorização do solicitante, combinar um meio seguro de entrega e informar o que foi disponibilizado ou exige outra providência. O sistema possui exportações para finalidades específicas; o encerramento pode exigir organizar também fotos e outros registros da empresa. Não se deve confundir a exportação dos dados de um titular com uma cópia completa de todos os dados do pet shop.
-A janela de acesso para entrega, o formato completo da migração e os critérios de eliminação ou conservação precisam ser definidos antes da oferta comercial. [RETENCAO_ENTREGA_E_ENCERRAMENTO]
-A venda do software ou mudança de administrador deve preservar os contratos, os acessos autorizados, os direitos e os deveres de informação aplicáveis. Ela não autoriza divulgação indiscriminada de dados pessoais.
+| Plano | Valor e período |
+|---|---|
+| Free | Teste de 30 dias corridos iniciado na confirmação; sem cartão ou cobrança automática ao terminar |
+| Mensal | R$ 35 por um mês, com recorrência mensal autorizada no PagBank |
+| Anual | R$ 350 por 12 meses, cobrados em cada contratação anual, com recorrência autorizada no PagBank |
 
-8. Propriedade intelectual e disposições finais
-O uso do serviço não transfere o código e a marca ao assinante, salvo contrato específico. As partes devem respeitar direitos de terceiros e as regras legais de responsabilidade. Controvérsias devem ser tratadas pelos canais de atendimento e pelas autoridades competentes, observados os direitos e o foro previstos na legislação aplicável.
-A versão aceita e a data do aceite são registradas para comprovar qual texto foi apresentado. A publicação e a coleta de aceite dependem da aprovação do conteúdo final e das informações do prestador. [APROVACAO_JURIDICA_E_OPERACIONAL]
+O Free vem selecionado no primeiro acesso. É possível contratar um plano pago imediatamente ou durante o teste. Selecionar um plano não cobra sozinho o cartão: o administrador segue ao checkout do PagBank, confere e autoriza.
 
-Referências de revisão: [LGPD — texto atualizado](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html), [ANPD — perguntas frequentes](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes), [PagBank — pagamentos recorrentes](https://developer.pagbank.com.br/docs/pagamentos-recorrentes), [Código de Defesa do Consumidor](https://www2.camara.leg.br/legin/fed/lei/1990/lei-8078-11-setembro-1990-365086-normaatualizada-pl.html).
+A conta atual utiliza links recorrentes de pessoa física. A Tiger Tech confere o recebimento e registra referência e período **em até um dia útil, de segunda a sexta-feira**, contado do pedido ou da identificação do pagamento. Feriados não contam como dias úteis. O retorno do checkout e o comprovante não substituem essa conferência; impedimentos serão informados, preservadas as obrigações legais.
+
+O período confirmado aparece em Plano e assinatura. Renovações conferidas acrescentam o período ao fim do acesso já pago; sem período válido, o início ocorre na conferência. O Free não recebe tolerância extra. A tolerância para regularizar um período pago vencido é de três dias. Depois, cadastros e alterações são limitados, preservados os meios de consulta, assinatura, suporte e direitos enquanto a conta estiver ativa.
+
+## 4. Cancelar renovação e trocar de plano
+
+O botão vermelho **Cancelar assinatura** abre um pedido de suporte, confirmado pelo cliente. O pedido também pode ser enviado a **tigertechbr@outlook.com**, com pet shop, e-mail da conta e referência da assinatura, se disponível. Não envie senha nem cartão completo.
+
+A Tiger Tech confere e executa o cancelamento no painel PagBank **em até um dia útil, de segunda a sexta-feira**, confirmando a providência ao solicitante. Cobrança próxima exige prioridade; eventual cobrança indevida posterior será apurada e corrigida. O pedido no PetCore não executa uma ordem automática no provedor.
+
+**Cancelar somente a renovação preserva o período pago.** Trocar de plano exige conferir e encerrar a recorrência anterior antes de outra contratação. O novo plano é ativado após o novo recebimento confirmado. Fechar a janela de checkout não prova que a recorrência deixou de existir; tentativas pendentes exigem conferência.
+
+Deixar de usar o serviço, desinstalar o APK ou suspender um acesso não cancela automaticamente a cobrança. Avisos por e-mail informam o atendimento, mas não substituem a confirmação registrada no chamado.
+
+## 5. Encerramento e reembolso
+
+Para encerrar o uso antes do fim do período pago, o cliente pode solicitar **reembolso voluntário proporcional ao período não utilizado**, sem multa de cancelamento. Isso é diferente de cancelar apenas futuras renovações. A Tiger Tech informa a data de encerramento, o cálculo, o valor e a referência da providência no PagBank.
+
+O cálculo usa o valor realmente pago e a proporção de tempo restante entre o encerramento solicitado e o fim do período correspondente, com resultado em reais e centavos. No Anual, usa-se o período anual pago, sem recalcular retroativamente pelo preço Mensal. Valores já restituídos não são reembolsados outra vez.
+
+A análise e as providências devidas são iniciadas em até um dia útil, de segunda a sexta-feira. O crédito na fatura depende do provedor e da administradora; o prazo obtido na confirmação será informado. Registro interno no PetCore não executa estorno.
+
+Quando aplicável relação de consumo, o arrependimento e outros direitos obrigatórios prevalecem sobre a regra proporcional. Nas hipóteses do art. 49 do CDC, o prazo legal de sete dias e a restituição cabível não são reduzidos pelo Free ou pelo uso parcial. O mesmo canal recebe o pedido, confirma o recebimento e aciona imediatamente o meio de pagamento quando exigido, sem aguardar o prazo comercial.
+
+## 6. Privacidade e entrega dos dados
+
+O pet shop decide as finalidades dos dados operacionais; a Tiger Tech realiza o tratamento conforme instruções legítimas, acordo de tratamento e Política de Privacidade. Para conta, assinatura, segurança e suporte próprios, o responsável do PetCore conduz as finalidades correspondentes. A contratação não transfere liberdade irrestrita sobre dados pessoais.
+
+O pet shop informa seus titulares e registra autorizações quando cabíveis. Lembretes não autorizam campanhas. Os fornecedores e os países de processamento estão identificados na Política de Privacidade.
+
+Após o **encerramento formal**, há **30 dias corridos para exportação assistida** dos dados da empresa. O pedido parte de administrador verificado e a entrega usa canal privado, registros estruturados JSON/CSV e fotos incluídas no escopo confirmado, sem dados de outras empresas. Lotes e eventuais limitações são identificados no chamado. Um relatório ou exportação de um titular não equivale automaticamente à entrega completa.
+
+Ao fim dessa janela, executa-se a eliminação ou desidentificação dos dados ativos sem hipótese de conservação. **Backups têm ciclo operacional de 30 dias**, com exclusão controlada; obrigações legais e conservação específica justificada ficam separadas, restritas e documentadas. A janela não reduz direitos dos titulares e não autoriza restaurar consentimentos revogados.
+
+## 7. Suporte e continuidade
+
+O atendimento ocorre pelo painel e por **tigertechbr@outlook.com**. Demandas comerciais são conferidas de segunda a sexta-feira, em até um dia útil; isso não é garantia de resolução de qualquer falha técnica nesse período. Identifique situações urgentes e suspeitas de incidente no assunto para avaliação de gravidade.
+
+O serviço mantém controles de acesso, arquivos privados, HTTPS, atualizações e rotinas de continuidade. Falhas ou manutenções relevantes são informadas quando cabível; não há garantia de disponibilidade absoluta. O contratante confere seus registros e guarda suas exportações necessárias, sem afastar as obrigações do prestador.
+
+## 8. Marca, transferência e condições finais
+
+A assinatura concede uso do serviço, sem transferir código ou marca, salvo contrato específico. A venda do projeto ou mudança do administrador exige transição segura, preservação dos contratos e informação quando cabível; não permite uso indiscriminado dos dados.
+
+São preservadas as responsabilidades legais e os direitos de terceiros. Não há escolha de foro que afaste aquele assegurado por lei. A versão apresentada, o usuário e a data de aceite ficam registrados.
+
+As condições comerciais acima foram aprovadas em 13/11/2026. A publicação do texto completo depende da conferência dos procedimentos e da aprovação final. [APROVACAO_JURIDICA_E_OPERACIONAL]
+
+Referências: [CDC](https://www2.camara.leg.br/legin/fed/lei/1990/lei-8078-11-setembro-1990-365086-normaatualizada-pl.html), [Decreto 7.962/2013](https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/decreto/d7962.htm), [PagBank recorrente](https://developer.pagbank.com.br/docs/pagamentos-recorrentes), [LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html).

@@ -1,55 +1,80 @@
-# Política de Privacidade do PetCore — rascunho
+# Política de Privacidade do PetCore — versão para revisão final
 
-POLÍTICA DE PRIVACIDADE DO PETCORE — RASCUNHO PARA REVISÃO
+Revisão preparada em 13/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o aviso publicado.
 
-1. Quem responde pelo tratamento
-O PetCore é um sistema de gestão para pet shops oferecido por José Andrey Pereira Lisboa, pessoa física, sob a marca Tiger Tech. A apresentação institucional da marca é: Tiger Tech — Sites, Sistemas e Soluções Digitais.
-O canal de suporte é tigertechbr@outlook.com e o canal para solicitações sobre dados pessoais é tigertechbr@outlook.com. Endereço para contato e identificação da oferta: Rua Brasílio Machado, 404, Santo André, São Paulo, CEP 09060-700.
+## 1. Responsável e contato
 
-José Andrey Pereira Lisboa atua como controlador dos dados necessários à administração das contas de acesso à plataforma, da relação contratual, das assinaturas, da segurança e do suporte do PetCore. Cada pet shop é responsável pelas decisões sobre os dados de seus tutores, clientes, profissionais e atendimentos. Para prestar essas funcionalidades, o responsável pelo PetCore atua como operador, segundo instruções legítimas do pet shop e o instrumento de tratamento de dados. Essas funções decorrem das atividades efetivas e não apenas do nome usado no contrato. O pet shop deve informar aos titulares sua identidade, finalidades e canal de atendimento.
+O PetCore é oferecido por **José Andrey Pereira Lisboa**, pessoa física, sob a marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**. Endereço: Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Suporte e privacidade: **tigertechbr@outlook.com**.
 
-2. Dados tratados e finalidades
-Contas de acesso: nome, e-mail, vínculo com empresas, permissões, hash de senha e sessões, para autenticação, administração e segurança.
-Operação do pet shop: identificação e contato dos tutores, informações e fotos dos pets, observações necessárias ao serviço, agendamentos, contatos de relacionamento, produtos, vendas, pagamentos registrados e despesas. A finalidade é prestar as funcionalidades contratadas pelo pet shop.
-Relacionamento comercial do PetCore: identificação do contratante, plano, vencimentos e referências de pagamento, para administrar o contrato e a cobrança.
-Suporte e direitos: informações fornecidas em solicitações, verificações proporcionais de identidade e registros das providências adotadas.
-Evite inserir documentos pessoais, informações de saúde de pessoas, dados de crianças, senhas ou números completos de cartão em campos livres. As informações sobre pets não autorizam coletar dados excessivos de pessoas.
+A Tiger Tech decide as finalidades dos dados necessários às contas, contratos, assinaturas, segurança e suporte próprios. Cada pet shop decide as finalidades dos registros de seus tutores, equipe e atendimentos; nessas operações, o PetCore realiza o tratamento conforme instruções legítimas do estabelecimento e o acordo de tratamento de dados. O pet shop precisa informar sua identidade e seu canal aos titulares.
 
-3. Fundamentos para tratamento
-Cada finalidade deve ter uma hipótese legal apropriada, documentada pelo responsável. A execução do contrato e os procedimentos solicitados pelo titular podem fundamentar dados necessários à prestação do serviço; obrigações legais ou regulatórias podem exigir conservação específica. Segurança e prevenção a fraudes devem ter necessidade e proporcionalidade avaliadas. Consentimento, quando aplicável, deve ser específico, informado e revogável. O aceite dos termos do serviço não constitui uma autorização geral para todos os tratamentos.
-Os lembretes por e-mail dependem da autorização específica registrada pelo pet shop. Um registro manual de conversa no CRM não concede essa autorização. O uso para publicidade ou campanhas exige avaliação e informação próprias; o PetCore não transforma uma autorização de lembrete em autorização de marketing.
+## 2. Dados e finalidades
 
-4. Pagamentos
-Os planos preparados para a oferta são: Plano Free por 30 dias, Plano Mensal por R$ 35,00 a cada mês e Plano Anual por R$ 350,00 a cada período de 12 meses. O teste começa na confirmação do Plano Free, sem cadastro de cartão e sem cobrança automática ao terminar. É possível escolher um plano pago no primeiro acesso, com pagamento imediato no checkout, ou contratar durante o teste.
-O fluxo preparado para as assinaturas utiliza links externos do PagBank. Quando o checkout estiver habilitado, os dados completos do cartão serão informados diretamente naquele ambiente, sujeito ao aviso de privacidade e às condições do provedor. O PetCore não coleta nem armazena número completo do cartão ou código de segurança. A liberação da assinatura depende da conferência manual do recebimento pelo responsável, com registro da referência e do período de acesso; o retorno do navegador não confirma o pagamento.
-Dados do contratante, plano, valor, referência da transação e período confirmado são usados para administrar a assinatura, atender solicitações e documentar a conferência. O contratante pode solicitar cancelamento da renovação, encerramento ou esclarecimentos em tigertechbr@outlook.com ou pela área Suporte. O cancelamento da recorrência é realizado no painel do PagBank; não há comando automático entre uma alteração de acesso no PetCore e a cobrança do provedor. Pedidos de eliminação de dados e pedidos relativos à assinatura são analisados segundo suas finalidades e obrigações próprias.
-Um lançamento manual de Pix ou cartão no Financeiro do pet shop é uma informação registrada pela equipe e não representa acesso à conta bancária. A função não solicita credenciais bancárias.
+| Uso | Dados necessários |
+|---|---|
+| Acesso e equipe | Nome, e-mail, vínculos, permissões, hash de senha e sessão |
+| Gestão do pet shop | Contatos dos tutores; informações e fotos dos pets; profissionais, serviços, horários, atendimentos, observações e registros de relacionamento |
+| Táxi Dog opcional | Endereço, complemento, orientações, motorista e etapas manuais de busca/entrega. A versão atual não coleta GPS ou localização contínua |
+| Financeiro e assinatura | Vendas, despesas e recebimentos registrados pela equipe; contratante, plano, referências de pagamento e períodos confirmados |
+| Atendimento | Solicitações, autoria, verificação proporcional de identidade e providências |
+| Segurança | Identificadores técnicos, tentativas de acesso e operações relevantes |
 
-5. Compartilhamento e fornecedores
-O acesso é limitado às pessoas autorizadas do pet shop e às atividades necessárias à prestação, ao suporte e à segurança. O responsável não recebe autorização para vender registros dos pet shops ou usá-los em finalidade incompatível com o contrato. O ambiente de homologação preparado para o lançamento possui os seguintes fornecedores e usos:
-- Neon: banco PostgreSQL configurado na região AWS São Paulo, Brasil (sa-east-1).
-- Railway: hospedagem da aplicação nos Estados Unidos (us-east4-eqdc4a) e armazenamento separado de fotos e backups na região IAD, Estados Unidos. As fotos usam armazenamento privado e os backups do banco são cifrados antes do envio.
-- PagBank: checkout externo das assinaturas e informações necessárias à conferência dos recebimentos. Os links PetCore Mensal, de R$ 35,00, e PetCore Anual, de R$ 350,00, tiveram nome, preço e periodicidade conferidos. A abertura comercial continua condicionada à aprovação dos documentos e das condições da operação.
-- Microsoft Outlook: caixa de suporte e privacidade tigertechbr@outlook.com, que recebe as mensagens enviadas voluntariamente pelos usuários e titulares. Não foi estabelecida nesta preparação uma região exclusiva para o processamento dessa caixa.
-- Resend: provedor configurado para e-mails de recuperação de acesso e lembretes. O envio de lembretes foi autorizado somente para tutores com a autorização específica registrada, e a validação operacional está em andamento. A configuração precisa respeitar remetente, destinatários autorizados e os controles de envio. A região de tratamento, os contratos e os subprocessadores devem ser conferidos para a versão final.
-Esta lista descreve a configuração conhecida na preparação. As localizações informadas não demonstram que todos os dados, metadados, acessos administrativos ou subfornecedores de cada provedor fiquem nessas regiões. A lista final precisa coincidir com o ambiente utilizado pelos clientes e com os contratos aplicáveis. [REVISAO_FORNECEDORES_E_TRANSFERENCIAS]
-Se houver tratamento no exterior, o responsável deve identificar os países ou regiões envolvidos, avaliar a transferência internacional e adotar o mecanismo legal aplicável, inclusive cláusulas contratuais adequadas quando cabíveis. A escolha de uma região de hospedagem, isoladamente, não comprova regularidade de todas as transferências.
+Os dados vêm dos usuários autorizados, dos atendimentos e da utilização técnica do serviço. Evite inserir documentos pessoais, informações de saúde de pessoas ou de crianças, senhas e cartão completo em campos livres. Uma foto ou informação do pet pode identificar seu tutor.
 
-6. Conservação e encerramento
-Os dados operacionais são mantidos durante a prestação do serviço segundo as instruções do pet shop e os critérios de necessidade. No encerramento, o controlador deve definir e comunicar a entrega, eliminação ou desidentificação dos registros, ressalvadas as hipóteses legítimas de conservação. Documentos financeiros, evidências de exercício de direitos e registros de segurança devem ter finalidade, acesso e duração de conservação documentados na tabela de retenção aplicável.
-Os prazos e critérios de retenção por categoria de dado e o ciclo de expiração das cópias de segurança ainda precisam ser definidos, documentados e informados na versão final. [RETENCAO_E_CICLO_DE_BACKUPS]
-A remoção no banco ativo não significa remoção instantânea em backups ou em fornecedores externos. Uma restauração deve reaplicar as solicitações de exclusão e revogação antes de reabrir o acesso. Não se deve conservar dados indefinidamente por mera conveniência.
+As finalidades são prestar e administrar o serviço, autenticar acessos, conferir assinaturas, responder pedidos e proteger a operação. Os fundamentos são avaliados por finalidade, incluindo execução contratual, obrigações e exercício de direitos. O pet shop faz a avaliação correspondente sobre os dados que controla. Aceitar os termos não constitui autorização geral para outros usos.
 
-7. Direitos e atendimento
-O titular pode solicitar confirmação do tratamento, acesso, correção, informação sobre compartilhamentos, revogação de consentimento e demais direitos aplicáveis, incluindo portabilidade, bloqueio, anonimização ou eliminação nas hipóteses legais. Encaminhe a solicitação ao pet shop responsável pelos seus atendimentos; para dados administrados diretamente pelo responsável do PetCore, use tigertechbr@outlook.com. Se não souber a quem se dirigir, o mesmo canal pode auxiliar no encaminhamento ao responsável correto. Não há cobrança pelo exercício dos direitos.
-Pode ser necessária uma verificação proporcional de identidade para evitar entregar ou alterar dados de outra pessoa. Não envie documentos ou informações sensíveis sem necessidade e orientação do responsável. O pedido será analisado, com resposta sobre as providências ou as razões de eventual impossibilidade, observando os prazos legais aplicáveis. Os direitos relativos a registros necessários a obrigações legais devem ser analisados conforme o caso. O titular também pode recorrer à ANPD e aos demais órgãos competentes.
+## 3. E-mails
 
-8. Segurança e incidentes
-O serviço utiliza controles de autenticação, autorização por empresa e transmissão protegida quando publicado por HTTPS. O responsável operacional deve manter backups, gestão de acessos, atualização e resposta a incidentes. Não existe segurança absoluta. Incidentes com risco ou dano relevante devem ser avaliados e comunicados pelo controlador conforme a legislação e regulamentação aplicáveis; a operadora deve colaborar e fornecer informações necessárias.
+Lembretes de agendamento exigem a autorização específica registrada no cadastro do tutor, que pode ser revogada. Contatos manuais do CRM não autorizam lembretes ou campanhas.
 
-9. Cookies e alterações
-O acesso utiliza cookies necessários à sessão. Ferramentas opcionais de publicidade, rastreamento ou análise devem ser avaliadas separadamente antes de serem adicionadas. A versão e a data de vigência desta política são apresentadas na página. Alterações relevantes devem ser comunicadas de forma adequada aos afetados.
+O serviço também envia recuperação de acesso e avisos transacionais de suporte. O provedor recebe o destinatário e o conteúdo necessário: lembretes incluem tutor, pet, estabelecimento e horário; avisos de suporte usam empresa, protocolo e link autenticado, sem copiar o texto livre do chamado. Recuperações contêm link temporário, que não deve ser compartilhado. Um aviso de suporte não aprova pagamento, troca de plano ou cancelamento.
 
-Este texto é um rascunho. A publicação depende da conferência dos dados reais, das operações, dos fornecedores, da retenção e dos instrumentos contratuais pelo responsável e por sua assessoria jurídica. Não representa certificação de conformidade. [APROVACAO_JURIDICA_E_OPERACIONAL]
+## 4. Pagamentos
 
-Referências de revisão: [LGPD — texto atualizado](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html), [ANPD — perguntas frequentes](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes), [PagBank — pagamentos recorrentes](https://developer.pagbank.com.br/docs/pagamentos-recorrentes), [Código de Defesa do Consumidor](https://www2.camara.leg.br/legin/fed/lei/1990/lei-8078-11-setembro-1990-365086-normaatualizada-pl.html).
+O Free oferece 30 dias a partir da confirmação, sem cartão e sem cobrança automática ao terminar. Os planos pagos são R$ 35 mensais e R$ 350 por 12 meses. O cartão é informado no checkout externo do PagBank; o PetCore não coleta o número completo nem o código de segurança.
+
+A conta atual usa links recorrentes PagBank de pessoa física e conferência manual em até um dia útil, de segunda a sexta-feira. Cancelar renovação, encerrar uso, pedir reembolso e solicitar eliminação de dados são providências diferentes, detalhadas nos Termos. Registrar cartão ou Pix no Financeiro do pet shop não dá acesso à conta bancária do estabelecimento.
+
+## 5. Compartilhamento e exterior
+
+O acesso é limitado à equipe autorizada de cada pet shop e às atividades necessárias de prestação, segurança e suporte. Os registros dos estabelecimentos não são vendidos nem usados para campanhas próprias incompatíveis com a contratação.
+
+| Fornecedor | Finalidade e localização conhecida |
+|---|---|
+| Neon | Banco PostgreSQL configurado em São Paulo, Brasil, AWS sa-east-1. Contas, suporte e subprocessadores podem envolver outros fluxos |
+| Railway | Aplicação em us-east4-eqdc4a e armazenamento privado separado de fotos e backups em IAD, Estados Unidos |
+| Resend | Recuperação, lembretes autorizados e suporte. O domínio envia por São Paulo; o fornecedor informa armazenamento nos Estados Unidos |
+| PagBank | Checkout, recorrência e dados necessários à conciliação; cartão tratado diretamente no provedor |
+| Microsoft Outlook | Caixa tigertechbr@outlook.com. Não há região exclusiva dessa caixa comprovada nesta preparação |
+
+O processamento no exterior atende à hospedagem, armazenamento e comunicações enquanto necessários, com os ciclos de conservação abaixo. Servidor em determinada região não limita automaticamente suporte, metadados ou transferências posteriores dos fornecedores.
+
+Antes da publicação, o responsável deve registrar o mecanismo aplicável a cada transferência e seus instrumentos ou fundamentos. Este texto não afirma cláusulas ANPD assinadas, equivalência automática de cláusulas europeias ou autorização genérica pelo aceite. O inventário e os caminhos de regularização estão em OPERACAO-COMERCIAL.md. [MECANISMO_TRANSFERENCIAS_VALIDADO]
+
+## 6. Conservação e encerramento
+
+Os dados operacionais permanecem durante a prestação. Após o **encerramento formal**, a janela para **exportação assistida é de 30 dias corridos**. Ao final, executa-se a destinação dos dados ativos e das fotos, conforme instruções legítimas do controlador, eliminando ou desidentificando o que não precisa ser conservado. Exceções precisam de finalidade, fundamento, prazo de revisão e acesso restrito documentados.
+
+A política operacional aprovada para **backups é de 30 dias**, com exclusão controlada das cópias vencidas. Esse prazo não substitui obrigações legais ou conservação específica justificada. Excluir no ambiente ativo não apaga instantaneamente versões e cópias dos fornecedores. Antes de reabrir um ambiente restaurado, são reaplicados os pedidos já atendidos e as autorizações revogadas.
+
+Sessões vencem e são limpas pela manutenção. Links de recuperação expiram em 30 minutos; tokens usados ou vencidos são removidos. O worker limpa destinatário e conteúdo de avisos de suporte finalizados após 30 dias; histórico e metadados seguem avaliação separada. Registros financeiros, contratuais, de direitos e de incidentes não são apagados indiscriminadamente por um prazo único.
+
+## 7. Direitos e atendimento
+
+Sobre cadastros e atendimentos, procure o pet shop responsável. Sobre conta, assinatura e dados administrados pela Tiger Tech, use **tigertechbr@outlook.com**. Se não souber a quem dirigir o pedido, o mesmo canal auxilia no encaminhamento. O exercício de direitos não é cobrado e pode exigir confirmação proporcional de identidade.
+
+Podem ser solicitados acesso, informações, correção e demais providências cabíveis, inclusive revogação, bloqueio, eliminação ou desidentificação. A confirmação ou acesso simplificados são providenciados imediatamente quando possível; a declaração completa observa o prazo legal de até 15 dias. Outros pedidos recebem análise conforme a regra aplicável. A janela comercial de exportação não reduz esses direitos. O titular também pode procurar a ANPD e os órgãos competentes.
+
+## 8. Segurança, incidentes e cookies
+
+O serviço utiliza autenticação, permissões por empresa, HTTPS, proteção de credenciais e arquivos privados. Os backups do banco são cifrados antes do envio. Isso reduz riscos e não representa segurança absoluta ou certificação pela ANPD.
+
+Se um incidente afetar dados de um estabelecimento, a Tiger Tech aciona o contato do controlador e coopera na avaliação, contenção e recuperação. O controlador avalia as comunicações legais; para suas próprias finalidades, o responsável do PetCore conduz essa avaliação. Relatos podem ser enviados ao canal de privacidade, sem senhas ou chaves.
+
+O cookie de sessão é necessário ao acesso. Ele não constitui autorização para publicidade. Novos rastreadores opcionais exigem avaliação própria antes da ativação. A versão e a vigência ficam no sistema, com informação adequada sobre alterações relevantes. A venda do projeto ou mudança de administrador exige transição segura e preservação de direitos.
+
+## Controle de publicação
+
+As condições comerciais de prazo, reembolso, exportação e backups foram aprovadas pelo responsável em 13/11/2026. Antes da publicação, confirmar a execução das rotinas descritas, o inventário de transferências e a aprovação do texto completo. [APROVACAO_JURIDICA_E_OPERACIONAL]
+
+Referências: [LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html), [ANPD — transferências](https://www.gov.br/anpd/pt-br/assuntos/assuntos-internacionais/transferencia-internacional-de-dados), [Resend — armazenamento e contratos](https://resend.com/security), [PagBank recorrente](https://developer.pagbank.com.br/docs/pagamentos-recorrentes).

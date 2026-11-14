@@ -1,5 +1,7 @@
 # PetCore — gestão para pet shops
 
+Atualização de 14/11/2026: exportação completa assistida por empresa e recuperação de fotos implementadas, com 216 verificações aprovadas. Aplicação publicada na revisão `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`, HTTPS e assets conferidos; nova cópia restaurada em banco isolado com 50 tabelas e contagens verificadas. Documentos jurídicos continuam rascunhos. A migração paga foi descartada por custo; Railway e Neon atuais preservados. Consulte [a revisão atual e seus limites](docs/REVISAO-20261114.md), [exportação](docs/TENANT-EXPORT.md), [recuperação de fotos](docs/PHOTO-RECOVERY.md) e [preparação portátil inativa](deploy/README.md). Os registros anteriores abaixo são históricos.
+
 Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).

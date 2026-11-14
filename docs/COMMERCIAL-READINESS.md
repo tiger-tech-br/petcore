@@ -2,7 +2,15 @@
 
 Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
-## Publicado — revisão de 13/11/2026
+## Atualização de 14/11/2026
+
+Aplicação `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4` publicada e conferida por HTTPS; 216 verificações únicas aprovadas, builds e TypeScript completos. Inclui exportação completa assistida por empresa com dados/fotos, snapshots de fotos criptografados, retenção controlada de 30 dias e recuperação para bucket novo. Migrations 018/019 na homologação, sem a 016 separada. O ensaio real com uma foto fictícia passou com limpeza completa e nenhum objeto de cliente alterado. Evidências e limites em [REVISAO-20261114.md](REVISAO-20261114.md).
+
+O responsável aprovou atendimento em até um dia útil de segunda a sexta, devolução proporcional e janela de 30 dias para exportação após encerramento formal. Rascunhos e [procedimentos](OPERACAO-COMERCIAL.md) refletem essas decisões; não há publicação jurídica automática. O APK 1.0.1 teve os cinco testes confirmados pelo usuário. A alternativa de infraestrutura/e-mail foi preparada e depois **descartada por custo**, sem contratação ou troca de DNS. O ambiente atual permanece. Esses avanços não encerram as pendências externas abaixo.
+
+Nova cópia `6874bd7f-f058-4255-9e29-7c6b7f158aaf`, 184.266 bytes, com fotos incluídas no escopo e inventário vazio, restaurada em banco isolado: **50 tabelas e contagens conferidas**, estado `verified` em 14/11 às 19h46min36s. A foto fictícia recuperada foi um ensaio separado; não afirmar que a cópia completa continha fotos existentes. Retenção apply conferida sem falhas e sem cópias vencidas/removidas; backup diário e manutenção atualizados. Resta conferir a guarda recuperável das chaves fora do ambiente ativo e acompanhar os jobs. A [proposta de infraestrutura/e-mail](PLANO-INFRAESTRUTURA-LGPD.md) é histórica e está inativa por decisão do responsável.
+
+## Histórico — revisão de 13/11/2026
 
 O código `640a96bd7dfabad6e2dde3eb3fa9147201046198` foi validado com 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds e TypeScript completos. Trata o erro de conexão ociosa PostgreSQL sem encerrar o processo nem expor credenciais e acrescenta **Atualizar conversa** no suporte, preservando rascunho, situação e histórico em caso de erro. Cliente/plataforma conferidos localmente em 320/1280 px, sem excesso horizontal, mantendo as fontes móveis.
 
@@ -94,7 +102,8 @@ As capturas do APK enviadas pelo usuário comprovam instalação e uso de alguma
 - [ ] Homologar a operação de cancelamento/recuperação de checkout no PagBank com os controles novos: pedido do cliente, cancelamento real pelo vendedor, referência/senha/período esperado, preservação do período pago e liberação posterior.
 - [ ] Proteção da chave de backup e procedimento de recuperação fora do ambiente ativo.
 - [ ] Homologação completa antes de receber clientes reais e anunciar.
-- [ ] Conferir recuperação de senha de ponta a ponta no aplicativo publicado e APK 1.0.1 em aparelho/emulador; os testes de entrega e de navegador existentes não substituem essas etapas.
+- [x] APK 1.0.1: responsável confirmou em 13/11 os cinco testes no celular, incluindo teclado/Voltar, seleção de foto, exportação Cancelar/Salvar e navegação inferior fixa. Integridade e assinatura reconferidas; ver [ANDROID.md](ANDROID.md).
+- [ ] Conferir recuperação de senha de ponta a ponta no aplicativo publicado; um teste de entrega de e-mail não substitui abrir e consumir o link de recuperação.
 
 A conta PagBank atual é PF: checkout externo por links recorrentes e conciliação manual. Não há captura de cartão, integração bancária ou token da API de assinaturas necessário a esse fluxo.
 

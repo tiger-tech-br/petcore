@@ -64,6 +64,12 @@ O número de versão e o código de atualização ficam em `android/app/build.gr
 
 ## Conferência da entrega
 
+### Validação manual confirmada em 13/11/2026
+
+O responsável informou que os cinco testes no APK **1.0.1** funcionaram no seu celular, usando cadastro de teste: login com cachorro inteiro; formulário de agendamento utilizável com teclado; Voltar fechando o formulário; escolha de foto do pet; exportação de relatório com Cancelar e Salvar no seletor. Também confirmou a navegação Hoje/Agenda/Clientes/Mais fixa. Esta é evidência relatada pelo usuário no aparelho, complementar aos testes automatizados e de navegador; não houve conexão USB ou teste físico executado pelo agente.
+
+A integridade do arquivo foi reconferida: SHA-256 corresponde aos metadados, assinatura v2/v3 válida, certificado preservado, versão 1.0.1/código 2, origem HTTPS correta e build sem debug. O APK não precisou ser gerado novamente para as mudanças da interface hospedada. Os registros de ausência de teste físico nas seções históricas abaixo referem-se à situação anterior a esta confirmação.
+
 Evidências da geração 1.0.1 em 10/11/2026:
 
 - `testDebugUnitTest`: **7 testes Java aprovados**, cobrindo as políticas de navegação e de exportação.

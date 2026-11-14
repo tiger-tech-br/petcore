@@ -1,0 +1,5 @@
+{$PETCORE_HOST} {
+    tls {$ACME_EMAIL}
+    encode zstd gzip
+    reverse_proxy app:4000
+}
