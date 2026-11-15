@@ -1,6 +1,24 @@
 # PetCore para Android
 
-O aplicativo acessa o mesmo PetCore publicado em `https://petcore-homologacao.up.railway.app`, usando um WebView Android. Login, empresas, permissões e dados continuam no serviço, com conexão à internet. Não há uma base de clientes separada nem operação offline. O endereço atual é de homologação; as pendências comerciais do projeto continuam no [checklist de preparação](COMMERCIAL-READINESS.md).
+O APK **1.0.1 já gerado** acessa `https://petcore-homologacao.up.railway.app`, usando um WebView Android. A fonte do candidato **1.0.2** foi preparada para a homologação isolada `https://petcore.tigertech.dev.br`; esse candidato ainda não foi compilado ou distribuído. Login, empresas, permissões e dados continuam no serviço de cada endereço, com conexão à internet. Não há operação offline. As pendências comerciais continuam no [checklist de preparação](COMMERCIAL-READINESS.md).
+
+## Candidato 1.0.2 — Hostinger (15/11/2026)
+
+A fonte Android está em **1.0.2, código 3**, mantendo o pacote `br.dev.tigertech.petcore`. Somente a versão e a origem HTTPS confiável foram alteradas. O carregamento inicial e a ponte de exportação usam `https://petcore.tigertech.dev.br`; o endereço antigo do Railway não é autorizado como página interna ou origem da ponte. Os testes de redirecionamento e de origem enganosa foram adaptados ao novo domínio. Não houve mudança de layout, fontes, navegação, teclado, permissões ou da chave de assinatura.
+
+**Não existe APK 1.0.2 para instalar nesta revisão.** A tentativa `testDebugUnitTest lintRelease assembleRelease --offline` encontrou o ambiente Java protegido com outro diretório de usuário e tentou obter o Gradle. A solicitação de execução com acesso às ferramentas do computador foi interrompida, sem resultado de compilação. A distribuição 8.14.3 completa existe em `C:\Users\andre\.gradle`, mas a tentativa offline com esse cache foi recusada por acesso negado ao arquivo de bloqueio. Nenhuma nova chave foi criada. Os arquivos 1.0.0 e 1.0.1 foram preservados.
+
+Os sete testes Java de navegação/exportação passaram em execução direta do JUnit com as classes do candidato; o compilador registrou acesso negado ao encerrar o arquivo JAR do cache. Isso **não substitui** um build Android, o lint, a assinatura ou um teste no aparelho. O passo restante é executar as verificações com acesso autorizado ao cache Android/Gradle existente e então gerar e conferir o APK:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+$env:ANDROID_HOME = 'C:\Users\andre\AppData\Local\Android\Sdk'
+$env:GRADLE_USER_HOME = 'C:\Users\andre\.gradle'
+& "$env:JAVA_HOME\bin\java.exe" -cp android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain -p android --no-daemon --offline testDebugUnitTest lintRelease assembleRelease
+if ($LASTEXITCODE -eq 0) { npm run android:apk -- --offline --skip-build }
+```
+
+A geração precisa conservar o certificado SHA-256 `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`; tamanho e hash do APK só poderão ser registrados após o arquivo existir. Instalar essa atualização exigirá novo login no endereço Hostinger; os dados do Railway não são transferidos pela instalação do APK. O destino ainda é **homologação**, sem envio de e-mails, fotos/storage ou rotinas automáticas ativadas. Não foi realizado teste físico da 1.0.2, e ela não deve ser apresentada como a versão comercial pronta.
 
 A revisão publicada de 11/11/2026 acrescenta o [Táxi Dog opcional](TAXI-DOG.md) pela interface/API remotas. A fonte maior para desktop tem um escopo separado e preserva os ajustes do aplicativo. Essas mudanças não alteram o pacote Android nem exigem gerar outro APK; não acrescentam GPS ou permissões de localização ao aparelho.
 

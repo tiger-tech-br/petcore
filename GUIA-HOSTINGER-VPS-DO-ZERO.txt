@@ -1,0 +1,495 @@
+GUIA DA TIGER TECH: HOSTINGER VPS DO ZERO AO DEPLOY
+Para projetos com Node.js, PostgreSQL e páginas web
+Atualizado em 14/11/2026, horário de Brasília
+
+COMO USAR ESTE GUIA
+Leia primeiro as seções 1 a 4. Os comandos são executados na Web Console
+Linux da Hostinger, e não no PowerShell do Windows. Copie um comando por vez
+e confira o resultado antes do próximo. Exemplos de projetos novos precisam
+ser adaptados; nomes em MAIÚSCULAS são campos para substituir.
+Este arquivo não contém senhas, tokens ou chaves privadas.
+Para preparar outro projeto Node que ainda não usa Docker, veja também o
+exemplo completo da seção 23, depois de entender as primeiras seções.
+
+1. ENTENDA AS PEÇAS
+VPS: computador alugado que fica ligado na internet.
+Ubuntu: sistema operacional desse computador.
+Docker: executa cada aplicação em um ambiente separado, chamado container.
+Compose: arquivo que descreve os containers e suas configurações.
+Node.js: executa o seu back-end. O PetCore leva o Node dentro da imagem Docker.
+PostgreSQL: guarda os registros; no seu caso, pode continuar no Neon.
+Caddy: recebe os acessos aos domínios e os encaminha para a aplicação certa.
+DNS: aponta um nome, como petcore.tigertech.dev.br, para o IP da VPS.
+HTTPS: protege a conexão do navegador com o sistema usando um certificado.
+Deploy: instalar uma revisão conferida da aplicação e verificar seu uso real.
+
+2. SUA VPS ATUAL: O QUE JÁ FOI FEITO
+Plano KVM 1: 1 vCPU, 4 GB de RAM e 50 GB de disco, em Campinas, Brasil.
+IP: 187.53.115.106. Identificação administrativa: srv2162451.hstgr.cloud.
+Ubuntu 24.04.5; Docker 29.9.3; Docker Compose 5.7.1 conferidos nesta data.
+O Ubuntu foi atualizado e reiniciado. O pacote cloud-init ficou retido;
+sua atualização não foi forçada. Isso não exige reinstalar o servidor.
+Firewall TigerTech-Web ativo: TCP 22/80/443, ICMP e ICMPv6; restante bloqueado.
+SSH 22 continua aceitando qualquer origem. Restringir IP é uma etapa futura.
+Fail2ban no SSH: cinco falhas em dez minutos geram bloqueio de uma hora.
+Monarx gratuito ativo; agendamento de backup da VPS semanal, sem adicional pago.
+Você preferiu manter o acesso atual e adiar o cadastro de chave SSH.
+Portanto, o roteiro atual usa a Web Console. Guarde a senha root privadamente.
+Esses recursos não significam capacidade ilimitada nem liberação comercial.
+
+3. PRIMEIRO ACESSO AO PAINEL E AO SERVIDOR
+Entre em hpanel.hostinger.com > VPS > sua KVM 1 > Gerenciar.
+A Visão geral mostra o estado, IP, sistema operacional e acesso administrativo.
+Gerenciador Docker mostra os projetos e containers. Web console abre o terminal.
+Ao terminar uma manutenção, feche a aba do terminal.
+Para uma VPS NOVA, escolha Brasil e a imagem Ubuntu 24.04 with Docker.
+Na VPS atual, utilize o serviço existente: reinstalar o sistema apaga o ambiente.
+Sua senha root e eventuais códigos de verificação são digitados só na Hostinger.
+Quando decidir usar SSH por chave, gere uma chave exclusiva, proteja a parte
+privada e cadastre somente a pública. Teste uma nova conexão antes de restringir
+senha/root. Uma chave privada não deve entrar no Git nem em conversas.
+
+4. CONFERIR O SERVIDOR SEM ALTERAR A APLICAÇÃO
+Na Web Console, estes comandos servem para consulta:
+    docker --version
+    docker compose version --short
+    docker ps
+    df -h /
+    free -m
+    systemctl --failed --no-pager
+    fail2ban-client status sshd
+df mostra espaço em disco; free mostra memória; docker ps mostra containers.
+CPU, memória, disco e acessos devem ser acompanhados conforme os sites crescerem.
+Atualizações do Ubuntu normalmente usam apt-get update e apt-get upgrade.
+Planeje a manutenção e o retorno antes de atualizar/reiniciar uma VPS com clientes.
+Upgrade de versão do Ubuntu é outra operação; não faz parte do deploy comum.
+
+5. O ESTADO DO PETCORE AGORA
+Endereço de TESTES: https://petcore.tigertech.dev.br
+O registro A foi salvo por você no Registro.br e resolveu para 187.53.115.106.
+Você autorizou os termos da Let's Encrypt e a emissão/renovação do HTTPS gratuito.
+A página retornou 200; saúde 200 com database=true; sessão anônima 401.
+HTTP redirecionou com 308 para HTTPS. Os arquivos visuais coincidiram com o Railway.
+A conexão Node -> Neon foi medida como TLSv1.3, com certificado autorizado.
+Em 15/11, passou um ensaio autenticado real por HTTPS com 11 verificações de
+login, cadastros, agenda, isolamento, estoque/caixa/financeiro, CRM e saída.
+As duas empresas fictícias e seus acessos foram desativados ao terminar.
+O teste usa banco separado: branch br-fragrant-frost-b6kr9it0, banco neondb.
+O app usa petcore_hostinger_runtime, com senha exclusiva e sem privilégios
+administrativos. Não usa owner nem DATABASE_DIRECT_URL no ambiente do app.
+Fotos e credenciais reais de armazenamento estão ausentes nesse ambiente.
+Os e-mails e todas as rotinas recorrentes estão desligados na Hostinger de testes.
+O Railway continua sendo o ambiente atual; o APK 1.0.1 permanece no endereço dele.
+Publicar esse teste não equivale à transferência final ou à liberação comercial.
+
+6. DOMÍNIO E SUBDOMÍNIO, SEM COMPRAR OUTRO DOMÍNIO
+tigertech.dev.br pode ser reservado para o site institucional da Tiger Tech.
+petcore.tigertech.dev.br identifica o PetCore. Outros SaaS podem ter seus nomes.
+Um cliente também pode manter seu domínio próprio e apontá-lo para a sua VPS.
+O domínio pode permanecer na conta e no registrador do proprietário; hospedagem
+e registro de domínio são serviços diferentes.
+No Registro.br: domínio > Configurar zona DNS > Nova entrada.
+Para o PetCore, a entrada é: Tipo A; Nome petcore; Dados 187.53.115.106.
+Adicione a entrada e salve. Preserve as outras entradas da zona, especialmente
+MX, TXT de SPF/DKIM/DMARC e os servidores DNS já utilizados.
+O tipo A aponta um nome para um IPv4; não se coloca https:// no campo do nome.
+Mantenha o DNS no Registro.br neste cenário; selecionar outro provedor não é
+necessário para apontar o subdomínio. Mudanças podem levar tempo para propagar.
+
+7. ORGANIZE O CÓDIGO ANTES DE PUBLICAR
+No computador, confira o projeto, compile, teste e publique uma revisão no Git.
+Um commit é uma identificação exata do código; usá-lo evita trocar versões sem querer.
+O primeiro deploy foi montado a partir da revisão limpa:
+    0a96d5f7455ec875ba879cd6c5e6f767b8b787d4
+Em 15/11, a imagem do app na Hostinger foi atualizada para a revisão limpa:
+    4c7a65ba0ca97977de128c8f703417dcf3fbe4c9
+As duas não incluem 016_taxi_driver_accounts.sql, que é trabalho separado.
+Os arquivos operacionais do Compose continuam na pasta da primeira revisão;
+a fonte da nova imagem está na pasta releases/4c7a65ba0ca97977de128c8f703417dcf3fbe4c9.
+O arquivo deploy/.env.validation seleciona a nova imagem pelo PETCORE_RELEASE.
+A pasta local de desenvolvimento pode conter alterações ainda não aprovadas.
+Por isso, a imagem não deve ser construída a partir de um envio bruto dessa pasta.
+Confira .gitignore e .dockerignore. Credenciais, backups, node_modules e material
+de assinatura Android ficam fora do repositório e da imagem.
+Para repositório privado, use uma integração GitHub autorizada ou acesso de
+leitura específico; nunca coloque uma senha/token dentro da URL do repositório.
+O Gerenciador Docker tem orientação oficial para repositórios privados.
+
+8. ESTRUTURA DE UM PROJETO NOVO
+Prepare no próprio projeto: Dockerfile, .dockerignore, package-lock.json,
+comandos de build/start, arquivos Compose, configuração do proxy e .env.example.
+O .env.example documenta nomes de variáveis, sem segredos reais.
+Para um projeto Node, confira engines e scripts do package.json; a versão do
+Node da imagem deve ser compatível com aquele projeto. PetCore usa Node 22.
+Front-end Vite deve ser compilado; o servidor de desenvolvimento não é produção.
+No PetCore, a imagem reúne o back-end e os arquivos já compilados do front-end.
+Se outro projeto ainda não tiver Dockerfile/Compose, peça a adaptação a partir
+do package.json e da estrutura real dele: o comando start e as pastas de saída
+variam. Não copie o Dockerfile do PetCore para qualquer projeto sem essa revisão.
+Inclua os arquivos de implantação na revisão que será usada ou transfira apenas
+os arquivos operacionais revisados, registrando sua origem e integridade.
+No PetCore atual, deploy/ não existia naquele commit: os arquivos revisados de
+implantação foram copiados separadamente e conferidos por hash.
+
+9. BAIXAR UMA REVISÃO DE UM PROJETO NOVO
+EXEMPLO PARA ADAPTAR; não é para clonar novamente o PetCore já instalado.
+Escolha uma pasta exclusiva dentro de /opt/tigertech/projetos/.
+    install -d -m 0755 /opt/tigertech/projetos
+    git clone --no-checkout https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git /opt/tigertech/projetos/NOME_DO_PROJETO
+    cd /opt/tigertech/projetos/NOME_DO_PROJETO
+    git checkout --detach COLOQUE_O_COMMIT_APROVADO
+    git rev-parse HEAD
+Confira se a identificação retornada é a revisão que você pretende instalar.
+Não siga se o comando falhar ou se a pasta já contiver outro projeto.
+Use uma pasta por revisão quando precisar preservar a anterior para retorno.
+Não substitua código em produção por uma versão que só foi conferida no editor.
+
+10. CONFIGURAR O BANCO E OS SEGREDOS
+Hospedar Node na VPS não obriga instalar outro PostgreSQL: ele pode usar o Neon.
+Copie a conexão do banco certo e mantenha TLS e verificação do certificado.
+Para SaaS diferentes, separe bancos/usuários e credenciais com acesso necessário.
+Dentro do PetCore, as empresas são separadas pelas permissões e pelo tenant;
+não é necessário criar outro PetCore para cada pet shop.
+Migrations e backups devem usar a conexão direta prevista pelo projeto.
+Na Hostinger de testes, só a conexão do branch isolado foi autorizada.
+A conexão da aplicação agora usa uma role limitada e senha exclusiva. Não copie
+a conexão administrativa para app.env. DATABASE_DIRECT_URL está ausente no app.
+O arquivo migration.env está neutralizado; futuras migrations dependem de
+uma conexão administrativa própria e controlada antes de qualquer execução.
+A mudança para o banco ativo requer planejamento e autorização próprios.
+Guarde variáveis privadas em arquivos protegidos, fora do Git e da imagem.
+Exemplo de preparação de uma pasta privada nova, na raiz do projeto:
+    umask 077
+    install -d -m 0700 deploy/private
+Edite os arquivos privadamente. Se usar nano: Ctrl+O salva; Enter confirma;
+Ctrl+X sai. Não exiba esses arquivos em capturas ou mensagens.
+
+11. VARIÁVEIS DO PETCORE: COMO PREENCHER
+Consulte .env.example e deploy/README.md do projeto para o catálogo completo.
+app.env: banco, DATABASE_SSL, SESSION_SECRET, APP_ORIGIN e serviços aprovados.
+migration.env: quando aprovado e preparado, conexão administrativa direta ao
+mesmo banco e TLS. Na homologação atual ele está neutralizado, sem conexão válida.
+maintenance.env, reminders.env e backup.env: configurações separadas das rotinas.
+SESSION_SECRET precisa de pelo menos 40 caracteres aleatórios; não use exemplo.
+APP_ORIGIN deve ser exatamente a origem HTTPS, por exemplo:
+    APP_ORIGIN=https://petcore.tigertech.dev.br
+PETCORE_HOST, no arquivo de seleção do Compose, recebe só o hostname:
+    PETCORE_HOST=petcore.tigertech.dev.br
+Os arquivos privados do PetCore usam format: raw, que exige Compose >= 2.30.
+Neles, use NOME=valor, uma variável por linha, sem export, aspas externas ou
+comentário depois do valor. O arquivo .env de seleção tem formato normal.
+Não copie caminhos Windows de pg_dump/pg_restore: a imagem fornece os clientes Linux.
+
+12. CONSTRUIR E VALIDAR ANTES DE SUBIR
+Execute os comandos na raiz da revisão aprovada, com os arquivos privados prontos.
+Use config --quiet: a saída normal de config pode mostrar credenciais resolvidas.
+Modelo para um projeto novo, adaptando o arquivo e o nome do projeto:
+    docker compose -p NOME_DO_PROJETO -f compose.yml config --quiet
+    docker compose -p NOME_DO_PROJETO -f compose.yml build app
+Confira o resultado da construção. Imagem criada não prova que o banco funciona.
+Para migrations, faça primeiro backup/ensaio no ambiente isolado e confira o alvo.
+O comando de migration executa SQL: é uma alteração real, não uma simples consulta.
+No PetCore, o controle confere arquivos/checksums e aplica apenas o que falta.
+Execute uma vez por revisão necessária; não inicie o app se a migration falhar.
+Na homologação Hostinger atual, NÃO rode esse passo: migration.env foi
+neutralizado. O rollout de 15/11 não precisou nem executou migrations.
+Seed é carga de demonstração; não o execute em banco de produção.
+Primeiro inicie somente o app interno e teste saúde, banco e rotas protegidas.
+Com a configuração desse projeto já aprovada, um exemplo de início é:
+    docker compose -p NOME_DO_PROJETO -f compose.yml up -d app
+    docker compose -p NOME_DO_PROJETO -f compose.yml ps
+O nome do serviço app é um exemplo; use o nome definido no Compose daquele projeto.
+
+13. COMANDOS EXATOS PARA CONSULTAR O PETCORE ATUAL
+Estes comandos se referem SOMENTE ao ambiente de testes já preparado.
+Entre na pasta correta:
+    cd /opt/tigertech/petcore/releases/0a96d5f7455ec875ba879cd6c5e6f767b8b787d4
+Defina este atalho na sessão atual do terminal; ele termina na linha com }:
+    pcv() {
+      docker compose -p petcore-validation --env-file deploy/.env.validation -f deploy/compose.production.yml -f deploy/compose.proxy-pinned.yml "$@"
+    }
+Depois, consulte:
+    pcv config --quiet
+    pcv ps
+    pcv logs --tail 50 app
+    pcv logs --tail 50 proxy
+O nome petcore-validation e os dois arquivos -f precisam ser preservados.
+Omiti-los pode criar outro projeto ou perder a fixação da imagem do proxy.
+Se for deixar a homologação sem uso por bastante tempo, pausar somente o app
+interrompe seus acessos e evita consultas constantes ao banco de testes:
+    pcv stop app
+Para retomar o teste com a configuração já conferida:
+    pcv up -d --no-build app
+Não pare o proxy compartilhado de outros sites para pausar apenas um app.
+O app usa petcore-runtime:4c7a65ba0ca97977de128c8f703417dcf3fbe4c9,
+selecionado por PETCORE_RELEASE em deploy/.env.validation. O diretório operacional
+0a96... permanece; por isso, o nome da pasta não prova a imagem em execução.
+O Caddy 2.11.9 foi fixado pelo digest no arquivo operacional do servidor.
+O proxy de testes monta Caddyfile.preview, com Let's Encrypt e noindex/nofollow.
+Esses arquivos operacionais já existem na VPS; não os substitua por exemplos.
+
+14. REAPLICAR UMA CONFIGURAÇÃO JÁ VALIDADA DO TESTE
+Depois de conferir alvo, arquivos, backup e imagem aprovada, o comando é:
+    pcv up -d --no-build app proxy
+Ele mantém os serviços em segundo plano e pode recriá-los se a configuração mudou.
+O banco desse projeto é o de testes, não o banco ativo do Railway.
+No deploy inicial de 14/11, a execução única retornou migrations_ready.
+As 18 migrations conferidas são 001 a 015, 017, 018 e 019.
+O update de 15/11 manteve essas 18 sem executar migrations. migration.env está
+neutralizado até preparar outra conexão administrativa própria e controlada.
+Não acrescente a 016 por estar presente na pasta do computador.
+Rotinas têm o perfil jobs: não use esse perfil em um up geral.
+Migrate é execução única controlada; manutenção, lembretes e backup recorrente
+continuam desligados na Hostinger até a transferência operacional aprovada.
+
+15. HTTPS E VERIFICAÇÕES NO NAVEGADOR
+O DNS deve apontar para a VPS e TCP 80/443 precisam estar acessíveis.
+Caddy obtém o certificado, guarda seus dados em volume persistente e faz renovação.
+O titular precisa autorizar a emissão e aceitar os termos da certificadora.
+No PetCore, isso já foi autorizado para o subdomínio de testes e a Let's Encrypt.
+Confira o domínio, emissor, validade e ausência de alertas no navegador.
+O Caddyfile.preview usa uma única certificadora explicitamente configurada.
+noindex/nofollow pede que buscadores não indexem a homologação; não é senha.
+Teste login, sair/entrar, permissões, cadastros e agendamento em computador/celular.
+Teste recuperação de senha, fotos e exportações depois de configurar esses serviços.
+Um 200 na saúde não substitui esses fluxos. Não contorne alertas de certificado.
+O firewall atual não libera UDP 443: HTTP/1.1 e HTTP/2 funcionam; HTTP/3 fica limitado.
+
+16. COMO FUNCIONAM OS E-MAILS AUTOMÁTICOS DEPOIS DA MUDANÇA
+A VPS hospeda a aplicação; ela não fornece automaticamente o envio do PetCore.
+O ambiente atual no Railway/Resend mantém sua configuração existente.
+Na Hostinger de testes: EMAIL_PROVIDER=none, sem chaves reais; suporte e lembretes
+false/NO. A recuperação de senha também não envia nada nesse ambiente.
+Antes da transferência final, aprove e valide o provedor e sua base contratual
+de privacidade. Preserve e confira SPF, DKIM e DMARC no DNS do remetente.
+Um status Verified antigo do provedor não comprova que o registro DNS continua
+publicado hoje. Confira os registros públicos antes de liberar os envios novos.
+O código atual usa EMAIL_PROVIDER, EMAIL_API_KEY e EMAIL_FROM para recuperação
+e avisos de suporte. Lembretes têm RESEND_API_KEY e RESEND_FROM_EMAIL separados.
+Consulte os nomes reais em .env.example; não renomeie variáveis por tentativa.
+Outro SMTP/provedor não está automaticamente implementado só por existir na VPS.
+Faça um envio autorizado e teste abrir/consumir o link de recuperação no domínio final.
+Confira recebimento e spam; “aceito pelo provedor” não garante Caixa de Entrada.
+Desative os workers antigos antes de ativar os novos. Lembretes somente com opt-in.
+Não deixe Railway e Hostinger enviarem a mesma fila em paralelo.
+
+17. VÁRIOS SITES E SAAS NA MESMA VPS
+Cada aplicação terá pasta, container, variáveis, banco/acesso e volumes próprios.
+Exemplos de nomes de pastas: tigertech, nacao-animal, petcore, barbearia e salao.
+Um único proxy deve receber 80/443 e decidir o destino pelo domínio.
+Hoje o proxy do PetCore de testes já ocupa essas portas: não inicie outro ali.
+Em uma VPS NOVA e vazia, pode-se planejar um proxy compartilhado separado,
+com uma rede Docker externa, por exemplo tigertech-web, e aliases exclusivos.
+Nesse plano de servidor novo, a rede é criada uma vez:
+    docker network create tigertech-web
+Os Compose participantes declaram essa rede como external: true.
+Cada app participa dessa rede; seu Compose publica só a porta interna via expose.
+O proxy participa da mesma rede e encaminha para o alias/porta daquele app.
+Exemplo conceitual de blocos do Caddy, usando domínios que o titular controla:
+    site-do-cliente.com.br {
+        reverse_proxy site-cliente:3000
+    }
+    petcore.tigertech.dev.br {
+        reverse_proxy petcore-app:4000
+    }
+Os aliases são exemplos, não a rede/nomes já instalados. Não copie esses blocos
+sobre a configuração atual. A transição para proxy compartilhado exige preservar
+os volumes/certificados, revisar as redes e planejar a troca das portas.
+Não publique PostgreSQL 5432, Node 4000 ou a API do Docker na internet.
+Projetos separados ainda disputam CPU/RAM/disco; acompanhe o consumo e dimensione.
+Cada cliente deve ter acesso só ao que administra, sem receber a senha root geral.
+
+18. BACKUPS E RECUPERAÇÃO
+Mantenha backup do banco, dos arquivos/fotos e das configurações necessárias.
+Uma cópia semanal da VPS não substitui o backup do banco externo no Neon.
+Fotos em bucket externo também não são recuperadas só pelo snapshot da VPS.
+No PetCore, fotos e backups usam destinos privados distintos e cópias cifradas.
+Guarde as chaves de cifra, suas versões e a assinatura Android fora da VPS/bucket,
+em local privado recuperável. Sem a chave correta, a cópia cifrada não é suficiente.
+Ensaie restauração em banco/bucket novos e vazios; confira quantidades e arquivos.
+Não restaure uma cópia sobre o ambiente ativo para descobrir se ela funciona.
+Registre data, versão, resultado e responsável pelo teste. Use docs/PHOTO-RECOVERY.md.
+Confirme que o backup semanal realmente foi criado, não apenas agendado.
+
+19. ATUALIZAÇÕES, RETORNO E ROTINAS
+Para atualizar: confira a revisão nova, faça backup, prepare outra pasta/imagem,
+valide com banco isolado e só depois programe a troca do ambiente principal.
+Guarde a revisão/imagem anterior. Voltar o código exige compatibilidade com o banco;
+restaurar um banco antigo pode perder registros criados depois da cópia.
+Não substitua a pasta ativa nem execute git pull sem conferir a revisão final.
+Depois da troca, verifique saúde, sessão, fotos, relatórios, e-mail e jobs.
+No PetCore, o plano é manutenção a cada 15 minutos, lembretes a cada 5 minutos
+e backup diário; isso ainda não foi ativado na Hostinger de testes.
+Confira fuso, logs e execução única. Só um ambiente deve processar cada rotina.
+As rotinas antigas são desligadas numa troca coordenada, não durante este ensaio.
+Logs podem conter dados: revise antes de compartilhá-los e preserve a privacidade.
+
+20. APK E TRANSFERÊNCIA FINAL
+O APK 1.0.1 continua confiando na origem do Railway. Trocar DNS não o atualiza.
+Para usar outro endereço: configurar a origem nativa, aumentar a versão, assinar
+com a mesma chave e instalar/testar no aparelho. Preserve essa chave privadamente.
+Teste teclado/Voltar, fotos, downloads/exportações e a navegação inferior fixa.
+Para transferência final, confira também exportação de dados e recuperação de senha.
+Use apenas dados fictícios na homologação. Depois da troca coordenada, registre
+qual banco, bucket, endereço, imagem e rotinas formam o ambiente principal.
+Hospedagem no Brasil não certifica LGPD sozinha: contratos, fornecedores, acessos,
+retenção e procedimentos ainda precisam estar adequados ao tratamento real.
+A liberação comercial segue docs/COMMERCIAL-READINESS.md; este guia não a substitui.
+
+21. SE ALGO DER ERRADO
+“Origem não permitida”: conferir APP_ORIGIN com https:// e hostname exato,
+sem caminho/curinga. Reaplicar a configuração correta do app e testar a sessão.
+Erro 502: consultar ps/health/logs do app, banco e proxy; conferir rede e porta interna.
+SSL indisponível: conferir A/AAAA, portas 80/443, logs do Caddy e validade do certificado.
+Sem e-mail: conferir provedor implementado, variáveis/flags, DNS e registro do envio.
+Sem foto: conferir storage privado, autorização e bucket certo; o teste atual não o tem.
+Comando falhou: pare essa sequência e leia o erro. Não apague volumes ou reinstale
+o sistema como tentativa de correção. Volumes podem conter dados/certificados.
+Na VPS atual, preserve o projeto petcore-validation e os outros serviços existentes.
+
+22. REFERÊNCIAS OFICIAIS E ARQUIVOS DO PROJETO
+Hostinger: template Docker e Ubuntu
+https://www.hostinger.com/support/8306612-how-to-use-the-docker-vps-template-at-hostinger/
+Hostinger: painel e Web Console
+https://www.hostinger.com/support/5726606-how-to-use-the-vps-dashboard-in-hostinger/
+https://www.hostinger.com/support/how-to-use-the-web-console-in-hostinger/
+Hostinger: GitHub privado e firewall
+https://www.hostinger.com/support/how-to-deploy-from-private-github-repository-on-hostinger-docker-manager/
+https://www.hostinger.com/support/8172641-how-to-use-a-managed-vps-firewall-at-hostinger/
+Docker Compose: arquivos de variáveis
+https://docs.docker.com/reference/compose-file/services/#env_file
+Caddy: HTTPS e configuração TLS
+https://caddyserver.com/docs/automatic-https
+https://caddyserver.com/docs/caddyfile/directives/tls
+Let's Encrypt: termos vigentes na aprovação desta implantação
+https://letsencrypt.org/documents/LE-SA-v1.8-July-06-2026.pdf
+No projeto: docs/HOSTINGER.md, deploy/README.md, .env.example,
+docs/PHOTO-RECOVERY.md, docs/ANDROID.md e docs/COMMERCIAL-READINESS.md.
+
+23. APÊNDICE PRÁTICO: OUTRO PROJETO NODE, COMEÇANDO SEM DOCKER
+Use este exemplo na pasta de um NOVO projeto, não na pasta do PetCore.
+Premissas: package.json e package-lock.json na raiz, scripts build e start
+funcionando, servidor HTTP na porta PORT=4000, ouvindo em 0.0.0.0, e rota
+/health que retorna 200. Esse caminho precisa ser adaptado se sua API usa outro.
+O script start deve iniciar o servidor compilado, não o servidor de desenvolvimento.
+Preserve os scripts do projeto: confira-os com o responsável pelo código.
+Monorepos, Next.js, bibliotecas nativas e outros formatos exigem adaptação;
+o Dockerfile abaixo não substitui a análise da estrutura/saída daquele projeto.
+
+Crie .dockerignore com este conteúdo mínimo, retirando os espaços antes dos nomes:
+    node_modules
+    .git
+    .env
+    .env.*
+    **/.env
+    **/.env.*
+    private
+    deploy/private
+    .android-signing
+    .aws
+    **/*.key
+    **/*.pem
+    **/*.jks
+    **/*.keystore
+    **/*.p12
+    **/*.pfx
+    **/*.apk
+    **/*.aab
+    **/*.dump
+    **/*.enc
+    dist
+    coverage
+    *.log
+    backups
+
+Crie Dockerfile com este conteúdo; as linhas não levam espaços à esquerda:
+    FROM node:22-bookworm-slim AS build
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci
+    COPY . .
+    RUN npm run build && npm prune --omit=dev
+    FROM node:22-bookworm-slim
+    ENV NODE_ENV=production PORT=4000
+    WORKDIR /app
+    COPY --from=build --chown=node:node /app /app
+    USER node
+    EXPOSE 4000
+    HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:4000/health',{signal:AbortSignal.timeout(3000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    CMD ["npm","run","start"]
+
+Crie compose.yml. Neste YAML, preserve a indentação relativa mostrada:
+    services:
+      app:
+        build: .
+        image: exemplo-node:teste
+        init: true
+        restart: unless-stopped
+        read_only: true
+        tmpfs:
+          - /tmp:rw,nosuid,nodev,size=64m,mode=1777
+        security_opt:
+          - no-new-privileges:true
+        cap_drop:
+          - ALL
+        env_file:
+          - path: ./private/app.env
+            format: raw
+        environment:
+          NODE_ENV: production
+          PORT: "4000"
+        ports:
+          - "127.0.0.1:14001:4000"
+Esse app terá acesso de teste SOMENTE pelo próprio servidor em 127.0.0.1:14001.
+Ele não disputa 80/443 nem expõe Node na internet. Use outra porta local se ocupada.
+Persistência de arquivos exige volume/bucket apropriado; este exemplo não o cria.
+Para outro app, troque exemplo-node no nome da imagem e nos comandos -p, além
+da porta local e do alias exemplo-app. Cada projeto deve ter identificadores próprios.
+
+Na raiz desse projeto novo, prepare e edite a configuração privadamente:
+    umask 077
+    install -d -m 0700 private
+    nano private/app.env
+Preencha as variáveis exigidas pelo .env.example do seu app, usando banco de testes
+e segredos próprios; salve o arquivo. As regras de format: raw da seção 11 valem aqui.
+Não use as credenciais de outro SaaS nem habilite envio real durante esse ensaio.
+Confira, construa, inicie e teste, um comando de cada vez:
+    docker compose -p exemplo-node -f compose.yml config --quiet
+    docker compose -p exemplo-node -f compose.yml build app
+    docker compose -p exemplo-node -f compose.yml up -d app
+    docker compose -p exemplo-node -f compose.yml ps
+    curl --fail --show-error http://127.0.0.1:14001/health
+Espere resposta 200 da sua rota e estado healthy. Leia logs se houver erro.
+Esse teste HTTP local não comprova login com cookies seguros: teste-o depois em HTTPS.
+Para pausar apenas esse exemplo sem apagar seus dados/configuração:
+    docker compose -p exemplo-node -f compose.yml stop app
+
+PARA PUBLICAR ESSE OUTRO PROJETO, REAPROVEITE O PROXY EXISTENTE
+Primeiro planeje/aprove uma rede Docker compartilhada e conecte nela o proxy e
+o app pelos respectivos arquivos Compose, de modo persistente após recriações.
+Não basta uma conexão manual temporária; a rede precisa existir antes do deploy.
+O nome tigertech-web é uma sugestão, não uma rede já configurada nesta VPS.
+Exemplo de arquivo adicional compose.web.yml; substitua o nome da rede aprovada:
+    services:
+      app:
+        networks:
+          web:
+            aliases:
+              - exemplo-app
+    networks:
+      web:
+        external: true
+        name: NOME_DA_REDE_COMPARTILHADA_APROVADA
+Somente após essa preparação, reaplique o app incluindo os dois arquivos:
+    docker compose -p exemplo-node -f compose.yml -f compose.web.yml up -d app
+Adicione ao Caddy EXISTENTE um bloco para um subdomínio autorizado, por exemplo:
+    outro-projeto.tigertech.dev.br {
+        tls tigertechbr@outlook.com {
+            ca https://acme-v02.api.letsencrypt.org/directory
+        }
+        reverse_proxy exemplo-app:4000
+    }
+O alias exemplo-app deve ser exclusivo e acessível ao proxy na mesma rede.
+Configure o DNS A desse subdomínio, obtenha autorização para o certificado e
+valide/recarregue a configuração do proxy existente. Não inicie um segundo proxy.
+Teste HTTPS, login e fluxos reais; só então programe a entrada em produção.

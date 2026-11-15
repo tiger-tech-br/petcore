@@ -13,11 +13,11 @@ public class UrlPolicyTest {
         assertFalse(UrlPolicy.isTrustedOrigin(UrlPolicy.ORIGIN + "?x=1"));
     }
     @Test public void blocksCommonNavigationBypasses() {
-        String[] values = {null, "", "http://petcore-homologacao.up.railway.app", UrlPolicy.ORIGIN + ":444/",
-            "https://petcore-homologacao.up.railway.app.evil.test", "https://petcore-homologacao.up.railway.app@evil.test",
-            "https://user@petcore-homologacao.up.railway.app", "file:///sdcard/a", "content://documents/a",
+        String[] values = {null, "", "http://petcore.tigertech.dev.br", UrlPolicy.ORIGIN + ":444/",
+            "https://petcore.tigertech.dev.br.evil.test", "https://petcore.tigertech.dev.br@evil.test",
+            "https://user@petcore.tigertech.dev.br", "file:///sdcard/a", "content://documents/a",
             "javascript:alert(1)", "data:text/html,a", "intent://open", " " + UrlPolicy.ORIGIN,
-            "https://petcore-homologacao.up.railway.app\\@evil.test"};
+            "https://petcore.tigertech.dev.br\\@evil.test", "https://petcore-homologacao.up.railway.app/"};
         for (String value : values) assertFalse(String.valueOf(value), UrlPolicy.isAppUrl(value));
     }
     @Test public void externalIntentsRequireSafeSchemes() {

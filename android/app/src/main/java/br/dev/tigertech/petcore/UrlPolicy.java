@@ -5,9 +5,9 @@ import java.net.URISyntaxException;
 
 /** Shared allowlist: no credentials, alternate ports, suffixes or cleartext. */
 public final class UrlPolicy {
-    public static final String ORIGIN = "https://petcore-homologacao.up.railway.app";
+    public static final String ORIGIN = "https://petcore.tigertech.dev.br";
     public static final String HOME = ORIGIN + "/";
-    private static final String HOST = "petcore-homologacao.up.railway.app";
+    private static final String HOST = "petcore.tigertech.dev.br";
     private UrlPolicy() {}
 
     private static URI parse(String value) {

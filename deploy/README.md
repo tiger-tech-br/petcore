@@ -1,8 +1,12 @@
 # Implantação portátil do PetCore
 
-**Preparação inativa:** em 14/11/2026, o responsável descartou a migração paga por custo. Estes arquivos ficam como referência futura; não autorizam contratação, criação de recursos ou alteração do ambiente atual.
+**Atualização de 15/11:** app Hostinger na revisão `4c7a65ba0ca97977de128c8f703417dcf3fbe4c9`, construção Linux e 11 verificações autenticadas aprovadas. A pasta operacional continua na revisão 0a96; a seleção da imagem está em `PETCORE_RELEASE`. Runtime usa role exclusiva, sem conexão administrativa; `migration.env` está neutralizado. Não executar migrations antes de preparar a conexão administrativa própria. E-mail, fotos e jobs continuam desligados. [Registro atual](../docs/REVISAO-20261115.md).
 
-Este pacote prepara uma migração para um servidor Linux com Docker Compose, mantendo o código da aplicação. Ainda não contrata servidor, altera DNS ou comprova que um fornecedor tem o instrumento de proteção de dados necessário. O destino e os custos precisam ser aprovados a partir do plano de infraestrutura.
+**Homologação ativa na Hostinger; transferência principal pendente:** em 14/11/2026, o PetCore foi construído e iniciado na KVM 1, em [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br), usando o branch Neon separado autorizado para testes. O ambiente atual do Railway e o APK permanecem inalterados. A proposta Google Cloud/Scaleway foi descartada pelo custo; a Hostinger já contratada é o destino preparado. Consulte evidências, limites e pendências em [HOSTINGER.md](../docs/HOSTINGER.md).
+
+Na implantação inicial de 14/11, o código da imagem veio do commit limpo `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`, sem a migration 016. Aquele commit não continha `deploy/`: os arquivos operacionais revisados foram copiados separadamente e conferidos por hash. A homologação usa o projeto `petcore-validation`, `deploy/.env.validation` e o override `deploy/compose.proxy-pinned.yml`, criado no servidor com o RepoDigest do Caddy 2.11.9 e montagem de `Caddyfile.preview`. Preserve esses parâmetros ao administrar o teste; os comandos genéricos abaixo são para uma futura implantação principal planejada. Recursos adicionais pagos continuam dependendo de aprovação, e a hospedagem não comprova os instrumentos de proteção de dados dos fornecedores.
+
+Na homologação, o usuário criou o registro A no Registro.br e autorizou expressamente os termos Let's Encrypt e a renovação do certificado. `Caddyfile.preview` limita a emissão a essa certificadora e aplica `noindex, nofollow`. E-mail real, armazenamento de fotos e rotinas recorrentes do PetCore permanecem desligados nesse destino; somente a migration foi executada uma vez. A configuração de produção abaixo não é autorização para ligar jobs em paralelo ao Railway.
 
 ## Preparação privada
 
@@ -42,7 +46,7 @@ Não inicie a aplicação nova se a migration falhar. `APP_ORIGIN` deve ser exat
 
 Fixe e registre também o digest da imagem do proxy escolhido na implantação; `caddy:2-alpine` é a referência de preparação, não uma imagem já validada no novo servidor. O pacote usa a imagem da própria revisão do PetCore e não inclui segredos. O temporário do contêiner é limitado; volumes de exportação/backup maiores exigem capacidade previamente dimensionada, sem usar o disco efêmero como armazenamento final.
 
-O parse local do YAML confere a estrutura e as referências dos arquivos, mas não substitui `docker compose config` nem `caddy validate`. Sem Docker/Caddy instalados nesta preparação, não foram executados a construção Linux, a inicialização dos contêineres, a validação oficial do Caddy, a emissão/renovação de certificados, o DNS, as conexões externas ou os jobs. Os comandos acima pertencem à futura implantação autorizada; não foram usados para contratar ou migrar serviços agora.
+Na homologação Hostinger, passaram `docker compose config --quiet`, construção Linux da imagem, conferência das 18 migrations, inicialização do app, validação do Caddy fixado e emissão do certificado. A conexão Node→Neon foi medida como TLSv1.3 com certificado autorizado. O teste público confirmou página/saúde 200, banco disponível, sessão anônima 401 e HTTP 308 para HTTPS; JS/CSS corresponderam aos hashes do Railway. O usuário relatou login, mas os fluxos autenticados não foram verificados automaticamente pelo agente. Não houve teste de renovação futura, fotos, recuperação de senha, entrega de e-mail ou rotinas recorrentes na VPS. Isso valida o ensaio descrito, não a migração principal nem a liberação comercial.
 
 ## Rotinas
 

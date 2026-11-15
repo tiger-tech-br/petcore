@@ -1,0 +1,8 @@
+{$PETCORE_HOST} {
+	tls {$ACME_EMAIL} {
+		ca https://acme-v02.api.letsencrypt.org/directory
+	}
+	encode zstd gzip
+	header X-Robots-Tag "noindex, nofollow"
+	reverse_proxy app:4000
+}
