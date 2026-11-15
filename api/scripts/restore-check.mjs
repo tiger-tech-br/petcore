@@ -3,6 +3,7 @@ import {createWriteStream} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {pipeline} from 'node:stream/promises';
+import {Transform} from 'node:stream';
 import {Pool} from 'pg';
 import {GetObjectCommand} from '@aws-sdk/client-s3';
 import {decryptBackupFile,parseBackupKey} from '../dist/backupCrypto.js';
@@ -25,7 +26,20 @@ function argumentsFor(args){
 function manifestIsValid(value){
  return value?.format==='petcore.backup.v1'&&/^[a-fA-F0-9-]{36}$/.test(value.backupId??'')&&/^[a-fA-F0-9]{64}$/.test(value.sourceFingerprint??'')
   &&/^[a-fA-F0-9]{64}$/.test(value.dumpSha256??'')&&/^[a-fA-F0-9]{64}$/.test(value.plaintextSha256??'')
+  &&Number.isSafeInteger(value.dumpBytes)&&value.dumpBytes>=36&&Number.isSafeInteger(value.plaintextBytes)&&value.plaintextBytes>=0&&value.dumpBytes-value.plaintextBytes===36
   &&Array.isArray(value.tables)&&value.tables.length<=10000&&value.tables.every(item=>typeof item.schema==='string'&&item.schema.length<=63&&typeof item.table==='string'&&item.table.length<=63&&/^\d+$/.test(item.rows));
+}
+const MANIFEST_LIMIT=5*1024*1024+36;
+async function downloadBounded(storage,object,path,limit,{exact=false,signal}={}){
+ const response=await storage.client.send(new GetObjectCommand({Bucket:storage.bucket,Key:object}),{abortSignal:signal});
+ if(!response.Body)throw failure('RESTORE_DOWNLOAD_EMPTY');
+ const invalid=()=>failure(exact?'RESTORE_DUMP_SIZE_INVALID':'RESTORE_MANIFEST_TOO_LARGE');
+ const length=response.ContentLength;
+ if(length!==undefined&&(!Number.isSafeInteger(length)||length<0||length>limit||(exact&&length!==limit))){response.Body.destroy?.();throw invalid();}
+ let bytes=0;
+ const bounded=new Transform({transform(chunk,_encoding,done){bytes+=Buffer.byteLength(chunk);done(bytes>limit?invalid():null,chunk);}});
+ await pipeline(response.Body,bounded,createWriteStream(path,{flags:'wx',mode:0o600}),{signal});
+ if(exact&&bytes!==limit)throw invalid();
 }
 async function inventory(db){
  const names=await db.query(`SELECT n.nspname AS schema,c.relname AS table FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
@@ -43,7 +57,7 @@ export async function checkRestore(args=process.argv.slice(2)){
  const target=databaseAddress(process.env.RESTORE_DATABASE_URL),databaseName=decodeURIComponent(target.pathname.slice(1));
  if(!databaseName.endsWith('_restore_test'))throw failure('RESTORE_ISOLATED_DATABASE_REQUIRED');
  const key=parseBackupKey(process.env.BACKUP_ENCRYPTION_KEY),temporary=await privateTemporary();
- let targetPool,sourcePool,targetClient,retentionClient,retentionSourceFingerprint,retentionLocked=false,retentionLost=false;
+ let targetPool,sourcePool,targetClient,retentionClient,retentionSourceFingerprint,retentionLocked=false,retentionLost=false,downloadStorage,remoteObjectKey;
  const retentionAbort=new AbortController();
  async function coordinateRetention(){
   if(retentionClient||process.env.RESTORE_RETENTION_PAUSED==='YES')return;
@@ -69,17 +83,17 @@ export async function checkRestore(args=process.argv.slice(2)){
    await coordinateRetention();
    const prefix=(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,''),objectKey=options['object-key'];
    if(!/^[a-zA-Z0-9/_-]{1,200}$/.test(prefix)||!objectKey.startsWith(prefix+'/')||objectKey.split('/').includes('..')||!objectKey.endsWith('.dump.enc'))throw failure('RESTORE_OBJECT_KEY_INVALID');
-   const storage=backupStorage();encryptedFile=join(temporary,'download.dump.enc');manifestFile=join(temporary,'download.manifest.enc');
-   for(const [object,path] of [[objectKey,encryptedFile],[objectKey.replace(/\.dump\.enc$/,'.manifest.enc'),manifestFile]]){
-    const response=await storage.client.send(new GetObjectCommand({Bucket:storage.bucket,Key:object}),{abortSignal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(15*60*1000)])});
-    if(!response.Body)throw failure('RESTORE_DOWNLOAD_EMPTY');await pipeline(response.Body,createWriteStream(path,{flags:'wx',mode:0o600}));
-   }
+   downloadStorage=backupStorage();remoteObjectKey=objectKey;encryptedFile=join(temporary,'download.dump.enc');manifestFile=join(temporary,'download.manifest.enc');
+   // Autenticar o pequeno manifesto antes de aceitar o tamanho do dump remoto.
+   await downloadBounded(downloadStorage,objectKey.replace(/\.dump\.enc$/,'.manifest.enc'),manifestFile,MANIFEST_LIMIT,{signal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(15*60*1000)])});
   }
-  if((await stat(manifestFile)).size>5*1024*1024)throw failure('RESTORE_MANIFEST_TOO_LARGE');
+  if((await stat(manifestFile)).size>MANIFEST_LIMIT)throw failure('RESTORE_MANIFEST_TOO_LARGE');
   const plainManifest=join(temporary,'manifest.json');await decryptBackupFile(manifestFile,plainManifest,key);
   let manifest;try{manifest=JSON.parse(await readFile(plainManifest,'utf8'));}catch{throw failure('RESTORE_MANIFEST_INVALID');}
   if(!manifestIsValid(manifest))throw failure('RESTORE_MANIFEST_INVALID');
   await checkRetentionRecord(manifest);
+  if(fingerprint(target)===manifest.sourceFingerprint)throw failure('RESTORE_SOURCE_EQUALS_TARGET');
+  if(downloadStorage)await downloadBounded(downloadStorage,remoteObjectKey,encryptedFile,manifest.dumpBytes,{exact:true,signal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(15*60*1000)])});
   let photosVerified=0;
   if(manifest.objectsIncluded){
    await coordinateRetention();
@@ -89,7 +103,6 @@ export async function checkRestore(args=process.argv.slice(2)){
    try{const photos=await verifyPhotoSnapshot({snapshot:manifest.photos,backup:storage,key,prefix:(process.env.BACKUP_STORAGE_PREFIX||'petcore').replace(/^\/+|\/+$/g,''),directory:temporary,signal:AbortSignal.any([retentionAbort.signal,AbortSignal.timeout(30*60*1000)])});photosVerified=photos.photosVerified;}
    finally{storage.client.destroy();}
   }
-  if(fingerprint(target)===manifest.sourceFingerprint)throw failure('RESTORE_SOURCE_EQUALS_TARGET');
   const plaintext=join(temporary,'restore.dump'),verified=await decryptBackupFile(encryptedFile,plaintext,key,manifest.dumpSha256);
   if(verified.sha256!==manifest.plaintextSha256||verified.sizeBytes!==manifest.plaintextBytes)throw failure('RESTORE_PLAINTEXT_CHECKSUM_MISMATCH');
   const restorePath=process.env.PG_RESTORE_PATH||'pg_restore',version=await runProgram(restorePath,['--version'],programEnvironment(target));
@@ -122,7 +135,7 @@ export async function checkRestore(args=process.argv.slice(2)){
   if(retentionLocked&&!retentionLost)await retentionClient?.query('SELECT pg_advisory_unlock_shared($1)',[BACKUP_RETENTION_LOCK]).catch(()=>{});
   retentionClient?.release(retentionLost);
   if(targetClient){await targetClient.query('SELECT pg_advisory_unlock(719381010)').catch(()=>{});targetClient.release();}
-  await targetPool?.end();await sourcePool?.end();await removeTemporary(temporary);
+  await targetPool?.end();await sourcePool?.end();downloadStorage?.client.destroy();await removeTemporary(temporary);
  }
 }
 if(process.argv[1]&&pathToFileURL(resolve(process.argv[1])).href===import.meta.url){checkRestore().catch(error=>{console.error(JSON.stringify({ok:false,code:safeCode(error,'RESTORE_FAILED')}));process.exitCode=1;});}
