@@ -24,7 +24,7 @@ router.post('/login',throttle,async(req,res)=>{
  if(!found.rowCount||!await argon2.verify(found.rows[0].password_hash,password))error(401,'E-mail ou senha incorretos.');
  await newSession(req);req.session.userId=found.rows[0].id;req.session.sessionVersion=found.rows[0].session_version;
  if(!found.rows[0].is_platform_owner){
-  const m=await pool.query('SELECT tenant_id FROM memberships WHERE user_id=$1 AND active=true ORDER BY tenant_id LIMIT 1',[found.rows[0].id]);
+  const m=await pool.query('SELECT m.tenant_id FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=$1 AND m.active=true AND t.active=true ORDER BY m.tenant_id LIMIT 1',[found.rows[0].id]);
   req.session.tenantId=m.rows[0]?.tenant_id;
  }
  res.json({ok:true});
@@ -133,3 +133,4 @@ router.post('/password/reset',async(req,res)=>{
  });res.json({ok:true});
 });
 export default router;
+

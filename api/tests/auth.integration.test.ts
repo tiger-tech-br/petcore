@@ -74,6 +74,27 @@ describe('Autenticação: recuperação simulada e invalidação de sessões',{c
   }finally{for(const key of emailEnv){const saved=savedEnv.get(key);if(saved===undefined)delete process.env[key];else process.env[key]=saved;}await Promise.all([appPool.end(),db.end()]);}
   assert.deepEqual(unexpected,[],'Nenhum serviço externo pode ser chamado pelo teste.');
  });
+ test('login ignora a empresa desativada e abre o vínculo ativo da mesma conta',async()=>{
+  // UUID menor garante que a seleção antiga cairia na empresa desativada.
+  const [inactive,active]=[randomUUID(),randomUUID()].sort(),user=randomUUID(),email=`multi-company-${tag}@example.test`;
+  try{
+   await db.query('INSERT INTO tenants(id,name,active) VALUES($1,$2,false),($3,$4,true)',[inactive,'Auth inativa '+tag,active,'Auth ativa '+tag]);
+   await db.query('INSERT INTO users(id,name,email,password_hash) VALUES($1,$2,$3,$4)',[user,'Conta multiempresa fictícia',email,await argon2.hash(oldPassword,{type:argon2.argon2id})]);
+   await db.query("INSERT INTO memberships(tenant_id,user_id,role,active) VALUES($1,$3,'admin',true),($2,$3,'admin',true)",[inactive,active,user]);
+   assert.equal((await db.query('SELECT tenant_id FROM memberships WHERE user_id=$1 AND active=true ORDER BY tenant_id LIMIT 1',[user])).rows[0].tenant_id,inactive);
+   const cookie=await login(email,oldPassword),me=await call('/me','GET',undefined,cookie);
+   assert.equal(me.code,200);assert.equal(me.data.user.tenantId,active);assert.equal(me.data.user.role,'admin');
+   assert.deepEqual(me.data.companies.map((row:{id:string})=>row.id),[active]);
+   assert.equal((await call('/select-company','POST',{tenantId:inactive},cookie)).code,403);
+   assert.equal((await call('/me','GET',undefined,cookie)).data.user.tenantId,active,'A tentativa recusada preserva a empresa ativa.');
+  }finally{
+   await db.query('DELETE FROM "session" WHERE sess->>\'userId\'=$1',[user]);
+   await db.query('DELETE FROM tenant_subscriptions WHERE tenant_id=ANY($1::uuid[])',[[inactive,active]]);
+   await db.query('DELETE FROM memberships WHERE tenant_id=ANY($1::uuid[]) AND user_id=$2',[[inactive,active],user]);
+   await db.query('DELETE FROM users WHERE id=$1',[user]);
+   await db.query('DELETE FROM tenants WHERE id=ANY($1::uuid[])',[[inactive,active]]);
+  }
+ });
  test('configuração ausente dá orientação de suporte sem expor nomes de variáveis nem existência da conta',async()=>{
   const before=providerCalls.length;process.env.EMAIL_PROVIDER='';
   try{for(const email of [emails[0],`unknown-${tag}@example.test`]){const reply=await call('/password/forgot','POST',{email});assert.equal(reply.code,503);assert.match(reply.data.error,/suporte/);assert.doesNotMatch(reply.data.error,/EMAIL_|resend|API_KEY/i);}}
@@ -156,3 +177,4 @@ describe('Autenticação: recuperação simulada e invalidação de sessões',{c
   }finally{await lock.query('ROLLBACK');lock.release();await db.query('DELETE FROM password_resets WHERE id=ANY($1::uuid[])',[[held,available]]);}
  });
 });
+
