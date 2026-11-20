@@ -1,8 +1,10 @@
 # PetCore — inventário de fornecedores e fluxos
 
-Conferência documental: **15/11/2026**. Responsável: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**. Contato: **tigertechbr@outlook.com**.
+Conferência documental: **15/11/2026**; estado das consultas atualizado em **19/11/2026**. Responsável: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**. Contato: **tigertechbr@outlook.com**.
 
 Este inventário distingue configurações observadas e declarações públicas dos fornecedores. Não comprova sozinho contratos individualizados, todos os subprocessadores, ausência de transferências ou conformidade integral. Nenhum contrato, compra, mensagem ou migração decorre deste arquivo. O responsável escolheu **manter o Resend e conferir os contratos primeiro**; não há contratação ou migração de e-mail autorizada.
+
+**Atualização de 19/11/2026:** após autorização expressa, foram enviadas quatro consultas a Hostinger, Neon/Databricks, Railway e Resend, com o remetente PetCore já configurado no Resend e Reply-To tigertechbr@outlook.com. As quatro foram aceitas pela API (HTTP 200 e identificador retornado); **entrega aos destinatários e respostas dos fornecedores permanecem pendentes**. Não foram enviados dados de clientes nem contratados novos planos. O envio não comprova regularização contratual. [Textos enviados](CONSULTAS-FORNECEDORES.md), [registro sem credenciais](evidence/PROVIDER-QUERIES-20261119.json).
 
 ## Ambientes e escopo atual
 
@@ -47,7 +49,8 @@ Evidências de configuração: [HOSTINGER.md](HOSTINGER.md), [RAILWAY.md](RAILWA
 - **Local/contrato:** o fornecedor declara armazenamento nos **EUA**; região de envio não muda isso. Afirma não aceitar cláusulas ANPD específicas e oferecer seu DPA padrão. **A base brasileira das transferências deste uso permanece não demonstrada**; preservar essa pendência ao revisar os documentos. [FAQ de segurança Resend](https://resend.com/security)
 - **Evidência da conta em 15/11:** a sessão autenticada em Settings → Documents apresentou o DPA preassinado pelo fornecedor e descrito como executado com o cadastro, com [download do instrumento assinado](https://resend.com/static/documents/resend-dpa-signed.pdf). O instrumento da conta foi localizado sem novo aceite; localização não comprova por si só a base brasileira nem substitui sua revisão e guarda privadas.
 - **Retenção declarada:** mensagens/logs 30 dias nos planos Free/Pro/Scale; dados remanescentes até 90 dias após encerramento; backups 7 dias. Não confundir exclusão no PetCore com eliminação simultânea no provedor. [Mesma fonte](https://resend.com/security)
-- **Falta:** arquivar DPA da conta e cadeia aplicável; verificar possibilidade de mecanismo válido antes de abrir os envios com dados reais. SPF restaurado e entrega de teste não resolvem o contrato.
+- **Atualização em 19/11:** DPA da conta já arquivado, após localização e conferência em 15/11. A consulta específica ao Resend foi enviada e aceita pela API; entrega e resposta seguem pendentes.
+- **Falta:** registrar a cadeia aplicável e verificar possibilidade de mecanismo válido antes de abrir os envios com dados reais. SPF restaurado, entrega de teste e aceitação da consulta pela API não resolvem o contrato.
 
 ### PagBank — cobrança externa
 
@@ -88,4 +91,4 @@ Evidências de configuração: [HOSTINGER.md](HOSTINGER.md), [RAILWAY.md](RAILWA
 4. Retenção efetiva de registros do aplicativo, objetos, backups, logs, e-mail e obrigações legais; exclusões e revogações precisam ser reaplicadas antes de reabrir uma restauração.
 5. Atualização do cadastro de fornecedores e documentos públicos **depois** da decisão e comprovação. Este inventário não publica os rascunhos jurídicos ou autoriza novos fornecedores.
 
-As perguntas preparadas em [CONSULTAS-FORNECEDORES.md](CONSULTAS-FORNECEDORES.md) permitem avançar sem criar custo ou migrar infraestrutura. Elas ainda não foram enviadas. Não se institui aqui exigência de contratar advogado, trocar todos os fornecedores ou paralisar permanentemente o projeto.
+As perguntas registradas em [CONSULTAS-FORNECEDORES.md](CONSULTAS-FORNECEDORES.md) permitem avançar sem migrar infraestrutura. **Em 15/11 ainda não haviam sido enviadas; em 19/11, após autorização expressa, as quatro foram enviadas e aceitas pela API. Entrega e respostas seguem pendentes.** Não se institui aqui exigência de contratar advogado, trocar todos os fornecedores ou paralisar permanentemente o projeto.

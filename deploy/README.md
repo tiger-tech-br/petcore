@@ -1,8 +1,8 @@
 # Implantação portátil do PetCore
 
-**Atualização de 15/11:** app Hostinger na revisão `4c7a65ba0ca97977de128c8f703417dcf3fbe4c9`, construção Linux e 11 verificações autenticadas aprovadas. A pasta operacional continua na revisão 0a96; a seleção da imagem está em `PETCORE_RELEASE`. Runtime usa role exclusiva, sem conexão administrativa; `migration.env` está neutralizado. Não executar migrations antes de preparar a conexão administrativa própria. E-mail, fotos e jobs continuam desligados. [Registro atual](../docs/REVISAO-20261115.md).
+**Estado conferido em 19/11:** app Hostinger na revisão `acde9dded16f71403d2a152284144d3019b10d10`, construída e saudável, com `/api/live` sem consulta ao banco e `/api/health` com banco disponível. A pasta operacional continua na revisão 0a96; a seleção da imagem está em `PETCORE_RELEASE`. Runtime usa role exclusiva, sem conexão administrativa; `migration.env` está neutralizado. E-mail, fotos e jobs continuam desligados. O roteiro para administrar esse ambiente e planejar o corte está em [CORTE-PRODUCAO.md](CORTE-PRODUCAO.md); [evidências atuais](../docs/REVISAO-20261119.md). Não substituir o projeto existente pelos comandos genéricos de primeira implantação abaixo.
 
-**Homologação ativa na Hostinger; transferência principal pendente:** em 14/11/2026, o PetCore foi construído e iniciado na KVM 1, em [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br), usando o branch Neon separado autorizado para testes. O ambiente atual do Railway e o APK permanecem inalterados. A proposta Google Cloud/Scaleway foi descartada pelo custo; a Hostinger já contratada é o destino preparado. Consulte evidências, limites e pendências em [HOSTINGER.md](../docs/HOSTINGER.md).
+**Homologação ativa na Hostinger; transferência principal pendente:** em 14/11/2026, o PetCore foi construído e iniciado na KVM 1, em [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br), usando o branch Neon separado autorizado para testes. O ambiente principal do Railway foi preservado. O APK 1.0.2/código 3 já usa a Hostinger e teve instalação, login, agendamento e exportação confirmados pelo responsável no celular em 15/11. A proposta Google Cloud/Scaleway foi descartada pelo custo; a Hostinger já contratada é o destino preparado. Consulte evidências, limites e pendências em [HOSTINGER.md](../docs/HOSTINGER.md).
 
 Na implantação inicial de 14/11, o código da imagem veio do commit limpo `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`, sem a migration 016. Aquele commit não continha `deploy/`: os arquivos operacionais revisados foram copiados separadamente e conferidos por hash. A homologação usa o projeto `petcore-validation`, `deploy/.env.validation` e o override `deploy/compose.proxy-pinned.yml`, criado no servidor com o RepoDigest do Caddy 2.11.9 e montagem de `Caddyfile.preview`. Preserve esses parâmetros ao administrar o teste; os comandos genéricos abaixo são para uma futura implantação principal planejada. Recursos adicionais pagos continuam dependendo de aprovação, e a hospedagem não comprova os instrumentos de proteção de dados dos fornecedores.
 
@@ -12,13 +12,13 @@ Na homologação, o usuário criou o registro A no Registro.br e autorizou expre
 
 Use um servidor Linux contratado com Docker Engine e Docker Compose **2.30.0 ou posterior** instalados a partir da documentação oficial, acesso administrativo individual e atualizações. Essa versão mínima permite ler os arquivos privados como valores literais, sem interpolar `$` de senhas ou tokens. Exponha somente 80/443; restrinja SSH às pessoas/endereço de administração autorizados. O PostgreSQL continua privado no Neon, por TLS. Fotos e backups precisam de buckets privados distintos no destino aprovado.
 
-Em `deploy/`, copie `.env.example` para `.env` e informe a revisão exata aprovada. O subdomínio proposto aproveita `tigertech.dev.br`; ele ainda não foi criado. Prepare uma pasta `private/`, restrita ao administrador, com os arquivos abaixo. Esses arquivos são ignorados pelo Git e não entram na imagem.
+Para uma primeira implantação em outro ambiente, copie `deploy/.env.example` para `deploy/.env` e informe a revisão exata aprovada. O subdomínio `petcore.tigertech.dev.br` já está criado e com HTTPS na homologação existente, que utiliza `deploy/.env.validation` e o override fixado. Preserve essa configuração. Prepare uma pasta `private/`, restrita ao administrador, com os arquivos abaixo. Esses arquivos são ignorados pelo Git e não entram na imagem.
 
 Os cinco arquivos de `private/` usam `format: raw`: escreva uma linha `NOME=valor` por variável, sem aspas externas, `export`, expansão de outras variáveis ou comentário no fim da linha. Aspas e `$` são parte literal do valor. Comentários devem ocupar linhas próprias. O `.env` de seleção da implantação continua no formato normal do Compose e contém somente revisão, host e contato do certificado. Use um hostname sem `https://`, porta ou caminho em `PETCORE_HOST`.
 
 | Arquivo | Configuração necessária |
 |---|---|
-| `app.env` | `APP_ORIGIN`, `DATABASE_URL`, `DATABASE_DIRECT_URL`, `DATABASE_SSL=true`, `SESSION_SECRET`, `OBJECT_STORAGE_*`, e-mail transacional e flags do suporte |
+| `app.env` | `APP_ORIGIN`, `DATABASE_URL` de role limitada, `DATABASE_SSL=true`, `SESSION_SECRET`, `OBJECT_STORAGE_*`, e-mail transacional e flags do suporte; `DATABASE_DIRECT_URL` é opcional e, se utilizado, precisa alcançar o mesmo banco com a mesma role limitada |
 | `migration.env` | `DATABASE_DIRECT_URL` ao mesmo banco e `DATABASE_SSL=true`, somente para a implantação |
 | `maintenance.env` | `DATABASE_URL`, `DATABASE_DIRECT_URL` ao mesmo banco/usuário, `DATABASE_SSL=true`, `SESSION_SECRET` de pelo menos 40 caracteres e `OBJECT_STORAGE_*` para a fila de exclusão |
 | `reminders.env` | `DATABASE_URL`, `DATABASE_SSL=true`, `SESSION_SECRET` de pelo menos 40 caracteres e `RESEND_API_KEY`/`RESEND_FROM_EMAIL` do provedor homologado; manter `REMINDER_EMAILS_ENABLED=false` e `REMINDER_EMAILS_CONFIRM_SEND=NO` até conferir remetente, autorizações e destino |
@@ -50,6 +50,8 @@ Na homologação Hostinger, passaram `docker compose config --quiet`, construç�
 
 ## Rotinas
 
+Os [modelos systemd](systemd/README.md) preparados em 20/11 descrevem o ambiente operacional existente e permanecem inativos. Não foram instalados ou ativados; a transição deve seguir [CORTE-PRODUCAO.md](CORTE-PRODUCAO.md), com destinos conferidos e um único responsável pelas rotinas.
+
 Prepare agendamento no servidor para executar `maintenance` a cada 15 minutos, `reminders` a cada 5 minutos e `backup` diariamente. Os comandos são serviços de execução única no perfil `jobs`, por exemplo:
 
 ```text
@@ -64,6 +66,6 @@ Configure o fuso e o horário desejado no agendador, monitore o resultado e regi
 
 Antes de mudar o tráfego: ensaie a restauração do banco e das fotos em destinos novos, confira contagens/checksums, acessos por empresa, login, agendamento, exportação privada e e-mail autorizado. Faça uma troca controlada com possibilidade de voltar ao destino anterior, sem perder gravações ou duplicar cobranças/lembretes.
 
-O APK 1.0.1 confia na origem HTTPS atual do Railway. A migração para outro endereço exige atualizar a origem nativa, aumentar o código da versão, gerar com o mesmo certificado e validar a nova versão no aparelho. A confirmação do APK 1.0.1 não substitui essa conferência de uma versão futura. O site da Tiger Tech pode continuar no domínio principal.
+O APK 1.0.2 já confia na origem HTTPS da Hostinger e passou pelos passos confirmados no celular em 15/11. A atualização remota de 19/11 não exigiu outro APK. Uma futura mudança de endereço exige revisar a origem nativa, aumentar o código da versão, gerar com o mesmo certificado e validar no aparelho. O site da Tiger Tech pode continuar no domínio principal.
 
 Referências de configuração: [Docker Compose e `env_file` literal](https://docs.docker.com/reference/compose-file/services/#format), [proxy HTTPS Caddy](https://caddyserver.com/docs/quick-starts/https), [instruções de configuração do projeto](../docs/RAILWAY.md) e [recuperação de fotos](../docs/PHOTO-RECOVERY.md).

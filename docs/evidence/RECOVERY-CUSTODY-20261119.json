@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-19",
+  "source": "Bitwarden EU personal vault",
+  "setId": "ab3f0b2a-0453-4bb9-bc31-0ce9fa10d534",
+  "ownNotes": 5,
+  "otherVaultItemsIncluded": false,
+  "userPerformedExport": true,
+  "importObserved": true,
+  "androidBytesIdentical": true,
+  "androidPasswordVerified": true,
+  "certificateSha256": "740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1",
+  "backupKeyMatchesActiveConfiguration": true,
+  "backupDataRestoredInThisCheck": false,
+  "externalCustodyVerified": true,
+  "temporaryCleanup": "completed",
+  "secretsInReceipt": false
+}

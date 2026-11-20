@@ -2,7 +2,29 @@
 
 Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
-## Atualização de 15/11/2026
+## Preparação de 20/11/2026
+
+O responsável informou que ainda não recebeu respostas às quatro consultas contratuais. Os envios anteriores permanecem registrados; nenhum reenvio foi feito.
+
+Foram preparados [modelos inativos de serviços e timers](../deploy/systemd/README.md) para manutenção, lembretes e backup na VPS. Os arquivos não foram instalados nem ativados. A ativação exige a configuração final conferida, recuperação/e-mail testados e um único ambiente responsável pelas rotinas; o arquivo marcador não substitui essas verificações. A última implantação comprovada permanece `acde9dde`, de 19/11.
+
+A operação de cobrança continua assistida com PagBank CPF. O roteiro está definido e os controles do software têm testes registrados. A primeira operação financeira real deve ser documentada quando houver um caso legítimo; não é necessário produzir cobrança ou cancelamento artificial para anunciar. Isso não elimina a necessidade de executar corretamente pedidos reais e preservar o período pago.
+
+## Continuação de 19/11/2026
+
+O APK **1.0.2/código 3** foi gerado e assinado em 15/11; o responsável confirmou no celular instalação, abertura, login, abertura/fechamento de agendamento e exportação de relatório. A geração passou em 7 testes Java, lint com zero erros e 9 avisos, build release e verificação de assinatura. Evidência física relatada pelo usuário, sem execução do agente; detalhes em [ANDROID.md](ANDROID.md).
+
+**Guarda externa concluída e verificada em 19/11:** o responsável importou cinco notas próprias no Bitwarden EU e exportou o conjunto. A reconstrução a partir dessa exportação conferiu bytes da assinatura Android, senha/certificado e correspondência da chave de backup à configuração ativa. Dez testes locais e revisão independente do preparador passaram. Treze arquivos temporários e dois diretórios restaurados vazios foram removidos, preservando originais e cofre. Recibo: [RECOVERY-CUSTODY-20261119.json](evidence/RECOVERY-CUSTODY-20261119.json), `externalCustodyVerified=true`, `temporaryCleanup=completed`. **Banco não restaurado neste teste.**
+
+A correção de `restore-check.mjs` passou em **9 testes locais com servidor simulado** e **40 testes unitários da API** em 15/11, no commit `8ab69fbeb6d47f765e050a357ccaccfe349bfc1e`. Foi incorporada à revisão **`acde9dded16f71403d2a152284144d3019b10d10`**, construída e **implantada na Hostinger em 19/11**, com arquivo da correção conferido na imagem.
+
+Hostinger e Railway responderam por HTTPS com página/saúde 200 e `ok=true,database=true` em 19/11, com validação normal do certificado. Após o rollout, a leitura interna confirmou **`acde9dde` ativa e saudável**, role exclusiva, origem preservada e ausência de conexão direta no runtime. E-mail, avisos, lembretes, credenciais de storage e timers PetCore continuam desligados/ausentes; sem migration ou troca de dados. A revisão passou em **41 testes unitários API**, build e TypeScript. Seu probe Docker usa `/api/live` sem sessão/SQL, também conferido por HTTPS; `/api/health` mantém a verificação do banco. O worker de suporte, quando habilitado, ainda consulta o banco a cada 30 segundos. Pasta operacional `0a96` e proxy preservados; imagem `4c7a65ba` mantida para retorno.
+
+Na consulta aos registros Neon dos últimos sete dias, havia sete `uploaded`, o mais recente concluído em 19/11 às 03h02min29s de Brasília, e um `verified`, referente ao ensaio histórico de 14/11. Documentos continuam **`published=false`**, fornecedores em revisão e comercialização pendente. Veja [o registro de continuação](REVISAO-20261119.md) e [recibo da implantação](evidence/DEPLOY-HOSTINGER-20261119.json).
+
+Após autorização do responsável, foram enviadas em **19/11 quatro consultas contratuais** pelo Resend a Hostinger, Neon, Railway e Resend. Todas retornaram HTTP 200 com identificador aceito: **quatro aceitas para envio, entrega não confirmada**, respostas aguardadas em `tigertechbr@outlook.com`. O envio não aprova fornecedores ou conformidade/LGPD e não ativa e-mail na VPS. Recibo: [PROVIDER-QUERIES-20261119.json](evidence/PROVIDER-QUERIES-20261119.json).
+
+## Evidências de 15/11/2026
 
 A consulta autenticada pelo MCP confirmou a VPS Hostinger **2162451** com **app e proxy saudáveis**, aproximadamente **15 horas** de execução no retrato observado. A homologação pública mantém o branch Neon de testes separado; o ambiente principal no Railway não foi transferido ou interrompido.
 
@@ -10,11 +32,11 @@ A credencial da aplicação na VPS foi separada: role **`petcore_hostinger_runti
 
 **E-mail, armazenamento real e jobs continuam desligados na Hostinger.** O responsável decidiu **manter o Resend e conferir os contratos primeiro**. Foram preparados o [inventário de fornecedores e fluxos](INVENTARIO-FORNECEDORES.md) e as [consultas aos fornecedores](CONSULTAS-FORNECEDORES.md), sem enviá-las e sem nova contratação. O armazenamento atual das fotos e backups é **Railway Storage Buckets**, em destinos privados separados; compatibilidade S3 não prova contratação direta de Cloudflare ou Amazon S3.
 
-A autenticação de empresa inativa recebeu correção aprovada em **12/12 testes locais**, compilação e TypeScript, e foi **publicada na Hostinger** na revisão **`4c7a65ba0ca97977de128c8f703417dcf3fbe4c9`**, branch `codex/hostinger-release-20261115`, com construção Linux aprovada e imagem de runtime fixada. O Compose operacional permanece na pasta da revisão `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`; não inferir a imagem ativa somente pelo diretório. Não houve migration nesse rollout nem inclusão da 016. O Railway principal permanece em `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`. As evidências do APK **1.0.2** são tratadas separadamente em [ANDROID.md](ANDROID.md), sem presumir novo teste físico.
+A autenticação de empresa inativa recebeu correção aprovada em **12/12 testes locais**, compilação e TypeScript, e foi **publicada na Hostinger** na revisão **`4c7a65ba0ca97977de128c8f703417dcf3fbe4c9`**, branch `codex/hostinger-release-20261115`, com construção Linux aprovada e imagem de runtime fixada. O Compose operacional permanece na pasta da revisão `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`; não inferir a imagem ativa somente pelo diretório. Não houve migration nesse rollout nem inclusão da 016. O Railway principal permanece em `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`. A geração e a confirmação de uso do APK **1.0.2** pelo responsável em 15/11 estão em [ANDROID.md](ANDROID.md).
 
 O ensaio funcional autenticado real da Hostinger terminou com **`ok=true`, 11 verificações**, run **`e3757a31-e0c8-4147-b8fb-ffef3f6aa6d9`**: login HTTPS/cookie seguro/três papéis, Free de 30 dias, origem/permissões/troca de empresa, cadastros/isolamento, agenda completa, estoque/caixa/venda/recebimento interno fictício idempotente/CSV, CRM, logout, aposentadoria e invalidação da sessão do funcionário. Uma consulta independente confirmou duas empresas inativas, três contas sem plataforma, vínculos inativos e zero caixas abertos/atendimentos ativos das fixtures. Nenhum e-mail, foto, checkout ou pagamento externo foi executado pelo ensaio; não somar a contagem a testes anteriores. Evidências e limites em [QA-HOSTINGER.md](QA-HOSTINGER.md) e [REVISAO-20261115.md](REVISAO-20261115.md).
 
-**A comercialização ainda não está liberada por esta atualização.** Permanecem revisão/publicação dos documentos e contratos efetivos, validação das fotos e recuperação no destino final, guarda recuperável das chaves, recuperação de senha ponta a ponta, conferência operacional da cobrança/cancelamento, APK final e transferência coordenada das rotinas. Nenhuma evidência histórica abaixo foi substituída por uma afirmação de teste novo.
+**A comercialização ainda não está liberada por esta atualização.** Permanecem revisão/publicação dos documentos e contratos efetivos, validação das fotos e recuperação no destino final, recuperação de senha ponta a ponta, conferência operacional da cobrança/cancelamento e transferência coordenada das rotinas. O APK 1.0.2 já foi gerado e teve os passos relatados acima confirmados pelo usuário; a guarda externa foi concluída em 19/11. Nenhuma evidência histórica abaixo foi substituída por uma afirmação de teste novo.
 
 ## Atualização de 14/11/2026
 
@@ -100,7 +122,7 @@ Não somar execuções sobrepostas. Resultados locais não comprovam entrega de 
 - [x] Lembretes ativados por autorização expressa, cron de cinco minutos, até 20 por execução e prazo de 10s por envio. Execução em 06/11/2026 às 22h55 de Brasília: nenhum lembrete autorizado devido, zero mensagens enviadas.
 - [x] Confirmar registros no painel Resend: SPF TXT/MX e DKIM Verified em 12/11. Em 13/11, teste anterior Delivered no painel e novo recebimento confirmado pelo usuário. Ver [EMAIL.md](EMAIL.md).
 - [ ] Conferir resultados SPF/DKIM/DMARC nos cabeçalhos recebidos e acompanhar classificação/entrega, sem presumir Caixa de Entrada.
-- [ ] Conferir retenção, alertas, guarda da chave e recuperação dos objetos de fotos.
+- [ ] Conferir retenção, alertas e recuperação dos objetos de fotos. A guarda externa das chaves foi verificada em 19/11; isso não restaura os objetos.
 
 Aplicativo HTTPS: [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Esse endereço e a revisão acima já foram conferidos; não comprovam automaticamente a publicação de revisões posteriores.
 
@@ -113,10 +135,11 @@ As capturas do APK enviadas pelo usuário comprovam instalação e uso de alguma
 - [ ] Retenção, incidentes, resposta a titulares, encerramento e transferência de administração praticáveis e aprovados.
 - [x] Novos links conferidos sem compra: [PetCore Mensal — R$ 35](https://pag.ae/82jFKCTjo) e [PetCore Anual — R$ 350](https://pag.ae/82jFLbrjr); revisão aprovada no cadastro dos planos. Links antigos substituídos.
 - [ ] Publicação jurídica final: permanece desativada e continua sendo uma pendência para a oferta comercial. Por solicitação do usuário, o checkout revisado não depende de `legal.published`; isso não aprova nem publica os documentos.
-- [ ] Homologar a operação de cancelamento/recuperação de checkout no PagBank com os controles novos: pedido do cliente, cancelamento real pelo vendedor, referência/senha/período esperado, preservação do período pago e liberação posterior.
-- [ ] Proteção da chave de backup e procedimento de recuperação fora do ambiente ativo.
+- [x] Definir a operação assistida de cancelamento e recuperação de checkout: pedido do cliente, conferência no PagBank, referência/reautenticação/período esperado, preservação do período pago e liberação posterior. O [procedimento comercial](OPERACAO-COMERCIAL.md) está preparado; os controles do software têm testes registrados. A primeira execução financeira real será documentada quando houver pedido legítimo ou assinatura de teste autorizada. Não criar cobrança artificial como requisito de lançamento; isso não declara que uma recorrência externa já foi cancelada.
+- [x] Guarda externa das chaves Android/backup e recuperação a partir do Bitwarden EU verificadas em 19/11; temporários removidos e originais preservados. Recibo público acima. Não equivale a restaurar banco/fotos no destino final.
 - [ ] Homologação completa antes de receber clientes reais e anunciar.
 - [x] APK 1.0.1: responsável confirmou em 13/11 os cinco testes no celular, incluindo teclado/Voltar, seleção de foto, exportação Cancelar/Salvar e navegação inferior fixa. Integridade e assinatura reconferidas; ver [ANDROID.md](ANDROID.md).
+- [x] APK 1.0.2: gerado em 15/11; o responsável confirmou instalação, abertura, login na Hostinger, abertura/fechamento de agendamento e exportação de relatório no celular. Não comprova e-mail/fotos/jobs no novo destino.
 - [ ] Conferir recuperação de senha de ponta a ponta no aplicativo publicado; um teste de entrega de e-mail não substitui abrir e consumir o link de recuperação.
 
 A conta PagBank atual é PF: checkout externo por links recorrentes e conciliação manual. Não há captura de cartão, integração bancária ou token da API de assinaturas necessário a esse fluxo.
@@ -127,7 +150,7 @@ Não há cancelamento automático da recorrência pelos links PF. O botão do cl
 
 O sistema gerencia o pet shop internamente, incluindo vendas no balcão e o Táxi Dog opcional vinculado ao atendimento. Não inclui loja virtual, entrega de produtos, status de pedidos de comércio eletrônico ou emissão fiscal. O transporte usa etapas manuais, sem GPS. Recursos de privacidade não são uma certificação de conformidade. O guia e as evidências de entrega do transporte ficam em [TAXI-DOG.md](TAXI-DOG.md).
 
-A hospedagem começa no endereço do Railway. Um subdomínio futuro da Tiger Tech pode ser configurado depois, sem alterar o site principal agora.
+A homologação Hostinger já usa [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br); o ambiente principal no Railway foi preservado. A transferência final da operação continua pendente.
 
 ## Referências
 

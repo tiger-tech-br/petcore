@@ -1,0 +1,13 @@
+[Unit]
+Description=PetCore authorized reminders every 5 minutes
+ConditionPathExists=/etc/petcore/hostinger-jobs-approved
+
+[Timer]
+OnCalendar=*-*-* *:0/5:00 America/Sao_Paulo
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=false
+Unit=petcore-reminders.service
+
+[Install]
+WantedBy=timers.target

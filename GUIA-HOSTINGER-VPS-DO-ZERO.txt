@@ -1,6 +1,6 @@
 GUIA DA TIGER TECH: HOSTINGER VPS DO ZERO AO DEPLOY
 Para projetos com Node.js, PostgreSQL e páginas web
-Atualizado em 14/11/2026, horário de Brasília
+Atualizado em 19/11/2026, horário de Brasília
 
 COMO USAR ESTE GUIA
 Leia primeiro as seções 1 a 4. Os comandos são executados na Web Console
@@ -26,7 +26,7 @@ Deploy: instalar uma revisão conferida da aplicação e verificar seu uso real.
 2. SUA VPS ATUAL: O QUE JÁ FOI FEITO
 Plano KVM 1: 1 vCPU, 4 GB de RAM e 50 GB de disco, em Campinas, Brasil.
 IP: 187.53.115.106. Identificação administrativa: srv2162451.hstgr.cloud.
-Ubuntu 24.04.5; Docker 29.9.3; Docker Compose 5.7.1 conferidos nesta data.
+Ubuntu 24.04.5; Docker 29.9.3; Docker Compose 5.7.1 conferidos em 14/11.
 O Ubuntu foi atualizado e reiniciado. O pacote cloud-init ficou retido;
 sua atualização não foi forçada. Isso não exige reinstalar o servidor.
 Firewall TigerTech-Web ativo: TCP 22/80/443, ICMP e ICMPv6; restante bloqueado.
@@ -79,7 +79,12 @@ O app usa petcore_hostinger_runtime, com senha exclusiva e sem privilégios
 administrativos. Não usa owner nem DATABASE_DIRECT_URL no ambiente do app.
 Fotos e credenciais reais de armazenamento estão ausentes nesse ambiente.
 Os e-mails e todas as rotinas recorrentes estão desligados na Hostinger de testes.
-O Railway continua sendo o ambiente atual; o APK 1.0.1 permanece no endereço dele.
+O Railway principal foi preservado. O APK atual 1.0.2/código 3 usa a Hostinger;
+em 15/11 você confirmou instalação, abertura, login, abertura/fechamento de
+agendamento e exportação no celular. A publicação remota de 19/11 não gerou APK.
+Em 19/11, a imagem acde9dde ficou saudável, com página 200, /api/live ok=true
+e /api/health ok=true,database=true em HTTPS válido. E-mail, fotos e jobs seguem
+desligados; a guarda externa das chaves no Bitwarden EU foi verificada.
 Publicar esse teste não equivale à transferência final ou à liberação comercial.
 
 6. DOMÍNIO E SUBDOMÍNIO, SEM COMPRAR OUTRO DOMÍNIO
@@ -101,11 +106,12 @@ No computador, confira o projeto, compile, teste e publique uma revisão no Git.
 Um commit é uma identificação exata do código; usá-lo evita trocar versões sem querer.
 O primeiro deploy foi montado a partir da revisão limpa:
     0a96d5f7455ec875ba879cd6c5e6f767b8b787d4
-Em 15/11, a imagem do app na Hostinger foi atualizada para a revisão limpa:
-    4c7a65ba0ca97977de128c8f703417dcf3fbe4c9
-As duas não incluem 016_taxi_driver_accounts.sql, que é trabalho separado.
-Os arquivos operacionais do Compose continuam na pasta da primeira revisão;
-a fonte da nova imagem está na pasta releases/4c7a65ba0ca97977de128c8f703417dcf3fbe4c9.
+Em 19/11, a imagem do app na Hostinger foi atualizada para a revisão limpa:
+    acde9dded16f71403d2a152284144d3019b10d10
+A imagem foi construída na VPS de contexto remoto fixado nesse SHA, sem a
+016_taxi_driver_accounts.sql, que é trabalho separado. Os arquivos operacionais
+do Compose continuam na pasta releases/0a96d5f7455ec875ba879cd6c5e6f767b8b787d4.
+Proxy e imagem anterior 4c7a65ba foram preservados para retorno.
 O arquivo deploy/.env.validation seleciona a nova imagem pelo PETCORE_RELEASE.
 A pasta local de desenvolvimento pode conter alterações ainda não aprovadas.
 Por isso, a imagem não deve ser construída a partir de um envio bruto dessa pasta.
@@ -221,9 +227,12 @@ interrompe seus acessos e evita consultas constantes ao banco de testes:
 Para retomar o teste com a configuração já conferida:
     pcv up -d --no-build app
 Não pare o proxy compartilhado de outros sites para pausar apenas um app.
-O app usa petcore-runtime:4c7a65ba0ca97977de128c8f703417dcf3fbe4c9,
+O app usa petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10,
 selecionado por PETCORE_RELEASE em deploy/.env.validation. O diretório operacional
 0a96... permanece; por isso, o nome da pasta não prova a imagem em execução.
+O Docker consulta /api/live a cada 30 segundos, sem sessão ou consulta SQL.
+/api/health mantém a conferência do banco. Quando habilitado, o worker de
+avisos de suporte ainda consulta o banco a cada 30 segundos.
 O Caddy 2.11.9 foi fixado pelo digest no arquivo operacional do servidor.
 O proxy de testes monta Caddyfile.preview, com Let's Encrypt e noindex/nofollow.
 Esses arquivos operacionais já existem na VPS; não os substitua por exemplos.

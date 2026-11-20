@@ -1,0 +1,13 @@
+[Unit]
+Description=PetCore daily backup at 03:00 in Sao Paulo
+ConditionPathExists=/etc/petcore/hostinger-jobs-approved
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 America/Sao_Paulo
+AccuracySec=1s
+RandomizedDelaySec=0
+Persistent=true
+Unit=petcore-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,14 +1,16 @@
 # PetCore — gestão para pet shops
 
-Atualização de 15/11/2026: homologação Hostinger em [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br), revisão `4c7a65ba0ca97977de128c8f703417dcf3fbe4c9`, com credencial exclusiva, correção de acesso entre empresas e 11 verificações funcionais autenticadas aprovadas. Railway e APK 1.0.1 preservados; APK 1.0.2 com fonte preparada, ainda sem arquivo gerado. E-mail, fotos e jobs da VPS continuam desligados. Resend mantido por decisão do responsável, com revisão contratual em andamento. [Evidências e pendências atuais](docs/REVISAO-20261115.md); registros anteriores abaixo são históricos.
+Preparação de 20/11/2026: [modelos inativos das rotinas da VPS](deploy/systemd/README.md) preparados para o corte. Nenhum agendamento foi instalado ou ativado nesta etapa. O responsável confirmou que ainda aguarda as respostas contratuais; não houve reenvio. A última implantação comprovada é a de 19/11 abaixo. [Checklist atual](docs/COMMERCIAL-READINESS.md).
+
+Continuação de 19/11/2026: **Hostinger atualizada para `acde9dde`, saudável**, com correção da restauração e verificação Docker sem SQL; página, `/api/live` e `/api/health` conferidos por HTTPS. E-mail/fotos/jobs continuam desligados; Railway e banco de destino preservados. **APK 1.0.2/código 3** permanece o gerado e testado no celular pelo responsável em 15/11, sem nova versão. Guarda externa das chaves Android/backup concluída e recuperação a partir do Bitwarden EU verificada, com temporários removidos. Quatro consultas contratuais autorizadas foram aceitas para envio pelo Resend; entrega e respostas ainda pendentes. Documentos seguem `published=false` e fornecedores em revisão. [Evidências e limites da continuação](docs/REVISAO-20261119.md); registros anteriores abaixo são históricos.
 
 Atualização de 14/11/2026: exportação completa assistida por empresa e recuperação de fotos implementadas, com 216 verificações aprovadas. Aplicação publicada na revisão `0a96d5f7455ec875ba879cd6c5e6f767b8b787d4`, HTTPS e assets conferidos; nova cópia restaurada em banco isolado com 50 tabelas e contagens verificadas. Documentos jurídicos continuam rascunhos. A migração paga foi descartada por custo; Railway e Neon atuais preservados. Consulte [a revisão atual e seus limites](docs/REVISAO-20261114.md), [exportação](docs/TENANT-EXPORT.md), [recuperação de fotos](docs/PHOTO-RECOVERY.md) e [preparação portátil inativa](deploy/README.md). Os registros anteriores abaixo são históricos.
 
-Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação está publicada em [petcore-homologacao.up.railway.app](https://petcore-homologacao.up.railway.app). Este registro não declara prontidão comercial; os pontos restantes estão no checklist de preparação.
+Sistema SaaS multiempresa da Tiger Tech, em português, com interface responsiva e operação interna do pet shop. A homologação Hostinger usa [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br); o ambiente [Railway](https://petcore-homologacao.up.railway.app) foi preservado. Este registro não declara prontidão comercial; os pontos restantes estão no registro de preparação.
 
 O contexto para continuar no ChatGPT gratuito está em [PROMPT-CHATGPT-GRATUITO.md](PROMPT-CHATGPT-GRATUITO.md). O estado de entrega está em [COMMERCIAL-READINESS.md](docs/COMMERCIAL-READINESS.md).
 
-## Publicado — revisão de 13/11/2026
+## Histórico publicado — revisão de 13/11/2026
 
 O código `640a96bd7dfabad6e2dde3eb3fa9147201046198` trata a perda de conexão ociosa PostgreSQL sem encerrar o processo nem registrar credenciais e acrescenta **Atualizar conversa** no suporte, preservando rascunho, situação selecionada e mensagens já carregadas em caso de erro. Passaram 169 verificações únicas (23 unitárias API, 128 integrações API e 18 web), builds e TypeScript completos; as telas locais de cliente/plataforma foram conferidas em 320/1280 px, sem excesso horizontal. Não houve nova migration, e-mail ou cobrança; a 016 continua excluída.
 
@@ -73,9 +75,9 @@ Na revisão de 10/11/2026, Hoje mantém os indicadores sem excesso horizontal, P
 
 ## Aplicativo Android
 
-Foi gerado o APK release assinado **PetCore 1.0.1**, código **2**, em `releases/PetCore-1.0.1.apk`, para Android **8.0 ou superior**. Ele abre o mesmo sistema no endereço de homologação do Railway e precisa de internet. O modo Android tem textos maiores, áreas de toque ampliadas, espaçamento e formulários responsivos; preserva o cachorro inteiro no login e os avisos existentes. Fotos e exportações CSV/JSON usam os seletores do Android, e o botão Voltar fecha primeiro formulários e menus.
+O APK release assinado atual é **PetCore 1.0.2**, código **3**, gerado em **15/11/2026** em `releases/PetCore-1.0.2.apk`, para Android **8.0 ou superior**. Abre a homologação Hostinger em `https://petcore.tigertech.dev.br` e precisa de internet. O modo Android tem textos maiores, áreas de toque ampliadas, espaçamento e formulários responsivos; preserva o cachorro inteiro no login e os avisos existentes. Fotos e exportações CSV/JSON usam os seletores do Android, e o botão Voltar fecha primeiro formulários e menus. O uso desses recursos depende da configuração do ambiente remoto.
 
-**Instale o APK 1.0.1 por cima da versão anterior:** a correção nativa elimina a aplicação duplicada dos espaços das barras do sistema/teclado no WebView; ela não chega apenas pela atualização da interface no servidor. A geração atual passou em **7 testes Java**, build release offline e verificação da assinatura v2/v3; `lintRelease` terminou com **zero erros e 9 avisos**. O arquivo tem **1.756.814 bytes**, SHA-256 `e3e26ee49df729278a9623d8adf5310d3570fbcfe603148fad5a0fe0c299d947`, e usa o mesmo certificado da 1.0.0, preservada em `releases/`. Não houve instalação ou teste do APK 1.0.1 em aparelho/emulador. A chave privada de atualização está em `.android-signing/`, fora do Git, e precisa ser preservada em cópia privada. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
+A geração 1.0.2 passou em **7 testes Java**, build release offline e verificação da assinatura v2/v3; `lintRelease` terminou com **zero erros e 9 avisos**. O arquivo tem **1.756.814 bytes**, SHA-256 `1cb4c76e063e0a0f828ee72b2aa8041d55855b1e523485a4a8a4b55071ab1dc0`, e conserva o certificado das versões anteriores, preservadas em `releases/`. O responsável confirmou em 15/11 instalação, abertura, login, abertura/fechamento de agendamento e exportação de relatório no celular. É relato do usuário, sem teste físico do agente; não valida e-mail, fotos ou jobs da Hostinger. A guarda externa da chave privada foi verificada em 19/11 a partir do Bitwarden EU, preservando os originais. Instruções e limites em [ANDROID.md](docs/ANDROID.md).
 
 O portfólio planejado tem um SaaS por área: pet shop, barbearia, prontuário e salão de beleza. Melhorias para pet shops, incluindo Táxi Dog, pertencem ao mesmo PetCore.
 
@@ -123,7 +125,7 @@ Integrações exigem `TEST_DATABASE_URL` de banco exclusivo terminado em `_test`
 
 Evidências registradas nesta preparação:
 
-- Entrega 1.0.1: **7 testes Java**, lint sem erros e com 9 avisos, build offline e assinatura v2/v3 aprovados. O ensaio visual local atual está descrito acima; não houve novo teste em aparelho.
+- Entrega 1.0.2 em 15/11: **7 testes Java**, lint sem erros e com 9 avisos, build offline e assinatura v2/v3 aprovados. O responsável confirmou no celular os passos descritos acima; sem teste físico executado pelo agente.
 - Revisão anterior: **25 testes comerciais de integração** aprovados em PostgreSQL isolado novo com migrations **001–014**, **13 testes unitários web** aprovados (ponte Android e checkout), compilação de API/interface aprovada. Não são uma nova rodada da entrega 1.0.1.
 - Ensaio anterior com componentes reais e dados fictícios locais: ações de atendimento em 360 px organizadas em grade; clientes em 320/360 px sem excesso horizontal, com fonte de 16 px; guia/resumos com corpo de 16 px e secundários de 14 px. O checkout anual capturou o destino correto, sem abrir o provedor; pedido de cancelamento e confirmação fictícia do operador preservaram a data Pago até. Não houve cobrança nem cancelamento real no PagBank.
 - Rodada completa anterior de 103 testes aprovada: 18 unitários e 85 de integração, incluindo comercial 19/19, autenticação 11/11, lembretes 8/8 e regressões de upload. Esses números não representam uma nova rodada das correções de checkout e interface descritas acima.
@@ -136,6 +138,8 @@ Construção Docker, HTTPS e controles remotos de fotos já tiveram conferência
 
 ## Fotos, e-mails e privacidade
 
+As evidências remotas de fotos/e-mail a seguir são do Railway e das datas indicadas. Na Hostinger, esses serviços e os jobs estavam desligados na conferência de 15/11; a validação e a transferência no destino final continuam pendentes.
+
 Fotos dependem de `OBJECT_STORAGE_*`. A API normaliza a imagem, remove metadados e fornece leitura temporária autorizada. Upload real, recusa de leitura anônima e exclusão foram conferidos. A retenção de versões e a recuperação dos objetos continuam sendo procedimentos próprios do armazenamento.
 
 Recuperação usa `EMAIL_PROVIDER=resend`, `EMAIL_API_KEY` e `EMAIL_FROM`, aplicadas na revisão `434a341f` e conferidas sem mensagem real. Lembretes usam outro processo, `RESEND_*` e duas liberações explícitas. O serviço está ativo a cada cinco minutos, com até 20 mensagens por execução e 10s por envio. A primeira execução não encontrou lembretes autorizados devidos. Somente tutores com autorização registrada podem receber; contatos do CRM não disparam mensagens nem concedem consentimento.
@@ -146,7 +150,7 @@ Suporte e solicitações sobre dados pessoais: **tigertechbr@outlook.com**. O ca
 
 A identidade e o endereço foram informados: **José Andrey Pereira Lisboa**, pessoa física, marca **Tiger Tech — Sites, Sistemas e Soluções Digitais**, Rua Brasílio Machado, 404, Santo André/SP, CEP 09060-700. Domínio institucional e remetente: `tigertech.dev.br`. Não foi informado CNPJ. A implementação de privacidade não é certificação de conformidade: revisão/publicação jurídica, fornecedores, retenção e procedimentos operacionais ainda precisam de aprovação. Veja [PRIVACIDADE-LGPD.md](docs/PRIVACIDADE-LGPD.md) e [LEGAL-DRAFTS.md](docs/LEGAL-DRAFTS.md).
 
-## Railway e recuperação
+## Histórico do Railway e recuperação
 
 O ambiente de homologação usa o Neon e destinos privados separados para fotos e backups. Migrations **001–015 e 017** estão aplicadas na homologação e no banco original, confirmado como somente testes; a **016 separada não está incluída**. A migration 014 foi aplicada pelo pré-deploy da implantação `2f176aca-c7b5-47a8-9ac1-8a95e9c445d4` e pelo comando de migration no original. A cópia de preservação anterior `br-quiet-mountain-b62dyl9j` permanece registrada. Não use seed ou testes destrutivos quando houver dados reais.
 

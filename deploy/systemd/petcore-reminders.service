@@ -1,0 +1,16 @@
+[Unit]
+Description=PetCore authorized reminders (one execution)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/petcore/hostinger-jobs-approved
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/tigertech/petcore/releases/0a96d5f7455ec875ba879cd6c5e6f767b8b787d4
+ExecStart=/usr/bin/docker compose --project-name petcore-validation --env-file deploy/.env.validation -f deploy/compose.production.yml -f deploy/compose.proxy-pinned.yml --profile jobs run --rm --no-deps --pull never --no-tty --interactive=false --name petcore-hostinger-reminders-job reminders
+TimeoutStartSec=10min
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=petcore-reminders

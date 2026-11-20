@@ -1,24 +1,35 @@
 # PetCore para Android
 
-O APK **1.0.1 já gerado** acessa `https://petcore-homologacao.up.railway.app`, usando um WebView Android. A fonte do candidato **1.0.2** foi preparada para a homologação isolada `https://petcore.tigertech.dev.br`; esse candidato ainda não foi compilado ou distribuído. Login, empresas, permissões e dados continuam no serviço de cada endereço, com conexão à internet. Não há operação offline. As pendências comerciais continuam no [checklist de preparação](COMMERCIAL-READINESS.md).
+O APK **1.0.2**, código **3**, foi gerado em **15/11/2026** e acessa `https://petcore.tigertech.dev.br`. No mesmo dia, o responsável confirmou instalação, abertura, login, abertura/fechamento de agendamento e exportação de relatório no celular. Usa o mesmo pacote e certificado da versão anterior. O endereço ainda é a homologação isolada Hostinger; login e dados dependem da internet. Em **19/11**, a aplicação remota foi atualizada para `acde9dde` e conferida saudável, mantendo fotos, e-mails e rotinas desligados. Essa publicação não gerou outro APK, não transferiu dados do Railway e não conclui a comercialização. Continuação registrada em [REVISAO-20261119.md](REVISAO-20261119.md).
 
-## Candidato 1.0.2 — Hostinger (15/11/2026)
+## APK 1.0.2 — gerado em 15/11/2026
 
-A fonte Android está em **1.0.2, código 3**, mantendo o pacote `br.dev.tigertech.petcore`. Somente a versão e a origem HTTPS confiável foram alteradas. O carregamento inicial e a ponte de exportação usam `https://petcore.tigertech.dev.br`; o endereço antigo do Railway não é autorizado como página interna ou origem da ponte. Os testes de redirecionamento e de origem enganosa foram adaptados ao novo domínio. Não houve mudança de layout, fontes, navegação, teclado, permissões ou da chave de assinatura.
+Arquivo: `releases/PetCore-1.0.2.apk`, **1.756.814 bytes**, pacote `br.dev.tigertech.petcore`, Android 8.0+ (`minSdk 26`, `targetSdk 36`). Release sem depuração, assinatura v2/v3 conferida. SHA-256:
 
-**Não existe APK 1.0.2 para instalar nesta revisão.** A tentativa `testDebugUnitTest lintRelease assembleRelease --offline` encontrou o ambiente Java protegido com outro diretório de usuário e tentou obter o Gradle. A solicitação de execução com acesso às ferramentas do computador foi interrompida, sem resultado de compilação. A distribuição 8.14.3 completa existe em `C:\Users\andre\.gradle`, mas a tentativa offline com esse cache foi recusada por acesso negado ao arquivo de bloqueio. Nenhuma nova chave foi criada. Os arquivos 1.0.0 e 1.0.1 foram preservados.
+```text
+1cb4c76e063e0a0f828ee72b2aa8041d55855b1e523485a4a8a4b55071ab1dc0
+```
 
-Os sete testes Java de navegação/exportação passaram em execução direta do JUnit com as classes do candidato; o compilador registrou acesso negado ao encerrar o arquivo JAR do cache. Isso **não substitui** um build Android, o lint, a assinatura ou um teste no aparelho. O passo restante é executar as verificações com acesso autorizado ao cache Android/Gradle existente e então gerar e conferir o APK:
+Certificado preservado: `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`. Metadados e soma em `releases/PetCore-1.0.2.apk.json` e `.sha256`. Material privado de assinatura permanece excluído do Git. APKs 1.0.0/1.0.1 preservados.
+
+A compilação offline do Gradle 8.14.3 concluiu `testDebugUnitTest lintRelease assembleRelease`: **7 testes Java sem falhas**, lint com **0 erros e 9 avisos**, build e assinatura aprovados. Os avisos são de dependências/ferramentas, recursos e apresentação já existentes; não equivalem a falhas dos testes. Não foi usado emulador ou aparelho nesta verificação. As primeiras tentativas bloqueadas foram superadas usando o cache autorizado; não é preciso baixar uma nova distribuição para repetir neste computador.
+
+As mudanças nativas são versão e origem HTTPS confiável. Login, ponte de exportação e navegação interna usam Hostinger; o Railway antigo não é autorizado como origem interna. Fontes, cachorro, navegação inferior, teclado, permissões e chave foram preservados. Não há GPS novo.
+
+**Teste físico confirmado pelo responsável em 15/11/2026:** instalou e abriu o APK 1.0.2, fez login na Hostinger, abriu/fechou agendamento e exportou relatório; informou que todos esses passos funcionaram. É evidência relatada pelo usuário no aparelho, sem teste físico executado pelo agente. Não comprova entrega de e-mail, upload de fotos ou rotinas no destino novo.
+
+Para repetir a compilação com as ferramentas existentes, em PowerShell na raiz do projeto:
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = 'C:\Users\andre\AppData\Local\Android\Sdk'
 $env:GRADLE_USER_HOME = 'C:\Users\andre\.gradle'
-& "$env:JAVA_HOME\bin\java.exe" -cp android/gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain -p android --no-daemon --offline testDebugUnitTest lintRelease assembleRelease
+$androidGradleArgs = @('-Duser.home=C:\Users\andre','-cp','android/gradle/wrapper/gradle-wrapper.jar','org.gradle.wrapper.GradleWrapperMain','-p','android','--no-daemon','--offline','testDebugUnitTest','lintRelease','assembleRelease')
+& "$env:JAVA_HOME\bin\java.exe" @androidGradleArgs
 if ($LASTEXITCODE -eq 0) { npm run android:apk -- --offline --skip-build }
 ```
 
-A geração precisa conservar o certificado SHA-256 `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`; tamanho e hash do APK só poderão ser registrados após o arquivo existir. Instalar essa atualização exigirá novo login no endereço Hostinger; os dados do Railway não são transferidos pela instalação do APK. O destino ainda é **homologação**, sem envio de e-mails, fotos/storage ou rotinas automáticas ativadas. Não foi realizado teste físico da 1.0.2, e ela não deve ser apresentada como a versão comercial pronta.
+Os registros abaixo são históricos; a entrega atual é a 1.0.2 acima.
 
 A revisão publicada de 11/11/2026 acrescenta o [Táxi Dog opcional](TAXI-DOG.md) pela interface/API remotas. A fonte maior para desktop tem um escopo separado e preserva os ajustes do aplicativo. Essas mudanças não alteram o pacote Android nem exigem gerar outro APK; não acrescentam GPS ou permissões de localização ao aparelho.
 
@@ -30,7 +41,7 @@ Novos agendamentos, verificações de disponibilidade, reagendamentos, antecipa�
 
 Passaram nesta rodada 20 testes unitários e 94 de integração da API, 13 testes unitários web da ponte Android/checkout e 5 testes unitários de datas. O ensaio local de 16 telas com dados fictícios em 320/360 px, incluindo ficha do CRM, conversa de suporte e formulário, não encontrou texto renderizado menor que 14 px nem excesso horizontal em 320 px. O gráfico conferido tinha largura e `viewBox` de 239, com rótulos de 14 px; a agenda rejeitou uma data passada e aceitou o dia seguinte. A publicação desta revisão está pendente e não houve validação em aparelho. São mudanças remotas de interface/API para o APK 1.0.1 já instalado após a publicação; não exigem gerar outro APK. Os metadados e as evidências anteriores abaixo permanecem históricos.
 
-## APK gerado
+## APK anterior — 1.0.1
 
 A versão **1.0.1**, código **2**, está em `releases/PetCore-1.0.1.apk`: pacote `br.dev.tigertech.petcore`, Android **8.0 ou superior** (`minSdk 26`, `targetSdk 36`), 1.756.814 bytes. É uma versão release assinada, sem depuração habilitada. A assinatura foi conferida com `apksigner`, com esquemas v2 e v3 válidos.
 
@@ -42,7 +53,7 @@ e3e26ee49df729278a9623d8adf5310d3570fbcfe603148fad5a0fe0c299d947
 
 Os metadados públicos e a soma estão em `releases/PetCore-1.0.1.apk.json` e `releases/PetCore-1.0.1.apk.sha256`. A assinatura usa o mesmo certificado da 1.0.0, SHA-256 `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`. O APK 1.0.0 e seus metadados foram preservados. O APK, os intermediários de compilação e a chave privada são ignorados pelo Git. Gerar o arquivo não publica o aplicativo na Play Store.
 
-**Instale a versão 1.0.1 por cima da anterior para receber a correção nativa.** O contêiner Android mantém a proteção das barras do sistema, recortes e teclado e informa ao WebView que esses espaços já foram tratados. Isso evita descontar a mesma área novamente abaixo de Hoje/Agenda/Clientes/Mais. A correção inclui compatibilidade com recortes no Android 9/10 (API 28–29); uma atualização apenas da interface no servidor não altera o APK instalado.
+**Registro histórico da atualização 1.0.1; a versão atual é 1.0.2 acima.** O contêiner Android mantém a proteção das barras do sistema, recortes e teclado e informa ao WebView que esses espaços já foram tratados. Isso evita descontar a mesma área novamente abaixo de Hoje/Agenda/Clientes/Mais. A correção inclui compatibilidade com recortes no Android 9/10 (API 28–29); uma atualização apenas da interface no servidor não altera o APK instalado.
 
 ## Aparência e uso
 
@@ -76,7 +87,9 @@ O comando compila a versão release, assina o arquivo e verifica sua assinatura.
 
 ## Chave de atualização
 
-A primeira geração cria material privado em `.android-signing/`, ignorado pelo Git. Os arquivos dessa pasta precisam de uma cópia de segurança privada: a mesma chave é necessária para assinar atualizações do aplicativo. Não publique essa pasta, não a envie no chat e não a inclua na imagem de hospedagem. O script recusa criar outra chave silenciosamente se detectar que a chave de uma configuração já concluída desapareceu.
+**Guarda externa verificada em 19/11/2026:** cinco notas próprias foram importadas no cofre pessoal Bitwarden EU. A recuperação a partir da exportação feita pelo responsável reconstruiu a assinatura Android com bytes idênticos, senha validada e o certificado esperado. A chave de backup também correspondeu à configuração ativa. Os temporários de transferência foram removidos e os originais preservados. Recibo público sem segredos: [RECOVERY-CUSTODY-20261119.json](evidence/RECOVERY-CUSTODY-20261119.json). Não houve restauração de banco neste teste.
+
+A primeira geração cria material privado em `.android-signing/`, ignorado pelo Git. Preserve os originais e a cópia privada no cofre: a mesma chave é necessária para assinar atualizações do aplicativo. Não publique essa pasta, não a envie no chat e não a inclua na imagem de hospedagem. O script recusa criar outra chave silenciosamente se detectar que a chave de uma configuração já concluída desapareceu.
 
 O número de versão e o código de atualização ficam em `android/app/build.gradle`. Antes de distribuir uma atualização, aumente o código de versão e conserve a chave. Mudanças futuras de domínio precisam atualizar a origem permitida no aplicativo e preservar a mesma política de navegação segura.
 
@@ -107,7 +120,7 @@ Essas evidências são do navegador com o modo Android ativado pelo ensaio, sepa
 
 Na revisão anterior, o ensaio em navegador conferiu a grade dos botões de atendimento em 360 px, os cartões de clientes em 320/360 px sem excesso horizontal e com fonte de 16 px e o guia/resumos com corpo de 16 px e secundários de 14 px. O checkout anual capturou a URL correta em ambiente local sem abrir o PagBank; o pedido de cancelamento e a confirmação fictícia do operador mantiveram Pago até. O cartão usa o botão vermelho Cancelar assinatura e o modal usa Confirmar pedido. Passaram 13 testes web e 25 testes comerciais em PostgreSQL isolado novo com migrations 001–014 e a compilação de API/interface. Não houve cobrança nem cancelamento real no provedor.
 
-Na geração inicial, o agente não realizou instalação ou uso em aparelho/emulador. Posteriormente, o usuário instalou o APK 1.0.0 e enviou capturas de telas reais, que motivaram as correções. A versão 1.0.1 ainda não foi instalada ou testada em aparelho/emulador pelo agente: teclado, insets do sistema, seletor de fotos, cancelamento/salvamento de arquivo e navegação Voltar ainda precisam de conferência específica no Android. Não marque esses fluxos como testados somente porque o APK compilou ou uma captura foi enviada.
+Na geração inicial, o agente não realizou instalação ou uso em aparelho/emulador. Posteriormente, o usuário instalou o APK 1.0.0 e enviou capturas de telas reais, que motivaram as correções. As confirmações do usuário para a 1.0.1 em 13/11 e a 1.0.2 em 15/11 estão registradas acima, com seus próprios escopos. Não houve teste em aparelho/emulador executado pelo agente; compilação e capturas não ampliam os fluxos confirmados pelo usuário.
 
 O registro histórico da revisão web de 10/11/2026 terminou com SUCCESS às 19h46 de Brasília: commit `4203d45d83111d911d9d48fd2644d05e0c61df50`, implantação `074c8588-8da6-4fe7-b91e-cb4a69d4a00c`. Página e saúde responderam 200, com `{ok:true,database:true}`; a sessão anônima retornou 401. Os assets `index-B-Yo4f02.js` e `index-BboF3XDV.css` responderam 200 e corresponderam ao build local por SHA-256. A consulta final encontrou cinco serviços sem problemas, falhas recentes ou alterações pendentes. Os ajustes de fonte e da barra de navegação inferior fixa estão publicados; o ajuste nativo exige instalar o APK 1.0.1. SPF e procedimentos jurídicos/operacionais continuam pendentes no checklist comercial.
 
