@@ -1,6 +1,6 @@
 # Acordo de tratamento de dados do PetCore — versão para contratação
 
-Preparado em 13/11/2026 para revisão e assinatura em cada contratação. Não está publicado nem assinado. Atendimento em até um dia útil, reembolso proporcional, janela de exportação e backups de 30 dias foram aprovados pelo responsável. Os campos do futuro contratante só são preenchidos quando houver um pet shop real.
+Preparado em 13/11/2026, com infraestrutura atualizada após o corte de 20/11/2026, para revisão e assinatura em cada contratação. Não está publicado nem assinado. Atendimento em até um dia útil, reembolso proporcional, janela de exportação e backups de 30 dias foram aprovados pelo responsável. Os campos do futuro contratante só são preenchidos quando houver um pet shop real.
 
 ## Partes e funções
 
@@ -32,7 +32,11 @@ As partes devem registrar as operações relevantes e as providências de direit
 
 A relação conhecida de fornecedores e regiões está na Política de Privacidade em preparação. O anexo contratual deve registrar os fornecedores efetivamente utilizados, os dados acessados, a finalidade, os países envolvidos e as condições aplicáveis a alterações e substituições.
 
-Há hospedagem e armazenamento nos Estados Unidos, além do banco configurado no Brasil. A região de envio Resend não altera seu armazenamento declarado nos Estados Unidos. O fornecedor informa não assinar ou anexar cláusulas-padrão ANPD. O DPA público Railway descreve mecanismos europeus e exige formalização própria. Este instrumento não afirma que tais documentos estão executados por esta conta ou que as cláusulas europeias equivalem automaticamente às brasileiras. O mecanismo de cada transferência permanece sujeito à conferência antes de dados reais; o inventário e os caminhos estão em [OPERACAO-COMERCIAL.md](OPERACAO-COMERCIAL.md).
+A operação ativa utiliza aplicação, proxy HTTPS, PostgreSQL 18.7 com TLS e armazenamento privado Versity Gateway na mesma VPS Hostinger, em Campinas, Brasil. O software Versity executado na VPS não representa contratação separada de um serviço externo por utilizar protocolo S3. Cópias cifradas também são guardadas fora do servidor, no computador do prestador, com atualização manual, acesso restrito e destinação acompanhada. Essa localização da VPS não comprova residência exclusivamente brasileira de suporte, painel, telemetria, cópias administrativas ou subprocessadores da Hostinger.
+
+O Resend permanece como fornecedor externo para recuperação de acesso, lembretes autorizados e suporte; informa armazenamento nos Estados Unidos. A região de envio não determina a localização de todo o tratamento. O inventário conserva as pendências contratuais já identificadas para os fluxos efetivos; a migração técnica não as declara resolvidas. O PagBank recebe os dados necessários ao checkout externo por links da conta de pessoa física e à conciliação; o PetCore não coleta o cartão completo.
+
+Neon e Railway não fornecem a infraestrutura ativa desde o corte de 20/11/2026. A destinação do acervo histórico de testes e a retenção residual desses fornecedores são acompanhadas separadamente. Este instrumento não afirma contratos ou mecanismos brasileiros executados, equivalência automática de cláusulas estrangeiras ou certificação de conformidade. O mecanismo de cada transferência efetiva permanece sujeito à conferência antes de dados reais; o inventário e os caminhos estão em [OPERACAO-COMERCIAL.md](OPERACAO-COMERCIAL.md).
 
 ## Direitos e incidentes
 

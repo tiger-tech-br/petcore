@@ -34,3 +34,20 @@ test('canais de suporte e privacidade podem ser distintos sem apagar o canal do 
  assert.match(draft.privacy,/Suporte: suporte@example.test\. Privacidade: direitos@example.test/);
  assert.match(draft.privacy,/dados administrados pela Tiger Tech, use direitos@example.test/);
 });
+
+test('rascunhos do operador e modelo genérico refletem a infraestrutura atual sem aprovar transferências',()=>{
+ for(const draft of [legalTemplatesFor(),legalTemplatesFor({brand:'Outra marca',legal_name:'Outro prestador'})]){
+  assert.match(draft.privacy,/Hostinger: [Aa]plicação/);
+  assert.match(draft.privacy,/PostgreSQL 18\.7 com TLS/);
+  assert.match(draft.privacy,/Versity Gateway/);
+  assert.match(draft.privacy,/Campinas, Brasil/);
+  assert.match(draft.privacy,/[Cc]ópias cifradas.*fora da VPS/);
+  assert.match(draft.privacy,/atualização manual|atualização dessa cópia é manual/);
+  assert.match(draft.privacy,/Resend:.*Estados Unidos/);
+  assert.match(draft.privacy,/não (?:comprova|significa) (?:localização exclusiva|residência integral)/);
+  assert.doesNotMatch(draft.privacy,/^- (?:Neon|Railway):/m);
+  assert.match(draft.privacy,/MECANISMO_TRANSFERENCIAS_VALIDADO|REVISAO_FORNECEDORES_E_TRANSFERENCIAS/);
+  assert.match(draft.privacy,/APROVACAO_JURIDICA_E_OPERACIONAL/);
+  assert.match(draft.privacy,/RASCUNHO PARA REVISÃO/);
+ }
+});

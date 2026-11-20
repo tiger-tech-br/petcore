@@ -1,6 +1,6 @@
 # Política de Privacidade do PetCore — versão para revisão final
 
-Revisão preparada em 13/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o aviso publicado.
+Revisão preparada em 13/11/2026, com infraestrutura atualizada após o corte de 20/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o aviso publicado.
 
 ## 1. Responsável e contato
 
@@ -39,15 +39,17 @@ A conta atual usa links recorrentes PagBank de pessoa física e conferência man
 
 O acesso é limitado à equipe autorizada de cada pet shop e às atividades necessárias de prestação, segurança e suporte. Os registros dos estabelecimentos não são vendidos nem usados para campanhas próprias incompatíveis com a contratação.
 
-| Fornecedor | Finalidade e localização conhecida |
+| Fornecedor ou destino | Finalidade e localização conhecida |
 |---|---|
-| Neon | Banco PostgreSQL configurado em São Paulo, Brasil, AWS sa-east-1. Contas, suporte e subprocessadores podem envolver outros fluxos |
-| Railway | Aplicação em us-east4-eqdc4a e armazenamento privado separado de fotos e backups em IAD, Estados Unidos |
-| Resend | Recuperação, lembretes autorizados e suporte. O domínio envia por São Paulo; o fornecedor informa armazenamento nos Estados Unidos |
+| Hostinger | Aplicação, proxy HTTPS, PostgreSQL 18.7 com TLS e arquivos privados no software Versity Gateway, na mesma VPS em Campinas, Brasil. A localização dessa máquina não comprova localização exclusiva de suporte, painel, telemetria, cópias administrativas ou subprocessadores |
+| Operação do prestador | Cópias cifradas também são guardadas fora da VPS, no computador do responsável, com acesso restrito. A atualização dessa cópia é manual e sua conservação e destinação integram o procedimento de continuidade |
+| Resend | Recuperação, lembretes autorizados e suporte, a partir da aplicação na Hostinger. O fornecedor informa armazenamento nos Estados Unidos; a região de envio não define a localização de todo o tratamento |
 | PagBank | Checkout, recorrência e dados necessários à conciliação; cartão tratado diretamente no provedor |
 | Microsoft Outlook | Caixa tigertechbr@outlook.com. Não há região exclusiva dessa caixa comprovada nesta preparação |
 
-O processamento no exterior atende à hospedagem, armazenamento e comunicações enquanto necessários, com os ciclos de conservação abaixo. Servidor em determinada região não limita automaticamente suporte, metadados ou transferências posteriores dos fornecedores.
+A infraestrutura ativa deixou de utilizar Neon e Railway no corte de 20/11/2026. O acervo histórico de testes preservado na origem e sua destinação são acompanhados separadamente; ele não constitui o banco usado para as novas operações na Hostinger.
+
+O processamento no exterior pode envolver comunicações e atividades dos fornecedores, inclusive suporte, metadados, cópias administrativas e transferências posteriores. A VPS no Brasil não significa residência integral de todos esses dados ou dispensa de conferir os instrumentos aplicáveis. Os ciclos de conservação e os acessos precisam corresponder à operação efetiva.
 
 Antes da publicação, o responsável deve registrar o mecanismo aplicável a cada transferência e seus instrumentos ou fundamentos. Este texto não afirma cláusulas ANPD assinadas, equivalência automática de cláusulas europeias ou autorização genérica pelo aceite. O inventário e os caminhos de regularização estão em OPERACAO-COMERCIAL.md. [MECANISMO_TRANSFERENCIAS_VALIDADO]
 

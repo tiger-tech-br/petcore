@@ -1,6 +1,12 @@
 # Operação comercial e privacidade do PetCore
 
-Roteiro de trabalho para José Andrey Pereira Lisboa, responsável pela Tiger Tech, preparado em 13/11/2026. Não publica documentos nem executa cobrança, estorno, cancelamento ou exclusão por conta própria.
+Roteiro de trabalho para José Andrey Pereira Lisboa, responsável pela Tiger Tech, preparado em 13/11/2026 e atualizado para o corte de 20/11/2026. Não publica documentos nem executa cobrança, estorno, cancelamento ou exclusão por conta própria.
+
+## Ambiente efetivo desde 20/11/2026
+
+O PetCore em `https://petcore.tigertech.dev.br` usa aplicação, PostgreSQL 18.7 e armazenamento privado Versity na VPS Hostinger 2162451, em Campinas. A recuperação real de uma cópia nova e de uma foto fictícia foi conferida. O Resend continua como serviço externo de e-mail; avisos de suporte e agendadores estão configurados na VPS. Isso não comprova a entrega de todas as mensagens nem o teste completo de recuperação de senha.
+
+Os cinco serviços e os dois buckets antigos do PetCore foram removidos do Railway após copiar e conferir os arquivos; a exclusão do projeto vazio foi aceita, ainda listado na conferência seguinte. Outros sete projetos da conta foram preservados, e a assinatura da conta não foi cancelada. O Neon continua preservado para retirada pelo responsável, sem conexão ativa do PetCore. Ver [migração e evidências](MIGRACAO-HOSTINGER-20261120.md). Essas alterações técnicas não publicam os termos ou a política de privacidade.
 
 ## Condições aprovadas
 
@@ -19,6 +25,10 @@ Roteiro de trabalho para José Andrey Pereira Lisboa, responsável pela Tiger Te
 Em cada dia útil, conferir sino, chamados abertos/em atendimento e avisos que falharam ou ficaram incertos. O e-mail é alerta; sua ausência não apaga o pedido. Ler o chamado não significa resolvê-lo. Registrar providências, datas e resposta ao cliente.
 
 Acompanhar backup, manutenção e lembretes e investigar falhas ou filas acumuladas. Preservar as chaves de cifra e de atualização Android em cópia privada recuperável fora do ambiente ativo. A existência de uma variável no servidor não comprova essa guarda. Ensaiar recuperação após alterações relevantes e periodicamente, sem restaurar sobre produção.
+
+A rotina atual executa manutenção a cada 15 minutos, lembretes a cada cinco minutos e backup às 03h de Brasília, com retenção ativa de 30 dias. Os 15 registros históricos de backup foram classificados como legados e exigem destinação separada; as cópias externas no computador também precisam de rotina de atualização e exclusão. A cópia externa de 20/11 foi autenticada, mas sua continuidade é manual, pelo procedimento do [guia da VPS](../GUIA-HOSTINGER-VPS-DO-ZERO.txt) e por `scripts/archive-hostinger-storage.mjs`. Não considerar uma cópia no mesmo disco da VPS como proteção contra perda do servidor.
+
+No Gerenciador Docker, o projeto principal é `petcore-validation`; banco, objetos e agendadores têm projetos próprios. Tarefas pontuais de migração e verificação podem aparecer paradas após terminar. Conferir finalidade, código de saída e último resultado antes de classificá-las como falha, reiniciá-las ou excluí-las. Não apagar volumes de uma tarefa antiga sem identificar se os serviços ativos ainda os usam; não alterar o projeto BeautyBarber durante a operação do PetCore.
 
 ## Pagamento, cancelamento e troca
 
@@ -69,13 +79,15 @@ Registrar por fluxo: dados, titulares, finalidade, exportador/importador, paíse
 
 | Fluxo | Fato conhecido | Providência |
 |---|---|---|
-| Neon | Banco em São Paulo; contas, suporte e metadados podem ter outros caminhos | Conferir esses fluxos e contrato da conta |
-| Railway | Aplicação, fotos e backups nos EUA; DPA público descreve mecanismos europeus e formalização própria | Comprovar execução e mecanismo brasileiro aplicável, ou adotar configuração/fornecedor que o viabilize |
+| Hostinger | Aplicação, PostgreSQL e objetos ativos na VPS em Campinas; a região da VM não descreve suporte, painel ou cópias administrativas | Conferir instrumentos efetivos da conta, acessos, regiões e retenção desses fluxos |
+| Versity na VPS | Software de armazenamento privado executado na Hostinger; não foi contratado um novo serviço externo por usar S3 | Acompanhar acesso às fotos, expiração dos backups e recuperação; manter cópia fora do servidor |
+| Neon — saída histórica | Banco não é mais usado pelo PetCore; acervo de teste preservado para retirada pelo responsável | Registrar destinação e retenção residual; resposta contratual não é condição para usar o novo banco local |
+| Railway — saída histórica | Serviços e buckets do PetCore removidos; exclusão do projeto aceita e outros projetos da conta preservados | Conferir conclusão da saída e retenção residual; não presumir cancelamento da assinatura da conta |
 | Resend | Envio por São Paulo não muda armazenamento declarado nos EUA; não assina/anexa cláusulas ANPD | Identificar mecanismo por fluxo; se não houver cabimento válido, limitar ou substituir o fluxo antes de dados reais |
 | PagBank | Checkout e conciliação | Conferir condições do produto e dados necessários |
 | Outlook | Região exclusiva da caixa não comprovada | Conferir contrato/mecanismo e evitar dados desnecessários nos avisos |
 
-Esses fatos constam das [declarações oficiais do Resend](https://resend.com/security) e do [DPA Railway](https://railway.com/legal/dpa). Não comprovam um instrumento brasileiro firmado por esta conta. Cópias e registros contratuais da conta ficam privados, sem tokens ou senhas no repositório.
+Os fatos técnicos atuais constam da [migração de 20/11](MIGRACAO-HOSTINGER-20261120.md); as declarações contratuais datadas estão no [inventário de fornecedores](INVENTARIO-FORNECEDORES.md), incluindo [Resend](https://resend.com/security) e o [DPA histórico Railway](https://railway.com/legal/dpa). Esses registros não comprovam um instrumento brasileiro firmado por esta conta. Avaliar os fluxos atuais e acompanhar a saída dos antigos separadamente. Cópias e registros contratuais ficam privados, sem tokens ou senhas no repositório.
 
 ## Caminhos para transferências
 
@@ -89,4 +101,4 @@ Escolher e documentar o caminho efetivo antes de declarar o fluxo apto a dados r
 
 ## Liberação
 
-As condições comerciais escolhidas não precisam ser perguntadas novamente. Permanecem a evidência das rotinas, a definição do mecanismo das transferências relevantes e a aprovação dos textos completos pelo responsável. Não remover marcadores para simular aprovação. Registrar os ensaios efetivos e a implantação atual, sem somar rodadas históricas ou chamar navegador de teste físico.
+As condições comerciais escolhidas não precisam ser perguntadas novamente. A migração técnica, os ensaios de banco/fotos e a configuração das rotinas têm evidências de 20/11; acompanhar sua execução e a continuidade da cópia externa. Permanecem a recuperação de senha completa e a entrega de e-mails no destino atual, a revisão dos fluxos/contratos efetivos e a aprovação/publicação dos textos completos pelo responsável. Os registros de saída de Railway e Neon não os tornam dependências ativas do lançamento. Não remover marcadores para simular aprovação. Registrar os ensaios efetivos e a implantação atual, sem somar rodadas históricas ou chamar navegador de teste físico.
