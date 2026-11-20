@@ -37,6 +37,8 @@ export function createApp(){
  app.use('/api',(_req,res,next)=>{res.set('Cache-Control','no-store');next();});
  app.use(helmet({contentSecurityPolicy:prod?undefined:false}));
  app.use(express.json({limit:'100kb'}));
+ // O Docker verifica o processo HTTP sem abrir sessão nem acordar o banco.
+ app.get('/api/live',(_req,res)=>{res.json({ok:true});});
  const PgStore=connectPgSimple(session);
  app.use(session({name:'petcore.sid',store:new PgStore({pool,createTableIfMissing:true}),
   secret:process.env.SESSION_SECRET!,resave:false,saveUninitialized:false,rolling:true,
