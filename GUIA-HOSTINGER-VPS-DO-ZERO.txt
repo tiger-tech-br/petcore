@@ -2,6 +2,15 @@ GUIA DA TIGER TECH: HOSTINGER VPS DO ZERO AO DEPLOY
 Para projetos com Node.js, PostgreSQL e páginas web
 Atualizado em 20/11/2026, horário de Brasília
 
+CONTINUAÇÃO MAIS RECENTE DE 20/11
+O projeto principal continua chamado petcore-validation. A aplicação usa a
+revisão 34eb0847 e os agendadores mantêm b89691af. A recuperação de senha
+foi testada com recebimento, alteração e login confirmados pelo responsável;
+o cadastro temporário foi removido. Rascunhos de privacidade foram corrigidos
+para a Hostinger e continuam sem publicação. Detalhes no checklist comercial.
+Itens interrompidos podem ser tarefas pontuais de migração já concluídas.
+Consulte docs/HOSTINGER-PROJECTS.md; não inicie nem apague todos os itens.
+
 COMO USAR ESTE GUIA
 Leia primeiro as seções 1 a 4. Os comandos são executados na Web Console
 Linux da Hostinger, e não no PowerShell do Windows. Copie um comando por vez

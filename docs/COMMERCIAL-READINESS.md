@@ -2,6 +2,16 @@
 
 Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
+## Continuação de 20/11 — recuperação de senha concluída
+
+Os itens da Hostinger marcados como interrompidos incluem tarefas pontuais de instalação, migração e verificação já concluídas. Aplicação, PostgreSQL, armazenamento e três agendadores foram encontrados em execução; não houve reinício ou exclusão em massa. O [guia dos projetos](HOSTINGER-PROJECTS.md) distingue os serviços permanentes dessas tarefas.
+
+Após autorização de um único e-mail para o responsável, a recuperação foi solicitada pela API pública em uma conta temporária isolada. O responsável confirmou recebimento, alteração da senha pelo link e login. A conferência do banco encontrou token consumido e avanço da versão da senha; a sessão desse login já não estava presente na leitura final, portanto a evidência de login é o relato do responsável. Conta, empresa, links e sessões temporários foram removidos, sem alterar outras contas. Não registrar senha ou link no chat. Essa pendência funcional está concluída; não presumir pasta da entrega ou resultados dos cabeçalhos SPF/DKIM/DMARC.
+
+Rascunhos da política, acordo e modelos da aplicação passaram a descrever Hostinger/PostgreSQL/Versity, cópia cifrada no computador e Resend. A aplicação usa a revisão `34eb0847`, em volume somente de leitura sobre a imagem base já existente; os jobs mantêm `b89691af`. Compilação e cinco testes dos modelos passaram. O texto salvo foi atualizado apenas após conferir correspondência com o padrão antigo não publicado, preservando termos, identidade, preços e prazos, com auditoria. Saúde pública respondeu 200 com banco OK; os documentos continuam `published=false`.
+
+A conferência oficial dos fornecedores não valida, por si, o mecanismo brasileiro das transferências internacionais. O DPA Hostinger cobre VPS e menciona LGPD; o Resend informa armazenamento nos EUA e recusa anexos contratuais brasileiros em seus planos. A publicação jurídica permanece pendente dessa definição e da aprovação do conteúdo. As consultas já enviadas não foram reenviadas, não houve nova contratação e Railway/Neon não são tratados como fornecedores ativos. Fontes: [Hostinger DPA](https://www.hostinger.com/legal/dpa), [FAQ Resend](https://resend.com/security). [Evidência desta continuação](evidence/HOSTINGER-CONTINUATION-20261120.json).
+
 ## Estado atual — migração técnica concluída em 20/11/2026
 
 Esta atualização substitui os estados operacionais históricos abaixo. O PetCore usa **aplicação, PostgreSQL 18.7 e armazenamento Versity na Hostinger**, mantendo `https://petcore.tigertech.dev.br` e o APK **1.0.2/código 3**. A API **`b89691af`** foi preparada às 19h41min45s UTC e aplicada ao app/agendadores às 19h43 UTC, em volume somente de leitura sobre a imagem base `acde9dde`. O banco usa TLS e papel restrito, com **50 tabelas e 19 migrations**, sem a migration 016 separada. O responsável aceitou a cópia de 19/11 às 03h02 por conter dados de teste; a possível defasagem foi informada.
@@ -154,7 +164,7 @@ As capturas do APK enviadas pelo usuário comprovam instalação e uso de alguma
 - [ ] Homologação completa antes de receber clientes reais e anunciar.
 - [x] APK 1.0.1: responsável confirmou em 13/11 os cinco testes no celular, incluindo teclado/Voltar, seleção de foto, exportação Cancelar/Salvar e navegação inferior fixa. Integridade e assinatura reconferidas; ver [ANDROID.md](ANDROID.md).
 - [x] APK 1.0.2: gerado em 15/11; o responsável confirmou instalação, abertura, login na Hostinger, abertura/fechamento de agendamento e exportação de relatório no celular. Não comprova e-mail/fotos/jobs no novo destino.
-- [ ] Conferir recuperação de senha de ponta a ponta no aplicativo publicado; um teste de entrega de e-mail não substitui abrir e consumir o link de recuperação.
+- [x] Recuperação de senha na Hostinger concluída em 20/11: e-mail único autorizado recebido, consumo do link e login com nova senha confirmados pelo responsável; token consumido e versão avançada conferidos no banco, com remoção do cadastro temporário. Evidência e limites na continuação acima.
 
 A conta PagBank atual é PF: checkout externo por links recorrentes e conciliação manual. Não há captura de cartão, integração bancária ou token da API de assinaturas necessário a esse fluxo.
 

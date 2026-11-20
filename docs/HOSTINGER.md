@@ -1,5 +1,11 @@
 # Hostinger — operação e migração do PetCore
 
+## Continuação posterior em 20/11
+
+A aplicação passou para `34eb0847` para corrigir os rascunhos de infraestrutura; os jobs mantêm `b89691af`. O rascunho salvo foi atualizado com auditoria e guarda de correspondência ao padrão anterior, sem publicação. A recuperação de senha foi concluída com um e-mail autorizado, recebimento e login relatados pelo responsável, token consumido e versão avançada conferidos no banco; os registros temporários foram removidos. A saúde pública respondeu 200 com banco OK. Veja [a evidência desta continuação](evidence/HOSTINGER-CONTINUATION-20261120.json).
+
+O [guia dos projetos](HOSTINGER-PROJECTS.md) explica os itens em execução e as tarefas pontuais finalizadas que o painel pode mostrar como interrompidas. Não houve reinício ou exclusão em massa. O nome principal continua `petcore-validation`; os registros anteriores abaixo antecedem essas correções.
+
 ## Estado final — migração técnica concluída em 20/11/2026
 
 **Aplicação, banco e arquivos ativos estão na Hostinger**, com o endereço `https://petcore.tigertech.dev.br` e o APK **1.0.2/código 3** preservados. PostgreSQL **18.7**, banco `petcore`, TLS verificado, papel de aplicação restrito, **50 tabelas/19 migrations** e Versity Gateway **1.11.0** com armazenamento privado e rotas HTTPS na mesma origem. A revisão de API **`b89691af`** foi preparada às **19h41min45s UTC** e aplicada ao app e aos três agendadores às **19h43 UTC**, em volume somente de leitura sobre a imagem base `acde9dde`. Não foi criada uma imagem com o nome da revisão. A saúde pública respondeu HTTP 200 com banco OK depois da retirada dos recursos do Railway.

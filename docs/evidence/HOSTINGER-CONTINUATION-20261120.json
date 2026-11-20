@@ -1,0 +1,68 @@
+{
+  "date": "2026-11-20",
+  "scope": "Operational status, authorized password recovery and unpublished infrastructure drafts",
+  "virtualMachineId": 2162451,
+  "application": {
+    "project": "petcore-validation",
+    "effectiveApiRevision": "34eb0847e2822094e4636cdee3e182c03f5e5d0b",
+    "apiCodeInReadOnlyVolume": true,
+    "baseImageRevision": "acde9dded16f71403d2a152284144d3019b10d10",
+    "jobsCodeRevisionUnchanged": "b89691af9acc08de7b254e5ef844283d06d25ba7",
+    "mainContainerRunningAndHealthy": true,
+    "proxyRunning": true,
+    "publicReadinessHttpStatus": 200,
+    "publicReadinessDatabaseReady": true,
+    "publicLegalPublished": false
+  },
+  "stoppedTasks": {
+    "migrationAndVerificationTasksAreOneOff": true,
+    "successfulRestoreSchemaReleaseBackupAndPublicCheckLogsReviewed": true,
+    "requiredApplicationDatabaseStorageAndSchedulersRunning": true,
+    "bulkRestartOrDeletionPerformed": false,
+    "operatingGuide": "docs/HOSTINGER-PROJECTS.md"
+  },
+  "passwordRecovery": {
+    "singleTestEmailExplicitlyAuthorized": true,
+    "temporaryIsolatedAccount": true,
+    "existingAccountUsingRecipientBeforeTest": false,
+    "emailRequestsByAgent": 1,
+    "publicRecoveryRequestHttpStatus": 200,
+    "userConfirmedMessageReceived": true,
+    "deliveryFolderReported": false,
+    "userConfirmedNewPasswordLogin": true,
+    "resetTokenConsumptionVerifiedInDatabase": true,
+    "passwordSessionVersionAdvanced": true,
+    "loginEvidence": "user_report",
+    "liveLoginSessionObservedAtFinalCheck": false,
+    "testAccountTenantTokensAndSessionsRemoved": true,
+    "otherAccountsChanged": false,
+    "passwordOrResetTokenExposed": false,
+    "verifiedAt": "2026-11-20T23:12:13.762Z"
+  },
+  "drafts": {
+    "apiBuildPassed": true,
+    "legalTemplateUnitTestsPassed": 5,
+    "activeProvidersCorrected": ["Hostinger VPS", "Resend"],
+    "postgresAndVersityHostedOnExistingVps": true,
+    "offVpsEncryptedCopyOnOperatorComputerDescribed": true,
+    "neonAndRailwayHistoricalOnly": true,
+    "savedDefaultDraftMatchedBeforeUpdate": true,
+    "savedDraftUpdatedWithAudit": true,
+    "termsIdentityPricesAndPeriodsPreserved": true,
+    "transferAndOperatorReviewMarkersPreserved": true,
+    "savedVersion": "352c5bcaac709f89def7a48f",
+    "legalPublished": false,
+    "commercialReleaseApprovedByThisEvidence": false
+  },
+  "supplierReview": {
+    "checkedOn": "2026-11-20",
+    "hostingerDpa": "https://www.hostinger.com/legal/dpa",
+    "resendOfficialFaq": "https://resend.com/security",
+    "resendStoresDataInUnitedStates": true,
+    "resendAcceptsBrazilSpecificAnpdContractualAnnexes": false,
+    "brazilianTransferMechanismValidatedByThisEvidence": false,
+    "previousQueriesResent": false,
+    "newServiceContracted": false
+  },
+  "secretsOrCustomerContentIncluded": false
+}
