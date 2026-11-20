@@ -60,7 +60,8 @@ export async function expireBackups(options:Options){
  let cursor:string|null=null,cursorId:string|null=null;
  const page=(size:number)=>options.db.query<BackupRow>(`SELECT id,state,object_key,sha256,size_bytes,expiration_objects,expiration_bucket_fingerprint,
   COALESCE(finished_at,'infinity'::timestamptz)::text AS retention_cursor FROM backup_runs
-  WHERE (state='expiring' OR (state IN ('uploaded','verified') AND finished_at<now()-interval '30 days'))
+  WHERE retention_scope='active'
+   AND (state='expiring' OR (state IN ('uploaded','verified') AND finished_at<now()-interval '30 days'))
    AND ($2::timestamptz IS NULL OR (COALESCE(finished_at,'infinity'::timestamptz),id)>($2::timestamptz,$3::uuid))
   ORDER BY COALESCE(finished_at,'infinity'::timestamptz),id LIMIT $1`,[size,cursor,cursorId]);
  const aborted=()=>{if(!signal.aborted)return false;result.ok=false;result.aborted=true;result.code='BACKUP_RETENTION_ABORTED';return true;};
