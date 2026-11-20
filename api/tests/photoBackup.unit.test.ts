@@ -5,6 +5,7 @@ import {mkdir} from 'node:fs/promises';
 import {join,basename} from 'node:path';
 import {createPhotoSnapshot,verifyPhotoSnapshot,restorePhotoSnapshotToEmptyBucket,removeUnpublishedPhotoSnapshot,photoStorage,validatePhotoKey,storageFingerprint} from '../src/photoBackup.ts';
 import {validateBackupObjectKey,validateExpirationPlan} from '../src/backupRetention.ts';
+import {readStorageMetadata} from '../src/storageMetadata.ts';
 import {FakeObjectStore,ownTemporary} from './helpers/fakePhotoStorage.ts';
 
 test('snapshot cifra fotos e manifesto e restaura bytes somente em namespace isolado',async()=>ownTemporary(async directory=>{
@@ -17,6 +18,7 @@ test('snapshot cifra fotos e manifesto e restaura bytes somente em namespace iso
  const result=await verifyPhotoSnapshot({snapshot,backup:backup.storage('backups'),key,prefix:'petcore',directory:target,target:source.storage('photos'),recoveryId});
  assert.equal(result.photosVerified,1);assert.equal(result.activeNamespaceModified,false);assert.equal(result.applicationReady,false);
  assert.deepEqual(source.objects.get(`recovery-tests/${recoveryId}/${sourceKey}`),content);assert.deepEqual(source.objects.get(sourceKey),content);
+ assert.deepEqual(source.metadata.get(`recovery-tests/${recoveryId}/${sourceKey}`),{'petcore-recovery-id':recoveryId});
  const collision=join(directory,'collision');await mkdir(collision);
  await assert.rejects(verifyPhotoSnapshot({snapshot,backup:backup.storage('backups'),key,prefix:'petcore',directory:collision,target:source.storage('photos'),recoveryId}),{name:'PreconditionFailed'});
  assert.ok(source.writes.every(value=>value.startsWith('recovery-tests/')));
@@ -87,4 +89,37 @@ test('recuperação definitiva em bucket novo preserva nomes originais e bytes',
  const fixture=await recoveryFixture(directory),store=new FakeObjectStore(),target=join(directory,'new');await mkdir(target);
  const result=await restorePhotoSnapshotToEmptyBucket({snapshot:fixture.snapshot,backup:fixture.backup.storage('backups'),key:fixture.key,prefix:'petcore',directory:target,target:store.storage('new-photos'),activeSourceFingerprint:fixture.source.storage('photos').fingerprint,confirmNewEmptyBucket:true,confirmPrivacyReviewed:true});
  assert.equal(result.photosRestored,1);assert.equal(result.applicationReady,false);assert.equal(result.activeStorageModified,false);assert.deepEqual(store.objects.get(fixture.sourceKey),fixture.content);assert.deepEqual(fixture.source.objects.get(fixture.sourceKey),fixture.content);
+ const restoredMetadata=store.metadata.get(fixture.sourceKey)!;assert.equal(Object.keys(restoredMetadata).length,1);assert.ok(restoredMetadata['petcore-restoration-id']);assert.ok(Object.keys(restoredMetadata).every(name=>!name.includes('_')));
+}));
+
+test('metadados aceitam nomes históricos e atuais iguais e recusam identificações conflitantes',()=>{
+ const id=randomUUID();
+ assert.equal(readStorageMetadata(undefined,'backup-id'),undefined);
+ assert.equal(readStorageMetadata({'backup-id':id},'backup-id'),id);
+ assert.equal(readStorageMetadata({backup_id:id},'backup-id'),id);
+ assert.equal(readStorageMetadata({'backup-id':id,backup_id:id},'backup-id'),id);
+ assert.throws(()=>readStorageMetadata({'backup-id':id,backup_id:randomUUID()},'backup-id'),{code:'STORAGE_METADATA_CONFLICT'});
+ assert.throws(()=>readStorageMetadata({backup_id:id},'backup_id'),{code:'STORAGE_METADATA_KEY_INVALID'});
+});
+
+test('novas cópias usam cabeçalhos com hífen e limpeza continua aceitando metadados históricos',async()=>ownTemporary(async directory=>{
+ for(const mode of ['legacy','matching-dual']){
+  const folder=join(directory,mode);await mkdir(folder);const fixture=await recoveryFixture(folder);
+  for(const [objectKey,metadata]of fixture.backup.metadata){
+   assert.deepEqual(metadata,{'petcore-backup-id':fixture.snapshot.backupId,'petcore-snapshot-attempt':fixture.snapshot.attemptId});
+   const legacy=Object.fromEntries(Object.entries(metadata).map(([name,value])=>[name.replaceAll('-','_'),value]));
+   fixture.backup.metadata.set(objectKey,mode==='legacy'?legacy:{...metadata,...legacy});
+  }
+  const cleanup=join(folder,'cleanup');await mkdir(cleanup);
+  await removeUnpublishedPhotoSnapshot({snapshot:fixture.snapshot,backup:fixture.backup.storage('backups'),key:fixture.key,prefix:'petcore',directory:cleanup});
+  assert.equal(fixture.backup.objects.size,0);assert.equal(fixture.backup.deletes.length,2);assert.equal(fixture.source.objects.size,1);
+ }
+}));
+
+test('limpeza recusa metadados antigos e atuais conflitantes antes de excluir qualquer objeto',async()=>ownTemporary(async directory=>{
+ const fixture=await recoveryFixture(directory);
+ for(const [objectKey,metadata]of fixture.backup.metadata)fixture.backup.metadata.set(objectKey,{...metadata,petcore_backup_id:randomUUID()});
+ const cleanup=join(directory,'conflicting');await mkdir(cleanup);
+ await assert.rejects(removeUnpublishedPhotoSnapshot({snapshot:fixture.snapshot,backup:fixture.backup.storage('backups'),key:fixture.key,prefix:'petcore',directory:cleanup}),{code:'STORAGE_METADATA_CONFLICT'});
+ assert.equal(fixture.backup.deletes.length,0);assert.equal(fixture.backup.objects.size,2);assert.equal(fixture.source.objects.size,1);
 }));

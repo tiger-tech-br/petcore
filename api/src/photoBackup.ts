@@ -7,6 +7,7 @@ import {pipeline} from 'node:stream/promises';
 import {S3Client,GetObjectCommand,PutObjectCommand,HeadObjectCommand,DeleteObjectCommand,ListObjectsV2Command} from '@aws-sdk/client-s3';
 import type {PoolClient} from 'pg';
 import {decryptBackupFile,encryptBackupFile,hashBackupFile} from './backupCrypto.js';
+import {readStorageMetadata} from './storageMetadata.js';
 
 export const PHOTO_BACKUP_LOCK=719381011;
 const UUID='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',uuid=new RegExp('^'+UUID+'$','i'),hash=/^[a-f0-9]{64}$/;
@@ -57,7 +58,7 @@ export async function createPhotoSnapshot(options:{db:Pick<PoolClient,'query'>;s
  if(rows.rows.length&&!options.source)throw failure('PHOTO_STORAGE_MISSING');
  if(options.source?.fingerprint===options.backup.fingerprint)throw failure('PHOTO_BACKUP_STORAGE_MUST_BE_SEPARATE');
  const directory=join(options.directory,'photos');await mkdir(directory,{mode:0o700});const entries:Entry[]=[],attemptId=randomUUID(),attemptedKeys:string[]=[];
- const ownership={petcore_backup_id:options.backupId,petcore_snapshot_attempt:attemptId};
+ const ownership={'petcore-backup-id':options.backupId,'petcore-snapshot-attempt':attemptId};
  try{
  for(const [index,row] of rows.rows.entries()){
   validatePhotoKey(row.tenant_id,row.id,row.photo_key);
@@ -81,7 +82,7 @@ export async function createPhotoSnapshot(options:{db:Pick<PoolClient,'query'>;s
     const head=await options.backup.client.send(new HeadObjectCommand({Bucket:options.backup.bucket,Key:objectKey}),{abortSignal:AbortSignal.any([cleanupSignal,AbortSignal.timeout(15000)])});
     // A previous snapshot with the same backup UUID must never be removed by
     // a failed overwrite attempt. Only this call's random ownership nonce wins.
-    if(head.Metadata?.petcore_snapshot_attempt!==attemptId||head.Metadata?.petcore_backup_id!==options.backupId)continue;
+    if(readStorageMetadata(head.Metadata,'petcore-snapshot-attempt')!==attemptId||readStorageMetadata(head.Metadata,'petcore-backup-id')!==options.backupId)continue;
     await options.backup.client.send(new DeleteObjectCommand({Bucket:options.backup.bucket,Key:objectKey}),{abortSignal:AbortSignal.any([cleanupSignal,AbortSignal.timeout(15000)])});
    }catch(cleanup){const issue=cleanup as {name?:string;$metadata?:{httpStatusCode?:number}};if(issue.$metadata?.httpStatusCode!==404&&!['NoSuchKey','NotFound'].includes(issue.name??''))cleanupFailed=true;}
   }
@@ -116,7 +117,7 @@ export async function removeUnpublishedPhotoSnapshot(options:{snapshot:PhotoSnap
  for(const objectKey of [...manifest.entries.map(entry=>entry.objectKey),options.snapshot.manifestObjectKey]){
   try{
    const head=await options.backup.client.send(new HeadObjectCommand({Bucket:options.backup.bucket,Key:objectKey}),{abortSignal:signal});
-   if(head.Metadata?.petcore_backup_id!==options.snapshot.backupId||head.Metadata?.petcore_snapshot_attempt!==options.snapshot.attemptId)throw failure('PHOTO_BACKUP_CLEANUP_OWNERSHIP_REQUIRED');
+   if(readStorageMetadata(head.Metadata,'petcore-backup-id')!==options.snapshot.backupId||readStorageMetadata(head.Metadata,'petcore-snapshot-attempt')!==options.snapshot.attemptId)throw failure('PHOTO_BACKUP_CLEANUP_OWNERSHIP_REQUIRED');
    await options.backup.client.send(new DeleteObjectCommand({Bucket:options.backup.bucket,Key:objectKey}),{abortSignal:signal});
   }catch(error){const issue=error as {name?:string;$metadata?:{httpStatusCode?:number}};if(issue.$metadata?.httpStatusCode!==404&&!['NoSuchKey','NotFound'].includes(issue.name??''))throw error;}
  }
@@ -134,7 +135,7 @@ export async function verifyPhotoSnapshot(options:{snapshot:PhotoSnapshot;backup
   const original=await decryptBackupFile(encrypted,plain,options.key,entry.sha256);
   if(original.sha256!==entry.plaintextSha256||original.sizeBytes!==entry.plaintextBytes)throw failure('PHOTO_BACKUP_CHECKSUM_MISMATCH');
   if(options.target){
-   const targetKey=`${recoveryPrefix}/${entry.sourceKey}`;await upload(options.target,targetKey,plain,original.sizeBytes,signal,'image/webp',{petcore_recovery_id:recoveryId});restoredKeys.push(targetKey);
+   const targetKey=`${recoveryPrefix}/${entry.sourceKey}`;await upload(options.target,targetKey,plain,original.sizeBytes,signal,'image/webp',{'petcore-recovery-id':recoveryId});restoredKeys.push(targetKey);
    const check=join(options.directory,index+'.restored.webp');await download(options.target,targetKey,check,MAX_PHOTO_BYTES,signal);
    const restored=await hashBackupFile(check);if(restored.sha256!==original.sha256||restored.sizeBytes!==original.sizeBytes)throw failure('PHOTO_RECOVERY_CHECKSUM_MISMATCH');
    await unlink(check);
@@ -161,7 +162,7 @@ export async function restorePhotoSnapshotToEmptyBucket(options:{snapshot:PhotoS
   await download(options.backup,entry.objectKey,encrypted,MAX_PHOTO_BYTES+36,signal);
   const original=await decryptBackupFile(encrypted,plain,options.key,entry.sha256);
   if(original.sha256!==entry.plaintextSha256||original.sizeBytes!==entry.plaintextBytes)throw failure('PHOTO_BACKUP_CHECKSUM_MISMATCH');
-  await upload(options.target,entry.sourceKey,plain,original.sizeBytes,signal,'image/webp',{petcore_restoration_id:restorationId});
+  await upload(options.target,entry.sourceKey,plain,original.sizeBytes,signal,'image/webp',{'petcore-restoration-id':restorationId});
   const check=join(options.directory,index+'.restored-check.webp');await download(options.target,entry.sourceKey,check,MAX_PHOTO_BYTES,signal);
   const restored=await hashBackupFile(check);if(restored.sha256!==original.sha256||restored.sizeBytes!==original.sizeBytes)throw failure('PHOTO_RECOVERY_CHECKSUM_MISMATCH');
   await unlink(check);await unlink(encrypted);await unlink(plain);photosRestored++;

@@ -10,6 +10,7 @@ import {Pool} from 'pg';
 import {S3Client,PutObjectCommand,HeadObjectCommand,DeleteObjectCommand} from '@aws-sdk/client-s3';
 import {encryptBackupFile,hashBackupFile,parseBackupKey} from '../dist/backupCrypto.js';
 import {createPhotoSnapshot,removeUnpublishedPhotoSnapshot,photoStorage,storageFingerprint,PHOTO_BACKUP_LOCK} from '../dist/photoBackup.js';
+import {readStorageMetadata} from '../dist/storageMetadata.js';
 config({path:new URL('../../.env',import.meta.url)});
 
 export function failure(code){return Object.assign(new Error(code),{code});}
@@ -120,7 +121,7 @@ export async function runBackup(args=process.argv.slice(2)){
    objectKey=`${prefix}/${name}.dump.enc`;
    for(const [file,path,metadata] of [[encrypted,objectKey,ciphertext],[manifestEncrypted,`${prefix}/${name}.manifest.enc`,manifestCipher]]){
     attemptedObjects.push(path);
-    await storage.client.send(new PutObjectCommand({Bucket:storage.bucket,Key:path,Body:createReadStream(file),ContentLength:metadata.sizeBytes,ContentType:'application/octet-stream',IfNoneMatch:'*',Metadata:{sha256:metadata.sha256,backup_id:backupId}}),{abortSignal:AbortSignal.timeout(15*60*1000)});
+    await storage.client.send(new PutObjectCommand({Bucket:storage.bucket,Key:path,Body:createReadStream(file),ContentLength:metadata.sizeBytes,ContentType:'application/octet-stream',IfNoneMatch:'*',Metadata:{sha256:metadata.sha256,'backup-id':backupId}}),{abortSignal:AbortSignal.timeout(15*60*1000)});
    }
   }
   // Once publication is sent, a lost response cannot tell us whether it committed.
@@ -148,7 +149,7 @@ export async function runBackup(args=process.argv.slice(2)){
   for(const objectKey of attemptedObjects){
    try{
     const head=await storage.client.send(new HeadObjectCommand({Bucket:storage.bucket,Key:objectKey}),{abortSignal:cleanupSignal});
-    if(head.Metadata?.backup_id!==backupId)continue;
+    if(readStorageMetadata(head.Metadata,'backup-id')!==backupId)continue;
     await storage.client.send(new DeleteObjectCommand({Bucket:storage.bucket,Key:objectKey}),{abortSignal:cleanupSignal});
    }catch(issue){if(issue?.$metadata?.httpStatusCode!==404&&!['NoSuchKey','NotFound'].includes(issue?.name))cleanupFailed=true;}
   }
