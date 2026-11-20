@@ -2,6 +2,20 @@
 
 Registro de evidências e pendências da preparação comercial. A homologação e as correções móveis/de cobrança estão publicadas; a aprovação operacional/jurídica ainda precisa de conclusão. Não é uma certificação de conformidade.
 
+## Estado atual — migração técnica concluída em 20/11/2026
+
+Esta atualização substitui os estados operacionais históricos abaixo. O PetCore usa **aplicação, PostgreSQL 18.7 e armazenamento Versity na Hostinger**, mantendo `https://petcore.tigertech.dev.br` e o APK **1.0.2/código 3**. A API **`b89691af`** foi preparada às 19h41min45s UTC e aplicada ao app/agendadores às 19h43 UTC, em volume somente de leitura sobre a imagem base `acde9dde`. O banco usa TLS e papel restrito, com **50 tabelas e 19 migrations**, sem a migration 016 separada. O responsável aceitou a cópia de 19/11 às 03h02 por conter dados de teste; a possível defasagem foi informada.
+
+O ensaio HTTPS autenticado confirmou login, cadastros, permissões, URLs pré-assinadas, bloqueio anônimo e logout, com limpeza dos registros fictícios. A recuperação de **uma foto fictícia** passou em 20/11 às **19h43min51s UTC**, rejeitando chave incorreta e sobrescrita, com limpeza completa. O backup novo **`3f45b670-ace7-48f6-9da5-2ee6d1004e80`**, criado às **19h43min52s UTC**, foi restaurado de fato em banco isolado: **50 tabelas conferidas e registro `verified`**. O snapshot tinha zero fotos; o ensaio de uma foto é evidência separada. Os arquivos e manifestos da cópia nova também foram autenticados no computador, com **50 tabelas e 180 linhas**.
+
+Manutenção a cada 15 minutos, lembretes a cada 5 minutos e backup diário às 03h de Brasília usam três contêineres próprios na VPS. A retenção ativa é de 30 dias e exclui os **15 registros legados**; os modelos systemd não foram instalados como timers. A configuração Resend foi preservada e os avisos de suporte foram habilitados após conferir fila vazia. Sucesso dos jobs não comprova entrega de mensagens nem substitui a validação de recuperação de senha ponta a ponta.
+
+Os **cinco serviços e dois buckets do PetCore foram removidos do Railway**, com leitura de zero serviços, buckets e volumes; a exclusão do projeto foi aceita, ainda aguardando a conferência final da lista de projetos neste checkpoint. Os outros sete projetos da conta não foram alterados. Não declarar assinatura da conta cancelada ou fatura total zerada. O Neon foi preservado, sem conexão ativa da aplicação. Antes da remoção da origem, os 36 objetos antigos foram comparados com o destino. A cópia externa no computador passou a conter **40 objetos/2.859.617 bytes**: 39 de backup e uma imagem fictícia de QA de 128 bytes, sem dados pessoais. Sua continuidade é manual, por `scripts/archive-hostinger-storage.mjs`; backups apenas no disco da VPS não protegem a perda do servidor.
+
+**Isso conclui a migração técnica, sem liberar a comercialização por este registro.** Documentos continuam **`legal.published=false`**; revisão/publicação jurídica, contratos e procedimentos efetivos de privacidade e atendimento seguem pendentes. As quatro consultas contratuais de 19/11 já foram enviadas e não foram reenviadas. Não reabrir o APK e a guarda externa de chaves já comprovados. PagBank CPF mantém operação assistida; não criar cobrança ou cancelamento artificial para satisfazer checklist. Detalhes em [MIGRACAO-HOSTINGER-20261120.md](MIGRACAO-HOSTINGER-20261120.md) e na [evidência pública](evidence/HOSTINGER-DATA-STAGING-20261120.json).
+
+## Histórico anterior à conclusão da migração de 20/11
+
 ## Preparação de 20/11/2026
 
 O responsável informou que ainda não recebeu respostas às quatro consultas contratuais. Os envios anteriores permanecem registrados; nenhum reenvio foi feito.

@@ -1,6 +1,6 @@
 GUIA DA TIGER TECH: HOSTINGER VPS DO ZERO AO DEPLOY
 Para projetos com Node.js, PostgreSQL e páginas web
-Atualizado em 19/11/2026, horário de Brasília
+Atualizado em 20/11/2026, horário de Brasília
 
 COMO USAR ESTE GUIA
 Leia primeiro as seções 1 a 4. Os comandos são executados na Web Console
@@ -17,7 +17,8 @@ Ubuntu: sistema operacional desse computador.
 Docker: executa cada aplicação em um ambiente separado, chamado container.
 Compose: arquivo que descreve os containers e suas configurações.
 Node.js: executa o seu back-end. O PetCore leva o Node dentro da imagem Docker.
-PostgreSQL: guarda os registros; no seu caso, pode continuar no Neon.
+PostgreSQL: guarda os registros; o banco ativo do PetCore está na própria VPS.
+Versity Gateway: fornece o armazenamento privado de fotos e backups do PetCore.
 Caddy: recebe os acessos aos domínios e os encaminha para a aplicação certa.
 DNS: aponta um nome, como petcore.tigertech.dev.br, para o IP da VPS.
 HTTPS: protege a conexão do navegador com o sistema usando um certificado.
@@ -65,27 +66,34 @@ Planeje a manutenção e o retorno antes de atualizar/reiniciar uma VPS com clie
 Upgrade de versão do Ubuntu é outra operação; não faz parte do deploy comum.
 
 5. O ESTADO DO PETCORE AGORA
-Endereço de TESTES: https://petcore.tigertech.dev.br
-O registro A foi salvo por você no Registro.br e resolveu para 187.53.115.106.
-Você autorizou os termos da Let's Encrypt e a emissão/renovação do HTTPS gratuito.
-A página retornou 200; saúde 200 com database=true; sessão anônima 401.
-HTTP redirecionou com 308 para HTTPS. Os arquivos visuais coincidiram com o Railway.
-A conexão Node -> Neon foi medida como TLSv1.3, com certificado autorizado.
-Em 15/11, passou um ensaio autenticado real por HTTPS com 11 verificações de
-login, cadastros, agenda, isolamento, estoque/caixa/financeiro, CRM e saída.
-As duas empresas fictícias e seus acessos foram desativados ao terminar.
-O teste usa banco separado: branch br-fragrant-frost-b6kr9it0, banco neondb.
-O app usa petcore_hostinger_runtime, com senha exclusiva e sem privilégios
-administrativos. Não usa owner nem DATABASE_DIRECT_URL no ambiente do app.
-Fotos e credenciais reais de armazenamento estão ausentes nesse ambiente.
-Os e-mails e todas as rotinas recorrentes estão desligados na Hostinger de testes.
-O Railway principal foi preservado. O APK atual 1.0.2/código 3 usa a Hostinger;
-em 15/11 você confirmou instalação, abertura, login, abertura/fechamento de
-agendamento e exportação no celular. A publicação remota de 19/11 não gerou APK.
-Em 19/11, a imagem acde9dde ficou saudável, com página 200, /api/live ok=true
-e /api/health ok=true,database=true em HTTPS válido. E-mail, fotos e jobs seguem
-desligados; a guarda externa das chaves no Bitwarden EU foi verificada.
-Publicar esse teste não equivale à transferência final ou à liberação comercial.
+Endereço: https://petcore.tigertech.dev.br. O DNS e o certificado continuam os mesmos.
+Em 20/11, o PetCore passou a usar aplicação, banco e armazenamento na Hostinger.
+O PostgreSQL 18.7 está em container/volume próprios, com TLS verificado e SCRAM.
+São 50 tabelas e 19 migrations. O aplicativo usa o papel limitado petcore_runtime;
+administração, migrations e aplicativo não compartilham o mesmo nível de acesso.
+O banco não tem porta publicada na internet. Não abra a porta 5432 no firewall.
+A cópia restaurada é de 19/11 às 03h02; você aceitou usá-la por serem dados de teste.
+Ela pode não conter alterações posteriores. Não a restaure novamente sobre o ativo.
+O Versity Gateway 1.11.0 guarda os arquivos em volumes privados da VPS. O Caddy
+expõe as rotas autorizadas de storage no mesmo HTTPS, preservando caminho e Host.
+Foram copiados e comparados 36 objetos, 2.666.944 bytes. Havia zero fotos na origem.
+Os arquivos cifrados históricos também estão preservados fora da VPS no computador.
+As URLs pré-assinadas e o bloqueio anônimo passaram no ensaio público das 16h27,
+junto com login, cadastros, permissões e saída. As fixtures foram removidas.
+Esse ensaio não enviou e-mails nem cobrou clientes; recuperação completa de fotos
+e backup novo restaurável ainda exigem conferência própria.
+O Resend foi mantido. Avisos de suporte estão habilitados após conferir fila vazia.
+Há três agendadores em containers: manutenção a cada 15 minutos, lembretes a cada
+5 minutos e backup às 03h de Brasília. Manutenção/lembretes executaram às 16h30;
+o próximo backup diário está previsto para 21/11 às 06h UTC, ainda não comprovado.
+Os cron antigos do Railway foram removidos. Não ative também os modelos systemd.
+Railway e Neon ainda estão preservados; a retirada aguarda a validação final.
+O APK 1.0.2/código 3 usa esse mesmo endereço e não muda por trocar o banco.
+Em 15/11 você confirmou instalação, login, formulário e exportação no celular.
+A guarda externa das chaves no Bitwarden EU foi verificada em 19/11.
+Os três containers do BeautyBarber continuaram saudáveis e sem alterações às 16h33.
+Os documentos ainda não estão publicados e contratos aguardam respostas. Migração
+técnica e liberação comercial têm verificações próprias; este guia não as aprova.
 
 6. DOMÍNIO E SUBDOMÍNIO, SEM COMPRAR OUTRO DOMÍNIO
 tigertech.dev.br pode ser reservado para o site institucional da Tiger Tech.
@@ -111,8 +119,13 @@ Em 19/11, a imagem do app na Hostinger foi atualizada para a revisão limpa:
 A imagem foi construída na VPS de contexto remoto fixado nesse SHA, sem a
 016_taxi_driver_accounts.sql, que é trabalho separado. Os arquivos operacionais
 do Compose continuam na pasta releases/0a96d5f7455ec875ba879cd6c5e6f767b8b787d4.
-Proxy e imagem anterior 4c7a65ba foram preservados para retorno.
-O arquivo deploy/.env.validation seleciona a nova imagem pelo PETCORE_RELEASE.
+Em 20/11, a imagem base acde9dde passou a receber código da API em volume
+somente de leitura. A revisão 33c1d015 foi conferida no corte do banco.
+A revisão b89691af corrige nomes de metadados S3 com hífens, mantendo leitura de
+nomes antigos; passou em 44 testes unitários e build. Seu volume está em implantação
+neste checkpoint. Consulte o estado real antes de declarar o rollout concluído.
+O Compose ativo passou a ser gerido pelo Gerenciador Docker/MCP. A pasta antiga
+e seu .env.validation não descrevem sozinhos a configuração atual; não os reaplique.
 A pasta local de desenvolvimento pode conter alterações ainda não aprovadas.
 Por isso, a imagem não deve ser construída a partir de um envio bruto dessa pasta.
 Confira .gitignore e .dockerignore. Credenciais, backups, node_modules e material
@@ -151,18 +164,18 @@ Use uma pasta por revisão quando precisar preservar a anterior para retorno.
 Não substitua código em produção por uma versão que só foi conferida no editor.
 
 10. CONFIGURAR O BANCO E OS SEGREDOS
-Hospedar Node na VPS não obriga instalar outro PostgreSQL: ele pode usar o Neon.
-Copie a conexão do banco certo e mantenha TLS e verificação do certificado.
+Um projeto Node pode usar banco externo ou banco privado na VPS. A opção atual
+do PetCore é PostgreSQL na própria VPS, sem depender de Neon ou Railway.
+Para outro projeto, crie banco e usuário próprios e mantenha TLS e verificação
+do certificado; não reutilize o usuário ou a senha do PetCore.
 Para SaaS diferentes, separe bancos/usuários e credenciais com acesso necessário.
 Dentro do PetCore, as empresas são separadas pelas permissões e pelo tenant;
 não é necessário criar outro PetCore para cada pet shop.
 Migrations e backups devem usar a conexão direta prevista pelo projeto.
-Na Hostinger de testes, só a conexão do branch isolado foi autorizada.
-A conexão da aplicação agora usa uma role limitada e senha exclusiva. Não copie
-a conexão administrativa para app.env. DATABASE_DIRECT_URL está ausente no app.
-O arquivo migration.env está neutralizado; futuras migrations dependem de
-uma conexão administrativa própria e controlada antes de qualquer execução.
-A mudança para o banco ativo requer planejamento e autorização próprios.
+O banco ativo do PetCore é petcore; a aplicação usa petcore_runtime com senha própria.
+Não copie a conexão administrativa para a configuração da aplicação. A conta de
+migrations e a conta administrativa ficam separadas, com arquivos privados.
+Nunca conceda administração do PostgreSQL a uma aplicação para contornar um erro.
 Guarde variáveis privadas em arquivos protegidos, fora do Git e da imagem.
 Exemplo de preparação de uma pasta privada nova, na raiz do projeto:
     umask 077
@@ -171,11 +184,14 @@ Edite os arquivos privadamente. Se usar nano: Ctrl+O salva; Enter confirma;
 Ctrl+X sai. Não exiba esses arquivos em capturas ou mensagens.
 
 11. VARIÁVEIS DO PETCORE: COMO PREENCHER
-Consulte .env.example e deploy/README.md do projeto para o catálogo completo.
-app.env: banco, DATABASE_SSL, SESSION_SECRET, APP_ORIGIN e serviços aprovados.
-migration.env: quando aprovado e preparado, conexão administrativa direta ao
-mesmo banco e TLS. Na homologação atual ele está neutralizado, sem conexão válida.
-maintenance.env, reminders.env e backup.env: configurações separadas das rotinas.
+Consulte .env.example e deploy/README.md para o catálogo; os nomes a seguir
+descrevem a separação necessária, não um comando para substituir o deploy ativo.
+Aplicação: banco limitado, DATABASE_SSL, CA autorizada, SESSION_SECRET, APP_ORIGIN
+e serviços aprovados. Migrations: conexão de esquema própria ao mesmo banco/TLS.
+Manutenção, lembretes e backup: configurações privadas separadas por função.
+Na implantação atual, o processo carrega a configuração própria de um volume
+privado. O Gerenciador Docker também referencia volumes persistentes e redes
+externas. Não apague esses volumes nem gere um Compose só com o app e o proxy.
 SESSION_SECRET precisa de pelo menos 40 caracteres aleatórios; não use exemplo.
 APP_ORIGIN deve ser exatamente a origem HTTPS, por exemplo:
     APP_ORIGIN=https://petcore.tigertech.dev.br
@@ -197,8 +213,8 @@ Para migrations, faça primeiro backup/ensaio no ambiente isolado e confira o al
 O comando de migration executa SQL: é uma alteração real, não uma simples consulta.
 No PetCore, o controle confere arquivos/checksums e aplica apenas o que falta.
 Execute uma vez por revisão necessária; não inicie o app se a migration falhar.
-Na homologação Hostinger atual, NÃO rode esse passo: migration.env foi
-neutralizado. O rollout de 15/11 não precisou nem executou migrations.
+No PetCore atual, as 19 migrations foram conferidas na migração de 20/11.
+Não acrescente a migration 016 separada nem execute carga de demonstração.
 Seed é carga de demonstração; não o execute em banco de produção.
 Primeiro inicie somente o app interno e teste saúde, banco e rotas protegidas.
 Com a configuração desse projeto já aprovada, um exemplo de início é:
@@ -206,50 +222,42 @@ Com a configuração desse projeto já aprovada, um exemplo de início é:
     docker compose -p NOME_DO_PROJETO -f compose.yml ps
 O nome do serviço app é um exemplo; use o nome definido no Compose daquele projeto.
 
-13. COMANDOS EXATOS PARA CONSULTAR O PETCORE ATUAL
-Estes comandos se referem SOMENTE ao ambiente de testes já preparado.
-Entre na pasta correta:
-    cd /opt/tigertech/petcore/releases/0a96d5f7455ec875ba879cd6c5e6f767b8b787d4
-Defina este atalho na sessão atual do terminal; ele termina na linha com }:
-    pcv() {
-      docker compose -p petcore-validation --env-file deploy/.env.validation -f deploy/compose.production.yml -f deploy/compose.proxy-pinned.yml "$@"
-    }
-Depois, consulte:
-    pcv config --quiet
-    pcv ps
-    pcv logs --tail 50 app
-    pcv logs --tail 50 proxy
-O nome petcore-validation e os dois arquivos -f precisam ser preservados.
-Omiti-los pode criar outro projeto ou perder a fixação da imagem do proxy.
-Se for deixar a homologação sem uso por bastante tempo, pausar somente o app
-interrompe seus acessos e evita consultas constantes ao banco de testes:
-    pcv stop app
-Para retomar o teste com a configuração já conferida:
-    pcv up -d --no-build app
-Não pare o proxy compartilhado de outros sites para pausar apenas um app.
-O app usa petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10,
-selecionado por PETCORE_RELEASE em deploy/.env.validation. O diretório operacional
-0a96... permanece; por isso, o nome da pasta não prova a imagem em execução.
-O Docker consulta /api/live a cada 30 segundos, sem sessão ou consulta SQL.
-/api/health mantém a conferência do banco. Quando habilitado, o worker de
-avisos de suporte ainda consulta o banco a cada 30 segundos.
-O Caddy 2.11.9 foi fixado pelo digest no arquivo operacional do servidor.
-O proxy de testes monta Caddyfile.preview, com Let's Encrypt e noindex/nofollow.
-Esses arquivos operacionais já existem na VPS; não os substitua por exemplos.
+13. CONSULTAR O PETCORE ATUAL SEM REAPLICAR CONFIGURAÇÕES ANTIGAS
+No Gerenciador Docker da VPS 2162451, abra o projeto petcore-validation para
+consultar app/proxy. Banco, storage e agendadores têm projetos separados.
+Use Estado e Logs. Não clique em excluir projeto ou volume para corrigir erro.
+Na Web Console, estes comandos apenas consultam os containers atuais:
+    docker ps --filter label=com.docker.compose.project=petcore-validation
+    docker logs --tail 50 petcore-validation-app-1
+    docker logs --tail 50 petcore-validation-proxy-1
+    docker ps --filter label=com.docker.compose.project=petcore-data-20261120
+    docker ps --filter name=petcore-object-storage-20261120
+Confira também, pelo navegador, https://petcore.tigertech.dev.br/api/health.
+Uma resposta 200 com ok=true e database=true comprova a consulta ao banco,
+mas não substitui o login e os fluxos do cliente. /api/live verifica o processo
+sem fazer consulta SQL; é a rota usada pelo probe Docker da aplicação.
+Evite docker inspect completo e compose config sem --quiet: podem revelar segredos.
+A imagem base, o volume de código da API e a configuração efetiva devem ser
+conferidos juntos. O nome da pasta releases/0a96 não identifica mais o deploy.
+O proxy usa configuração JSON em volume próprio, com certificado preservado.
+O antigo atalho pcv com compose.production.yml/compose.proxy-pinned.yml foi
+retirado deste guia porque reaplicá-lo poderia desfazer a migração de 20/11.
 
-14. REAPLICAR UMA CONFIGURAÇÃO JÁ VALIDADA DO TESTE
-Depois de conferir alvo, arquivos, backup e imagem aprovada, o comando é:
-    pcv up -d --no-build app proxy
-Ele mantém os serviços em segundo plano e pode recriá-los se a configuração mudou.
-O banco desse projeto é o de testes, não o banco ativo do Railway.
-No deploy inicial de 14/11, a execução única retornou migrations_ready.
-As 18 migrations conferidas são 001 a 015, 017, 018 e 019.
-O update de 15/11 manteve essas 18 sem executar migrations. migration.env está
-neutralizado até preparar outra conexão administrativa própria e controlada.
-Não acrescente a 016 por estar presente na pasta do computador.
-Rotinas têm o perfil jobs: não use esse perfil em um up geral.
-Migrate é execução única controlada; manutenção, lembretes e backup recorrente
-continuam desligados na Hostinger até a transferência operacional aprovada.
+14. ATUALIZAR O PETCORE PELO GERENCIADOR DOCKER
+Abra Hostinger > VPS > Gerenciar > Gerenciador Docker > petcore-validation.
+Antes de editar/recriar, confira a configuração ativa, a revisão aprovada, a cópia
+de segurança e os nomes exatos dos volumes persistentes e da rede externa.
+Preserve app/proxy, certificado, volumes de configuração privada, CA do banco,
+código da API e conexão com os serviços de dados. A configuração pode conter
+referências privadas: não a copie inteira para mensagens ou repositório.
+Atualizar só a imagem base ou reaplicar o YAML anterior à migração pode retirar
+o código novo ou voltar às conexões antigas. Use a configuração efetiva revisada.
+Depois de aplicar, espere os containers terminarem de iniciar e consulte logs,
+saúde, login e operações reais de teste. Pedido aceito não prova deploy concluído.
+Atualize também os agendadores quando dependerem da nova API, preservando sua
+configuração separada e sem criar outro agendador para a mesma rotina.
+Não use excluir projeto, remover volumes ou reinstalar VPS como forma de atualizar.
+O banco ativo tem 19 migrations: 001 a 015, 017, 018, 019 e 020. A 016 continua fora.
 
 15. HTTPS E VERIFICAÇÕES NO NAVEGADOR
 O DNS deve apontar para a VPS e TCP 80/443 precisam estar acessíveis.
@@ -257,7 +265,7 @@ Caddy obtém o certificado, guarda seus dados em volume persistente e faz renova
 O titular precisa autorizar a emissão e aceitar os termos da certificadora.
 No PetCore, isso já foi autorizado para o subdomínio de testes e a Let's Encrypt.
 Confira o domínio, emissor, validade e ausência de alertas no navegador.
-O Caddyfile.preview usa uma única certificadora explicitamente configurada.
+A configuração ativa do Caddy usa Let's Encrypt e preserva seus volumes.
 noindex/nofollow pede que buscadores não indexem a homologação; não é senha.
 Teste login, sair/entrar, permissões, cadastros e agendamento em computador/celular.
 Teste recuperação de senha, fotos e exportações depois de configurar esses serviços.
@@ -266,11 +274,12 @@ O firewall atual não libera UDP 443: HTTP/1.1 e HTTP/2 funcionam; HTTP/3 fica l
 
 16. COMO FUNCIONAM OS E-MAILS AUTOMÁTICOS DEPOIS DA MUDANÇA
 A VPS hospeda a aplicação; ela não fornece automaticamente o envio do PetCore.
-O ambiente atual no Railway/Resend mantém sua configuração existente.
-Na Hostinger de testes: EMAIL_PROVIDER=none, sem chaves reais; suporte e lembretes
-false/NO. A recuperação de senha também não envia nada nesse ambiente.
-Antes da transferência final, aprove e valide o provedor e sua base contratual
-de privacidade. Preserve e confira SPF, DKIM e DMARC no DNS do remetente.
+O PetCore da Hostinger usa o Resend; a configuração foi preservada privadamente.
+Avisos de suporte foram habilitados depois de conferir a fila vazia. O agendador
+de lembretes executou com sucesso em 20/11 às 16h30, somente para tutores com opt-in.
+Sucesso do job não significa que houve mensagem devida ou entrega na caixa de entrada.
+Contratos de privacidade continuam aguardando respostas; a implantação não os aprova.
+Preserve e confira SPF, DKIM e DMARC no DNS do remetente.
 Um status Verified antigo do provedor não comprova que o registro DNS continua
 publicado hoje. Confira os registros públicos antes de liberar os envios novos.
 O código atual usa EMAIL_PROVIDER, EMAIL_API_KEY e EMAIL_FROM para recuperação
@@ -310,8 +319,10 @@ Cada cliente deve ter acesso só ao que administra, sem receber a senha root ger
 
 18. BACKUPS E RECUPERAÇÃO
 Mantenha backup do banco, dos arquivos/fotos e das configurações necessárias.
-Uma cópia semanal da VPS não substitui o backup do banco externo no Neon.
-Fotos em bucket externo também não são recuperadas só pelo snapshot da VPS.
+Uma cópia semanal da VPS não substitui o backup consistente do banco e dos objetos.
+O banco PostgreSQL e o storage Versity atuais estão na própria VPS: uma perda
+do servidor pode atingir dados e backups locais ao mesmo tempo. Mantenha também
+cópia cifrada fora da VPS, com chave protegida em local recuperável.
 No PetCore, fotos e backups usam destinos privados distintos e cópias cifradas.
 Guarde as chaves de cifra, suas versões e a assinatura Android fora da VPS/bucket,
 em local privado recuperável. Sem a chave correta, a cópia cifrada não é suficiente.
@@ -319,6 +330,11 @@ Ensaie restauração em banco/bucket novos e vazios; confira quantidades e arqui
 Não restaure uma cópia sobre o ambiente ativo para descobrir se ela funciona.
 Registre data, versão, resultado e responsável pelo teste. Use docs/PHOTO-RECOVERY.md.
 Confirme que o backup semanal realmente foi criado, não apenas agendado.
+Na migração de 20/11 foram preservados 36 objetos históricos no computador e na VPS.
+Quinze registros antigos foram marcados como legados, fora da retenção ativa.
+O backup novo diário está programado às 03h de Brasília, com próxima execução
+prevista em 21/11 às 06h UTC; sua criação e restauração ainda não estão comprovadas
+neste checkpoint. Não confunda esse agendamento com uma cópia já realizada.
 
 19. ATUALIZAÇÕES, RETORNO E ROTINAS
 Para atualizar: confira a revisão nova, faça backup, prepare outra pasta/imagem,
@@ -327,15 +343,19 @@ Guarde a revisão/imagem anterior. Voltar o código exige compatibilidade com o 
 restaurar um banco antigo pode perder registros criados depois da cópia.
 Não substitua a pasta ativa nem execute git pull sem conferir a revisão final.
 Depois da troca, verifique saúde, sessão, fotos, relatórios, e-mail e jobs.
-No PetCore, o plano é manutenção a cada 15 minutos, lembretes a cada 5 minutos
-e backup diário; isso ainda não foi ativado na Hostinger de testes.
+No PetCore, três containers agendam manutenção a cada 15 minutos, lembretes a
+cada 5 minutos e backup diário às 03h de Brasília. Manutenção e lembretes tiveram
+execução confirmada em 20/11 às 16h30. Backup novo/recuperação continuam em validação.
+Os arquivos em deploy/systemd são modelos e não estão instalados como timers.
 Confira fuso, logs e execução única. Só um ambiente deve processar cada rotina.
-As rotinas antigas são desligadas numa troca coordenada, não durante este ensaio.
+As rotinas antigas do Railway foram desagendadas e conferidas; não as reative.
 Logs podem conter dados: revise antes de compartilhá-los e preserve a privacidade.
 
 20. APK E TRANSFERÊNCIA FINAL
-O APK 1.0.1 continua confiando na origem do Railway. Trocar DNS não o atualiza.
-Para usar outro endereço: configurar a origem nativa, aumentar a versão, assinar
+O APK atual é 1.0.2/código 3 e acessa https://petcore.tigertech.dev.br.
+A instalação e quatro fluxos foram confirmados por você em 15/11. A troca do
+banco para a VPS em 20/11 manteve a origem, portanto não exige outro APK.
+Para usar futuramente outro endereço: configurar a origem nativa, aumentar a versão, assinar
 com a mesma chave e instalar/testar no aparelho. Preserve essa chave privadamente.
 Teste teclado/Voltar, fotos, downloads/exportações e a navegação inferior fixa.
 Para transferência final, confira também exportação de dados e recuperação de senha.
@@ -351,7 +371,8 @@ sem caminho/curinga. Reaplicar a configuração correta do app e testar a sessã
 Erro 502: consultar ps/health/logs do app, banco e proxy; conferir rede e porta interna.
 SSL indisponível: conferir A/AAAA, portas 80/443, logs do Caddy e validade do certificado.
 Sem e-mail: conferir provedor implementado, variáveis/flags, DNS e registro do envio.
-Sem foto: conferir storage privado, autorização e bucket certo; o teste atual não o tem.
+Sem foto: conferir autorização por empresa, bucket, conta do storage, metadados
+e URL pré-assinada pela origem HTTPS; não tornar o bucket público para corrigir.
 Comando falhou: pare essa sequência e leia o erro. Não apague volumes ou reinstale
 o sistema como tentativa de correção. Volumes podem conter dados/certificados.
 Na VPS atual, preserve o projeto petcore-validation e os outros serviços existentes.
