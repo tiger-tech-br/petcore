@@ -20,12 +20,21 @@ export function defaultAppointmentTime(date:string,timezone=schedulingTimezone,n
  return nextQuarter.slice(0,10)>currentDay?`${nextQuarter.slice(0,10)}T09:00`:nextQuarter;
 }
 
-export function defaultWaitlistAppointmentTime(earliest:string,latest:string,durationMinutes:number,timezone=schedulingTimezone,now=Date.now()){
+export function waitlistAppointmentBounds(earliest:string,latest:string,durationMinutes:number,timezone=schedulingTimezone,now=Date.now()){
  const earliestTime=Date.parse(earliest),latestTime=Date.parse(latest);
- if(!Number.isFinite(earliestTime)||!Number.isFinite(latestTime)||!Number.isFinite(durationMinutes)||durationMinutes<0)return null;
+ if(!Number.isFinite(earliestTime)||!Number.isFinite(latestTime)||!Number.isFinite(durationMinutes)||durationMinutes<=0)return null;
  const firstMinute=Math.max(Math.ceil(earliestTime/60000)*60000,Math.floor(now/60000)*60000+60000);
- const fits=(start:number)=>start<latestTime&&start+durationMinutes*60000<=latestTime;
- if(!fits(firstMinute))return null;
+ const lastMinute=Math.floor((latestTime-durationMinutes*60000)/60000)*60000;
+ if(firstMinute>lastMinute)return null;
+ return {min:calendarWallTime(firstMinute,timezone),max:calendarWallTime(lastMinute,timezone)};
+}
+
+export function defaultWaitlistAppointmentTime(earliest:string,latest:string,durationMinutes:number,timezone=schedulingTimezone,now=Date.now()){
+ const bounds=waitlistAppointmentBounds(earliest,latest,durationMinutes,timezone,now);
+ if(!bounds)return null;
+ const earliestTime=Date.parse(earliest);
+ const firstMinute=Math.max(Math.ceil(earliestTime/60000)*60000,Math.floor(now/60000)*60000+60000);
  const preferred=earliestTime>now?firstMinute:Math.max(firstMinute,Math.floor(now/900000)*900000+900000);
- return calendarWallTime(fits(preferred)?preferred:firstMinute,timezone);
+ const lastMinute=Math.floor((Date.parse(latest)-durationMinutes*60000)/60000)*60000;
+ return preferred<=lastMinute?calendarWallTime(preferred,timezone):bounds.min;
 }

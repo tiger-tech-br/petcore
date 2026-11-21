@@ -68,7 +68,10 @@ const fixtureTasks=[
   {id:'qa-task-a',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',title:'Confirmar retorno para banho e tosa',notes:'Conferir a disponibilidade da tutora e registrar o melhor período para o próximo atendimento.',due_at:futureDay(-1),status:'open',created_at:qaTimestamp,created_by_name:'Marina Exemplo',completed_at:null},
   {id:'qa-task-b',tutor_id:ids.tutorB,tutor_name:'Bruno Exemplo',title:'Acompanhar o primeiro atendimento',notes:'Perguntar como foi a experiência de Thor e atualizar as observações do cadastro.',due_at:futureDay(2),status:'open',created_at:qaTimestamp,created_by_name:'Juliana Exemplo',completed_at:null}
 ];
-const fixtureWaitlist=[{id:'qa-wait',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',pet_id:ids.petA,pet_name:'Luna',service_id:ids.serviceA,service_name:'Banho e cuidados especiais',professional_id:ids.professionalA,earliest_at:`${today()}T13:00:00-03:00`,latest_at:`${today()}T18:00:00-03:00`,status:'waiting',notes:'Prefere atendimento no período da tarde.'}];
+type WaitlistFixture={id:string;tutor_id:string;tutor_name:string;pet_id:string;pet_name:string;service_id:string;service_name:string;duration_minutes:number;service_active:boolean;professional_id:string|null;earliest_at:string;latest_at:string;status:string;notes:string;appointment_id?:string};
+const waitlistState=parameters.get('waitlist-state');
+const waitlistDay=futureDay(waitlistState==='expired'?-1:1).slice(0,10);
+const fixtureWaitlist:WaitlistFixture[]=waitlistState==='empty'?[]:[{id:'qa-wait',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',pet_id:ids.petA,pet_name:'Luna',service_id:ids.serviceA,service_name:'Banho e cuidados especiais',duration_minutes:services[0].duration_minutes,service_active:waitlistState!=='service_unavailable',professional_id:null,earliest_at:`${waitlistDay}T13:00:00-03:00`,latest_at:`${waitlistDay}T18:00:00-03:00`,status:'waiting',notes:'Prefere atendimento no período da tarde.'}];
 const fixtureTeam=[{id:ids.user,name:'Marina Exemplo',email:'marina@example.test',role:'admin',active:true,permissions:[]},{id:'qa-employee',name:'Juliana Exemplo',email:'juliana.atendimento@example.test',role:'employee',active:true,permissions:['appointments','tutors','crm']}];
 const fixturePrivacy=[{id:'qa-privacy',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',anonymized_at:null,kind:'access',status:'in_progress',description:'Solicito uma cópia das informações do meu cadastro e dos atendimentos de Luna.',identity_verified:true,verification_method:'in_person',identity_verified_at:qaTimestamp,resolution:'Identidade conferida presencialmente. Levantamento dos registros em andamento.',created_at:qaTimestamp,updated_at:qaTimestamp,resolved_at:null,created_by_name:'Marina Exemplo'}];
 const fixtureTicket={id:'qa-support',tenant_id:ids.company,company_name:'Vila Pet • demonstração',subject:'Dúvida sobre a organização da agenda',category:'technical',status:'in_progress',created_at:qaTimestamp,updated_at:qaTimestamp};
@@ -126,8 +129,8 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   const path=url.pathname.slice(4);
   let body:Record<string,unknown>={};
   if(typeof init?.body==='string'){try{body=JSON.parse(init.body) as Record<string,unknown>;}catch{return reply({error:'Corpo fictício inválido.'},400);}}
+  if(path.startsWith(`/public/booking/${qaPublicToken}`)&&(parameters.get('public-state')==='notfound'||!qaPublicSettings.enabled||!qaPublicSettings.subscription_writable))return reply({error:'Agendamento público indisponível.'},404);
   if(method==='GET'&&path===`/public/booking/${qaPublicToken}`){
-    if(parameters.get('public-state')==='notfound')return reply({error:'Agendamento público indisponível.'},404);
     return reply({businessName:'Vila Pet • Banho e Tosa',timezone:'America/Sao_Paulo',services,notice:qaPublicSettings.notice,confirmation_notice:qaPublicNotice,enabled:true,horizon_days:90});
   }
   if(method==='GET'&&path===`/public/booking/${qaPublicToken}/slots`){
@@ -147,7 +150,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   }
   if(method==='GET'&&path==='/public-booking/settings')return reply(qaPublicSettings);
   if(method==='PUT'&&path==='/public-booking/settings'){
-    if(body.enabled&&(!qaPublicSettings.legal_ready||!qaPublicSettings.subscription_writable))return reply({error:'Finalize os documentos e confira a assinatura antes de ativar o link.'},409);
+    if(body.enabled&&!qaPublicSettings.subscription_writable)return reply({error:'Confira a assinatura antes de ativar o link.'},409);
     const token=body.rotate_token?'e'.repeat(48):qaPublicSettings.token;
     qaPublicSettings={...qaPublicSettings,enabled:body.enabled===true,notice:String(body.notice??''),token,path:`/agendar/${token}`,updated_at:new Date().toISOString()};return reply(qaPublicSettings);
   }
@@ -170,6 +173,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/auth/me')return reply(session);
   if(method==='GET'&&path==='/notifications')return reply({items:[],unreadCount:0});
   if(method==='GET'&&path==='/calendar/options')return reply(options());
+  if(method==='GET'&&path==='/calendar/waitlist/options')return reply({...options(),services:waitlistState==='service_unavailable'?services.filter(item=>item.id!==ids.serviceA):services});
   if(method==='POST'&&path==='/data/clients-with-pets'){
     qaClientSubmitCalls++;const key=String(body.idempotency_key||'');if(!key)return reply({error:'Identificador de envio obrigatório.'},422);
     let saved=qaClientRegistrations.get(key);
@@ -197,8 +201,53 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/crm/clients')return reply({...pageOf(fixtureCrmClients),inactiveDays:60,timezone:'America/Sao_Paulo',summary:{clients:2,withoutVisits:1,inactive:1,pendingTasks:2,overdueTasks:1}});
   if(method==='GET'&&path==='/crm/tasks')return reply(pageOf(fixtureTasks));
   if(method==='GET'&&path.startsWith('/crm/clients/'))return reply({client:fixtureCrmClients.find(item=>path.endsWith(item.id))??fixtureCrmClients[0],timezone:'America/Sao_Paulo',pets:[{...pets[0],breed:'Sem raça definida'}],appointments:fixturesFor(today()).map(item=>({...item,service_names:item.services.map(service=>service.name)})),contacts:[{id:'qa-contact',tutor_id:ids.tutorA,channel:'phone',summary:'Combinamos um retorno para conferir os melhores horários. A tutora informou que prefere o período da tarde.',occurred_at:qaTimestamp,created_at:qaTimestamp,created_by_name:'Marina Exemplo'}],tasks:fixtureTasks});
+  if(method==='DELETE'&&/^\/calendar\/waitlist\/[^/]+$/.test(path)){
+    const row=fixtureWaitlist.find(item=>item.id===path.split('/')[3]);
+    if(!row)return reply({error:'Solicitação fictícia não encontrada.'},404);
+    if(!['waiting','offered'].includes(row.status))return reply({error:'Somente solicitações em espera podem ser excluídas da lista.'},409);
+    row.status='closed';return reply(row);
+  }
   if(method==='GET'&&path==='/calendar/waitlist')return reply(fixtureWaitlist);
-  if(method==='GET'&&/^\/calendar\/waitlist\/[^/]+\/opportunities$/.test(path))return reply({options:[{starts_at:`${today()}T14:00:00-03:00`,professional_id:ids.professionalA,professional_name:'Juliana Exemplo'}]});
+  if(method==='POST'&&path==='/calendar/waitlist'){
+    const tutor=tutors.find(item=>item.id===body.tutor_id),pet=pets.find(item=>item.id===body.pet_id),service=services.find(item=>item.id===body.service_id);
+    const start=Date.parse(String(body.earliest_at)),end=Date.parse(String(body.latest_at));
+    if(!tutor||!pet||pet.tutor_id!==tutor.id||!service||!Number.isFinite(start)||!Number.isFinite(end)||start<=Date.now()||start+service.duration_minutes*60000>end)return reply({error:'Escolha um período futuro que comporte o serviço.'},422);
+    if('professional_id' in body)return reply({error:'A prévia escolhe automaticamente quem atende.'},422);
+    const row:WaitlistFixture={id:`qa-wait-${sequence++}`,tutor_id:tutor.id,tutor_name:tutor.name,pet_id:pet.id,pet_name:pet.name,service_id:service.id,service_name:service.name,duration_minutes:service.duration_minutes,service_active:waitlistState!=='service_unavailable'||service.id!==ids.serviceA,professional_id:null,earliest_at:new Date(start).toISOString(),latest_at:new Date(end).toISOString(),status:'waiting',notes:String(body.notes||'')};
+    fixtureWaitlist.push(row);return reply(row,201);
+  }
+  if(/^\/calendar\/waitlist\/[^/]+\/(opportunities|availability|offer|book)$/.test(path)){
+    const id=path.split('/')[3],action=path.split('/')[4],row=fixtureWaitlist.find(item=>item.id===id);
+    if(!row)return reply({error:'Solicitação fictícia não encontrada.'},404);
+    if(!['waiting','offered'].includes(row.status))return reply({error:'Esta oportunidade já foi utilizada.'},409);
+    const service=services.find(item=>item.id===row.service_id),duration=(service?.duration_minutes||30)*60000;
+    if(method==='GET'&&action==='opportunities'){
+      const emptyReason=Date.parse(row.latest_at)<=Date.now()?'expired':!service||!row.service_active?'service_unavailable':['no_eligible_professional','no_availability'].includes(waitlistState||'')?waitlistState:null;
+      if(emptyReason)return reply({options:[],reason:emptyReason,searchedUntil:row.latest_at});
+      const start=Math.max(Date.parse(row.earliest_at),Math.floor(Date.now()/60000)*60000+60000),end=Date.parse(row.latest_at);
+      const suggested=[];
+      for(let time=start;time+duration<=end&&suggested.length<5;time+=30*60000)suggested.push({starts_at:new Date(time).toISOString(),ends_at:new Date(time+duration).toISOString(),professional_id:ids.professionalA,professional_name:professionals[0].name});
+      return reply({options:suggested,...(!suggested.length?{reason:'no_availability'}:{}),searchedUntil:row.latest_at});
+    }
+    if(method==='PATCH'&&action==='availability'){
+      const start=Date.parse(String(body.earliest_at)),end=Date.parse(String(body.latest_at));
+      if(!Number.isFinite(start)||!Number.isFinite(end)||start<=Date.now()||start+duration>end)return reply({error:'Escolha um período futuro que comporte o serviço.'},422);
+      row.earliest_at=new Date(start).toISOString();row.latest_at=new Date(end).toISOString();row.status='waiting';return reply(row);
+    }
+    if(method==='POST'&&action==='offer'){
+      if(row.status!=='waiting')return reply({error:'Oferta não disponível.'},409);
+      row.status='offered';return reply({offer:row,delivered:false});
+    }
+    if(method==='POST'&&action==='book'){
+      if('professional_id' in body)return reply({error:'A prévia escolhe automaticamente quem atende.'},422);
+      const start=Date.parse(String(body.starts_at));
+      if(!Number.isFinite(start)||start<=Date.now()||start<Date.parse(row.earliest_at)||start+duration>Date.parse(row.latest_at)||body.tutor_consent!==true)return reply({error:'Escolha um horário futuro dentro da disponibilidade do tutor.'},422);
+      if(!service||!row.service_active)return reply({error:'O serviço não está disponível. Escolha um serviço ativo em um novo pedido.'},422);
+      if(['no_eligible_professional','no_availability'].includes(waitlistState||''))return reply({error:'Esse horário não está disponível para o serviço escolhido. Escolha outro horário.'},409);
+      const appointment:Appointment={id:`qa-wait-booked-${sequence++}`,tutor_name:row.tutor_name,pet_name:row.pet_name,professional_id:ids.professionalA,professional_name:professionals[0].name,starts_at:new Date(start).toISOString(),status:'pending',services:[service]};
+      localAppointments.push(appointment);row.status='booked';row.appointment_id=appointment.id;return reply(appointment,201);
+    }
+  }
   if(method==='GET'&&path==='/team')return reply(fixtureTeam);
   if(method==='GET'&&path==='/settings')return reply({name:'Vila Pet • demonstração',timezone:'America/Sao_Paulo',operation_mode:parameters.get('operation')==='complete'?'complete':'essential',late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled});
   if(method==='GET'&&path==='/privacy/requests')return reply({...pageOf(fixturePrivacy),timezone:'America/Sao_Paulo',summary:{open:0,inProgress:1,completed:0,rejected:0,filesPending:1}});

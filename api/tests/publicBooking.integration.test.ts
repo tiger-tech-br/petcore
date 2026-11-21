@@ -24,7 +24,6 @@ const legalVersion='public-booking-test-'+tag,ips=new Set<string>();let ipSerial
 const source=()=>{const value=`2001:db8:${tag.slice(0,4)}:${tag.slice(4)}::${(++ipSerial).toString(16)}`;ips.add(value);return value;};
 const day=new Date(Date.now()+2*86400000).toISOString().slice(0,10),time=(hour:string)=>`${day}T${hour}:00.000Z`;
 let server:ReturnType<ReturnType<typeof createApp>['listen']>|undefined,base='',admin='',other='',employee='',reception='',token='',foreignToken='',primaryRequest='',primaryAppointment='';
-let oldLegal:{published:boolean;legal_version:string}|undefined;
 const originalFetch=globalThis.fetch;let externalCalls=0;
 type Reply={status:number;data:any;headers:Headers};
 async function call(path:string,method='GET',body?:unknown,cookie='',ip=source()):Promise<Reply>{
@@ -45,8 +44,7 @@ async function counts(){return (await db.query(`SELECT (SELECT count(*)::int FRO
 
 describe('Public booking: privacy, availability, confirmation and tenant isolation',{concurrency:false},()=>{
  before(async()=>{
-  oldLegal=(await db.query('SELECT published,legal_version FROM commercial_settings WHERE singleton=true')).rows[0];
-  await db.query("UPDATE commercial_settings SET published=false,legal_version=$1 WHERE singleton=true",[legalVersion]);
+  assert.equal((await db.query('SELECT published FROM commercial_settings WHERE singleton=true')).rows[0]?.published,false,'Use an unpublished dedicated test configuration.');
   await db.query("INSERT INTO tenants(id,name,timezone) VALUES($1,$2,'UTC'),($3,$4,'UTC')",[ids.a,'Public A '+tag,ids.b,'Public B '+tag]);
   const hash=await argon2.hash(password,{type:argon2.argon2id});
   for(const [id,label] of [[ids.admin,'admin'],[ids.other,'other'],[ids.employee,'employee'],[ids.reception,'reception']])await db.query('INSERT INTO users(id,name,email,password_hash) VALUES($1,$2,$3,$4)',[id,'Private account '+label,`${label}-${tag}@example.test`,hash]);
@@ -74,7 +72,6 @@ describe('Public booking: privacy, availability, confirmation and tenant isolati
   globalThis.fetch=originalFetch;
   if(server){server.closeIdleConnections();await new Promise<void>(resolve=>server!.close(()=>resolve()));}
   try{
-   if(oldLegal)await db.query('UPDATE commercial_settings SET published=$1,legal_version=$2 WHERE singleton=true',[oldLegal.published,oldLegal.legal_version]);
    await db.query('DELETE FROM "session" WHERE sess->>\'userId\'=ANY($1::text[])',[users]);
    for(const table of ['public_booking_request_services','public_booking_requests','public_booking_settings','audit_events','privacy_request_events','privacy_requests','reminder_jobs','notifications','appointment_events','appointment_services','appointments','professional_absences','professional_breaks','professional_shifts','professional_services','pets','professionals','services','tutors','tenant_subscriptions','memberships'])await db.query(`DELETE FROM ${table} WHERE tenant_id=ANY($1::uuid[])`,[tenants]);
    await db.query('DELETE FROM terms_acceptances WHERE user_id=ANY($1::uuid[])',[users]);await db.query('DELETE FROM users WHERE id=ANY($1::uuid[])',[users]);await db.query('DELETE FROM tenants WHERE id=ANY($1::uuid[])',[tenants]);
@@ -86,22 +83,24 @@ describe('Public booking: privacy, availability, confirmation and tenant isolati
   assert.equal(externalCalls,0,'No external email, storage or payment request is allowed.');
  });
 
- test('default disabled, admin-only configuration and legal publication gate',async()=>{
+ test('default disabled with admin-only configuration and unpublished documents',async()=>{
   assert.equal((await call('/public-booking/settings')).status,401);
   assert.equal((await call('/public-booking/settings','GET',undefined,employee)).status,403);
   const config=await call('/public-booking/settings','GET',undefined,admin);assert.equal(config.status,200);assert.equal(config.data.enabled,false);assert.equal(config.data.legal_ready,false);assert.equal(config.data.subscription_writable,true);
   token=config.data.token;assert.match(token,/^[a-f0-9]{48}$/);assert.equal(config.data.path,`/agendar/${token}`);
+  assert.equal(config.data.link,`${process.env.APP_ORIGIN}/agendar/${token}`);
   assert.equal((await call(`/public/booking/${token}`)).status,404);
-  assert.equal((await call('/public-booking/settings','PUT',{enabled:true},admin)).status,409);
+  assert.equal((await call('/public-booking/settings','PUT',{enabled:true},employee)).status,403);
  });
- test('published opt-in exposes only shop/services and anonymous available times',async()=>{
-  await db.query('UPDATE commercial_settings SET published=true WHERE singleton=true');
+ test('normal opt-in exposes anonymous services and times before documents are published',async()=>{
   assert.equal((await call('/public-booking/settings','PUT',{enabled:true,notice:'Entre em contato para confirmar.'},admin)).status,200);
+  const settings=await call('/public-booking/settings','GET',undefined,admin);assert.equal(settings.status,200);assert.equal(settings.data.enabled,true);assert.equal(settings.data.legal_ready,false);
   const config=await call(`/public/booking/${token}`);assert.equal(config.status,200);assert.equal(config.data.businessName,'Public A '+tag);assert.equal(config.data.services.length,1);assert.equal(config.data.services[0].id,ids.service);
   assert.doesNotMatch(JSON.stringify(config.data),new RegExp(`${ids.a}|${ids.prof}|PRIVATE-PROFESSIONAL|private account|public_token|payload_hash`,'i'));
   const slots=await call(`/public/booking/${token}/slots?date=${day}&service_ids=${ids.service}`);assert.equal(slots.status,200);assert.ok(slots.data.slots.some((row:any)=>row.starts_at===time('10:00')));
   for(const row of slots.data.slots)assert.deepEqual(Object.keys(row).sort(),['ends_at','starts_at']);
   assert.equal(slots.data.slots.some((row:any)=>row.starts_at===time('12:00')||row.starts_at===time('14:00')),false);
+  assert.equal((await db.query('SELECT published FROM commercial_settings WHERE singleton=true')).rows[0].published,false);
  });
  test('strict public input refuses private selectors, foreign/transport services, past dates and honeypot',async()=>{
   for(const payload of [{...input(),professional_id:ids.prof},{...input(),tenant_id:ids.b},{...input(),service_ids:[ids.foreignService]},
@@ -181,12 +180,26 @@ describe('Public booking: privacy, availability, confirmation and tenant isolati
   const ip=source();for(let attempt=0;attempt<8;attempt++)assert.equal((await call(`/public/booking/${token}/requests`,'POST',input('17:00'),'',ip)).status,201);
   assert.equal((await call(`/public/booking/${token}/requests`,'POST',input('17:00'),'',ip)).status,429);
  });
- test('token rotation, disabling, legal withdrawal and expired access close the public endpoint',async()=>{
+ test('token rotation, disabling, inactive company and expired access close the public endpoint',async()=>{
   const original=token,rotated=await call('/public-booking/settings','PUT',{enabled:true,rotate_token:true},admin);assert.equal(rotated.status,200);token=rotated.data.token;assert.notEqual(token,original);assert.equal((await call(`/public/booking/${original}`)).status,404);
-  await db.query('UPDATE commercial_settings SET published=false WHERE singleton=true');assert.equal((await call(`/public/booking/${token}`)).status,404);
-  await db.query('UPDATE commercial_settings SET published=true WHERE singleton=true');await db.query("UPDATE tenant_subscriptions SET trial_ends_at=now()-interval '1 day',paid_through=NULL WHERE tenant_id=$1",[ids.a]);assert.equal((await call(`/public/booking/${token}`)).status,404);
+  assert.equal((await call('/public-booking/settings','PUT',{enabled:false},admin)).status,200);assert.equal((await call(`/public/booking/${token}`)).status,404);
+  assert.equal((await call(`/public/booking/${token}/slots?date=${day}&service_ids=${ids.service}`)).status,404);
+  assert.equal((await call(`/public/booking/${token}/requests`,'POST',input())).status,404);
+  assert.equal((await call('/public-booking/settings','PUT',{enabled:true},admin)).status,200);
+  await db.query('UPDATE tenants SET active=false WHERE id=$1',[ids.a]);
+  try{
+   assert.equal((await call(`/public/booking/${token}`)).status,404);
+   assert.equal((await call(`/public/booking/${token}/slots?date=${day}&service_ids=${ids.service}`)).status,404);
+   assert.equal((await call(`/public/booking/${token}/requests`,'POST',input())).status,404);
+   assert.equal((await call('/public-booking/settings','PUT',{enabled:true},admin)).status,403);
+  }finally{await db.query('UPDATE tenants SET active=true WHERE id=$1',[ids.a]);}
+  assert.equal((await call(`/public/booking/${token}`)).status,200);
+  await db.query("UPDATE tenant_subscriptions SET trial_ends_at=now()-interval '1 day',paid_through=NULL WHERE tenant_id=$1",[ids.a]);assert.equal((await call(`/public/booking/${token}`)).status,404);
+  assert.equal((await call(`/public/booking/${token}/slots?date=${day}&service_ids=${ids.service}`)).status,404);
+  assert.equal((await call(`/public/booking/${token}/requests`,'POST',input())).status,404);
   assert.equal((await call('/public-booking/settings','PUT',{enabled:true},admin)).status,402);
   assert.equal((await call('/public-booking/settings','PUT',{enabled:false},admin)).status,200);
   assert.equal((await call(`/public/booking/${token}`)).status,404);
+  assert.equal((await db.query('SELECT published FROM commercial_settings WHERE singleton=true')).rows[0].published,false);
  });
 });

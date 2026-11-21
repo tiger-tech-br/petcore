@@ -18,6 +18,7 @@ import commercialRoutes,{publicCommercial} from './commercialRoutes.js';
 import {createOriginGuard} from './originGuard.js';
 import {startSupportEmailWorker} from './supportEmailService.js';
 import {publicBookingRouter} from './publicBookingRoutes.js';
+import waitlistRoutes from './waitlistRoutes.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
  if(env.NODE_ENV!=='production')return;
@@ -54,6 +55,7 @@ export function createApp(){
  app.use('/api/business',businessRoutes);
  app.use('/api/crm',crmRoutes);
  app.use('/api/taxi-dog',taxiDogRoutes);
+ app.use('/api/calendar/waitlist',waitlistRoutes);
  app.use('/api',dataRoutes);
  app.use('/api',calendarRoutes);
  app.use('/api',fileRoutes);

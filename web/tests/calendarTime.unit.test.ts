@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {calendarWallTime,defaultAppointmentTime,defaultWaitlistAppointmentTime,minimumAppointmentTime} from '../src/calendarTime.ts';
+import {calendarWallTime,defaultAppointmentTime,defaultWaitlistAppointmentTime,minimumAppointmentTime,waitlistAppointmentBounds} from '../src/calendarTime.ts';
 
 const zone='America/Sao_Paulo';
 test('novo agendamento abandona a data antiga e mantém o dia futuro selecionado',()=>{
@@ -36,4 +36,18 @@ test('encaixe respeita o início futuro e sinaliza janela encerrada ou curta dem
  assert.equal(defaultWaitlistAppointmentTime('2026-11-11T08:03:00-03:00','2026-11-11T09:00:00-03:00',30,zone,now),'2026-11-11T08:03');
  assert.equal(defaultWaitlistAppointmentTime('2026-11-10T06:00:00-03:00','2026-11-10T07:00:00-03:00',30,zone,now),null);
  assert.equal(defaultWaitlistAppointmentTime('2026-11-10T07:00:00-03:00','2026-11-10T07:10:00-03:00',10,zone,now),null);
+});
+
+test('limites do encaixe reservam a duração inteira e arredondam os segundos com segurança',()=>{
+ const now=Date.parse('2026-11-10T10:04:10Z');
+ assert.deepEqual(waitlistAppointmentBounds('2026-11-10T07:00:30-03:00','2026-11-10T08:00:30-03:00',30,zone,now),{min:'2026-11-10T07:05',max:'2026-11-10T07:30'});
+ assert.deepEqual(waitlistAppointmentBounds('2026-11-11T08:03:30-03:00','2026-11-11T08:34:00-03:00',30,zone,now),{min:'2026-11-11T08:04',max:'2026-11-11T08:04'});
+ assert.equal(defaultWaitlistAppointmentTime('2026-11-11T08:03:30-03:00','2026-11-11T08:33:30-03:00',30,zone,now),null);
+});
+
+test('limites do encaixe rejeitam serviço sem duração e janela que acabou de vencer',()=>{
+ const now=Date.parse('2026-11-10T10:04:10Z');
+ for(const duration of [0,-1,NaN])assert.equal(waitlistAppointmentBounds('2026-11-11T08:00:00-03:00','2026-11-11T09:00:00-03:00',duration,zone,now),null);
+ assert.equal(waitlistAppointmentBounds('2026-11-10T06:00:00-03:00','2026-11-10T07:04:00-03:00',30,zone,now),null);
+ assert.equal(waitlistAppointmentBounds('inválido','2026-11-11T09:00:00-03:00',30,zone,now),null);
 });

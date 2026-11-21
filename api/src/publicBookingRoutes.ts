@@ -49,7 +49,6 @@ async function publicCompany(raw:unknown,db:PoolClient|typeof pool=pool,lock=fal
   JOIN tenants t ON t.id=s.tenant_id WHERE s.public_token=$1 AND s.enabled=true AND t.active=true
   ${lock?'FOR SHARE OF s,t':''}`,[parsed.data]);
  ensure(found.rowCount,404,'Agendamento público indisponível.');
- const legal=await settings(db);ensure(legal?.published===true,404,'Agendamento público indisponível.');
  const current=await subscription(found.rows[0].id,db);ensure(current?.writable===true,404,'Agendamento público indisponível.');
  return found.rows[0] as {id:string;name:string;timezone:string;notice:string};
 }
@@ -125,8 +124,7 @@ r.get('/public-booking/settings',auth,administrator,async(req,res)=>res.json(awa
 r.put('/public-booking/settings',auth,administrator,async(req,res)=>{
  const company=tenant(req),input=z.object({enabled:z.boolean(),notice:cleanText(0,600).default(''),rotate_token:z.boolean().default(false)}).strict().parse(req.body);
  const result=await tx(async db=>{
-  if(input.enabled){const legal=await settings(db);ensure(legal?.published===true,409,'Publique os documentos de privacidade e uso antes de ativar o link público.');
-   const current=await subscription(company,db);ensure(current?.writable===true,402,'Regularize o acesso para ativar pedidos públicos.');}
+  if(input.enabled){const current=await subscription(company,db);ensure(current?.writable===true,402,'Regularize o acesso para ativar pedidos públicos.');}
   await settingsResult(company,db);
   await db.query(`UPDATE public_booking_settings SET enabled=$2,notice=$3,
    public_token=CASE WHEN $4 THEN $5 ELSE public_token END,updated_by=$6,updated_at=now() WHERE tenant_id=$1`,
