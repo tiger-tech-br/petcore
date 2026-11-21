@@ -13,6 +13,9 @@ import InventoryPage from '../src/InventoryPage';
 import ReportsPage from '../src/ReportsPage';
 import WaitlistPage from '../src/WaitlistPage';
 import TeamPage from '../src/TeamPage';
+import PublicBookingPage from '../src/PublicBookingPage';
+import PublicBookingSettings from '../src/PublicBookingSettings';
+import PublicBookingInbox from '../src/PublicBookingInbox';
 import TaxiDogPage from '../src/TaxiDogPage';
 import type {TaxiBooking,TaxiDriver,TaxiService,TaxiTrip} from '../src/taxiDog';
 import PrivacyPage from '../src/PrivacyPage';
@@ -69,6 +72,12 @@ const fixtureWaitlist=[{id:'qa-wait',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo
 const fixtureTeam=[{id:ids.user,name:'Marina Exemplo',email:'marina@example.test',role:'admin',active:true,permissions:[]},{id:'qa-employee',name:'Juliana Exemplo',email:'juliana.atendimento@example.test',role:'employee',active:true,permissions:['appointments','tutors','crm']}];
 const fixturePrivacy=[{id:'qa-privacy',tutor_id:ids.tutorA,tutor_name:'Ana Exemplo',anonymized_at:null,kind:'access',status:'in_progress',description:'Solicito uma cópia das informações do meu cadastro e dos atendimentos de Luna.',identity_verified:true,verification_method:'in_person',identity_verified_at:qaTimestamp,resolution:'Identidade conferida presencialmente. Levantamento dos registros em andamento.',created_at:qaTimestamp,updated_at:qaTimestamp,resolved_at:null,created_by_name:'Marina Exemplo'}];
 const fixtureTicket={id:'qa-support',tenant_id:ids.company,company_name:'Vila Pet • demonstração',subject:'Dúvida sobre a organização da agenda',category:'technical',status:'in_progress',created_at:qaTimestamp,updated_at:qaTimestamp};
+const qaPublicToken='a'.repeat(48),qaPublicNotice='Seu pedido será confirmado pelo pet shop. O horário só fica reservado depois dessa confirmação.';
+let qaPublicSettings={enabled:parameters.get('public-state')!=='disabled',token:qaPublicToken,path:`/agendar/${qaPublicToken}`,notice:'Para seu pet ficar tranquilo, chegue 10 minutos antes. A equipe confirma o horário pelo contato informado.',confirmation_notice:qaPublicNotice,legal_ready:parameters.get('public-state')!=='unpublished',subscription_writable:parameters.get('public-state')!=='expired',updated_at:qaTimestamp};
+const qaPublicRequests=[{id:'10000000-0000-4000-8000-000000000031',receipt:'b'.repeat(40),status:'pending',starts_at:`${futureDay(1).slice(0,10)}T10:00:00-03:00`,ends_at:`${futureDay(1).slice(0,10)}T11:00:00-03:00`,created_at:qaTimestamp,updated_at:qaTimestamp,appointment_id:null as string|null,reviewed_at:null as string|null,rejection_reason:'',tutor:{name:'Ana Exemplo com Sobrenome Comprido',phone:'(11) 90000-0001',email:'ana.contato.demonstracao@example.test'},pet:{name:'Luna',species:'Cachorro',size:'pequeno',breed:'Shih-tzu'},services},
+ {id:'10000000-0000-4000-8000-000000000032',receipt:'c'.repeat(40),status:'pending',starts_at:`${futureDay(2).slice(0,10)}T14:30:00-03:00`,ends_at:`${futureDay(2).slice(0,10)}T15:00:00-03:00`,created_at:qaTimestamp,updated_at:qaTimestamp,appointment_id:null as string|null,reviewed_at:null as string|null,rejection_reason:'',tutor:{name:'Bruno Exemplo',phone:'(11) 90000-0002',email:''},pet:{name:'Thor',species:'Cachorro',size:'grande',breed:'Sem raça definida'},services:[services[0]]}];
+const qaPublicReceipts=new Map<string,{receipt:string;message:string;ok:boolean;status:string}>();
+let qaPublicSlotsCalls=0,qaPublicSubmitCalls=0;
 const fixtureExportTicket={id:'10000000-0000-4000-8000-000000000021',subject:'Exportação dos dados da Vila Pet • solicitação fictícia do administrador',status:'in_progress',created_at:qaTimestamp};
 let fixtureSupportReads=0;
 const fixtureSupportMessages=[{id:'qa-message-a',from_platform:false,body:'Gostaria de saber como organizar os horários dos profissionais e localizar os atendimentos da semana.',created_at:qaTimestamp},{id:'qa-message-b',from_platform:true,body:'Na Agenda, escolha a visualização Semana e use o filtro de profissional para conferir cada jornada.',created_at:qaTimestamp}];
@@ -116,6 +125,37 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   const path=url.pathname.slice(4);
   let body:Record<string,unknown>={};
   if(typeof init?.body==='string'){try{body=JSON.parse(init.body) as Record<string,unknown>;}catch{return reply({error:'Corpo fictício inválido.'},400);}}
+  if(method==='GET'&&path===`/public/booking/${qaPublicToken}`){
+    if(parameters.get('public-state')==='notfound')return reply({error:'Agendamento público indisponível.'},404);
+    return reply({businessName:'Vila Pet • Banho e Tosa',timezone:'America/Sao_Paulo',services,notice:qaPublicSettings.notice,confirmation_notice:qaPublicNotice,enabled:true,horizon_days:90});
+  }
+  if(method==='GET'&&path===`/public/booking/${qaPublicToken}/slots`){
+    qaPublicSlotsCalls++;
+    if(parameters.get('public-state')==='slots-error'&&qaPublicSlotsCalls===1)return reply({error:'Prévia: falha temporária ao conferir horários.'},503);
+    const date=url.searchParams.get('date')||today(),count=(url.searchParams.get('service_ids')||'').split(',').filter(Boolean).length;
+    const slots=['09:00','10:00','11:15','13:00','14:30','15:30','16:00','17:00'].map(clock=>({starts_at:new Date(`${date}T${clock}:00-03:00`).toISOString(),ends_at:new Date(Date.parse(`${date}T${clock}:00-03:00`)+Math.max(count,1)*30*60000).toISOString()})).filter(slot=>Date.parse(slot.starts_at)>Date.now());
+    return reply({slots:parameters.get('public-state')==='empty'?[]:slots,confirmation_notice:qaPublicNotice});
+  }
+  if(method==='POST'&&path===`/public/booking/${qaPublicToken}/requests`){
+    qaPublicSubmitCalls++;const key=String(body.idempotency_key||'');
+    if(!key)return reply({error:'A prévia precisa de identificador de envio.'},422);
+    const existing=qaPublicReceipts.get(key),saved=existing??{ok:true,receipt:'d'.repeat(40),status:'pending',message:qaPublicNotice};qaPublicReceipts.set(key,saved);
+    if(parameters.get('public-state')==='uncertain'&&qaPublicSubmitCalls===1)throw new TypeError('Prévia: conexão interrompida após registrar pedido fictício.');
+    if(parameters.get('public-state')==='rate-error'&&qaPublicSubmitCalls===2)return reply({error:'Prévia: aguarde antes de verificar novamente.'},429);
+    return reply(saved,201);
+  }
+  if(method==='GET'&&path==='/public-booking/settings')return reply(qaPublicSettings);
+  if(method==='PUT'&&path==='/public-booking/settings'){
+    if(body.enabled&&(!qaPublicSettings.legal_ready||!qaPublicSettings.subscription_writable))return reply({error:'Finalize os documentos e confira a assinatura antes de ativar o link.'},409);
+    const token=body.rotate_token?'e'.repeat(48):qaPublicSettings.token;
+    qaPublicSettings={...qaPublicSettings,enabled:body.enabled===true,notice:String(body.notice??''),token,path:`/agendar/${token}`,updated_at:new Date().toISOString()};return reply(qaPublicSettings);
+  }
+  if(method==='GET'&&path==='/public-booking/requests'){const status=url.searchParams.get('status')||'pending';return reply({items:qaPublicRequests.filter(row=>status==='all'||row.status===status)});}
+  if(method==='POST'&&/^\/public-booking\/requests\/[^/]+\/(confirm|reject)$/.test(path)){
+    const row=qaPublicRequests.find(item=>item.id===path.split('/')[3]);if(!row)return reply({error:'Pedido fictício não encontrado.'},404);
+    if(parameters.get('public-state')==='conflict'&&path.endsWith('/confirm'))return reply({error:'O horário foi ocupado. Combine outro horário com o cliente.'},409);
+    row.status=path.endsWith('/confirm')?'confirmed':'rejected';row.appointment_id=row.status==='confirmed'?'10000000-0000-4000-8000-000000000033':null;row.reviewed_at=new Date().toISOString();row.rejection_reason=String(body.reason??'');return reply({id:row.id,status:row.status,appointment_id:row.appointment_id});
+  }
   if(method==='GET'&&path==='/taxi-dog/options')return reply(taxiOptions());
   if(method==='GET'&&path==='/taxi-dog/drivers')return reply({items:fixtureTaxiDrivers});
   if(method==='POST'&&path==='/taxi-dog/drivers'){const item:TaxiDriver={id:`qa-driver-${sequence++}`,name:String(body.name||''),phone:String(body.phone||''),active:body.active!==false};fixtureTaxiDrivers.push(item);return reply(item,201);}
@@ -125,7 +165,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const booking=fixtureTaxiBookings[path.split('/')[3]];return reply({booking:booking?{...booking,editable:booking.cancelled_at!==null||booking.trips.every(item=>item.status==='scheduled')}:null});}
   if(method==='PUT'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const id=path.split('/')[3];setQaTaxiBooking(id,body.taxi_dog as Record<string,any>|null,localAppointments.find(item=>item.id===id));return reply({ok:true});}
   if(method==='PATCH'&&path==='/settings'){taxiEnabled=body.taxi_dog_enabled===true;session.features={taxi_dog:taxiEnabled};return reply({ok:true});}
-  if(method==='GET'&&path==='/public/legal')return reply({published:false,version:'qa-unpublished',operator:{brand:'PetCore',supportEmail:'suporte@example.test',privacyEmail:'privacidade@example.test'}});
+  if(method==='GET'&&path==='/public/legal')return reply({published:false,version:'qa-unpublished',effectiveDate:null,operator:{brand:'PetCore • prévia local',legalName:'Responsável fictício',address:null,supportEmail:'suporte@example.test',privacyEmail:'privacidade@example.test'},documents:{privacy:'Documento fictício apenas para conferir esta tela. Não é uma política publicada.',terms:'Termos fictícios apenas para conferir esta tela. Não representam aceite contratual.'},subprocessors:[]});
   if(method==='GET'&&path==='/auth/me')return reply(session);
   if(method==='GET'&&path==='/notifications')return reply({items:[],unreadCount:0});
   if(method==='GET'&&path==='/calendar/options')return reply(options());
@@ -151,7 +191,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/calendar/waitlist')return reply(fixtureWaitlist);
   if(method==='GET'&&/^\/calendar\/waitlist\/[^/]+\/opportunities$/.test(path))return reply({options:[{starts_at:`${today()}T14:00:00-03:00`,professional_id:ids.professionalA,professional_name:'Juliana Exemplo'}]});
   if(method==='GET'&&path==='/team')return reply(fixtureTeam);
-  if(method==='GET'&&path==='/settings')return reply({late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled});
+  if(method==='GET'&&path==='/settings')return reply({name:'Vila Pet • demonstração',timezone:'America/Sao_Paulo',operation_mode:parameters.get('operation')==='complete'?'complete':'essential',late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled});
   if(method==='GET'&&path==='/privacy/requests')return reply({...pageOf(fixturePrivacy),timezone:'America/Sao_Paulo',summary:{open:0,inProgress:1,completed:0,rejected:0,filesPending:1}});
   if(method==='GET'&&path.startsWith('/privacy/requests/'))return reply({request:fixturePrivacy[0],events:[{id:'qa-privacy-event',action:'created',status:'open',created_at:qaTimestamp,actor_name:'Marina Exemplo',reason_code:null}]});
   if(method==='GET'&&path==='/privacy/tutors')return reply({items:tutors.map(item=>({...item,anonymized_at:null}))});
@@ -233,13 +273,14 @@ function Harness(){
   const go=(target:MenuKey)=>{setView(target);setSearch('');};
   const resource:Resource|null=['tutors','pets','professionals','services'].includes(view)?view as Resource:null;
   if(requested==='login')return <AuthScreen onDone={()=>localScreen('agenda')} onReadLegal={()=>setNotice('Documentos não publicados nesta prévia local.')}/>;
+  if(requested==='public-booking')return <PublicBookingPage token={qaPublicToken}/>;
   const shellSession:Session=view==='platform'?{...session,user:{...session.user,role:'platform'}}:session;
   return <AppShell session={shellSession} view={view} go={go} onSearch={(target,query)=>{setView(target);setSearch(query);}} company={()=>{}} logout={()=>localScreen('login')} onOpenPlatformSupport={()=>{go('platform');setPlatformSupportRequest(value=>value+1);}}>
     {error&&<div className="alert error" role="alert">{error}</div>}
     {notice&&<div className="alert success" role="status">{notice}</div>}
     {checkout&&<aside className="alert success" role="status">Prévia local: destino do pagamento capturado, sem abrir o provedor: <span style={{overflowWrap:'anywhere'}}>{checkout}</span></aside>}
     {onboarding&&<PlanOnboardingDialog onDone={()=>{setOnboarding(false);setView('subscription');}} onLogout={()=>localScreen('login')}/>}
-    {view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError} supportRequest={platformSupportRequest}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'||requested==='taxi-form'} canTaxiDog searchQuery={search} onSaved={()=>setSearch('')}/>:view==='taxi-dog'?<TaxiDogPage setMessage={setNotice} setError={setError} onSetup={go} canSetup={()=>true}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError} onSettingsSaved={()=>setSessionVersion(value=>value+1)}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
+    {requested==='public-booking-settings'?<PublicBookingSettings setMessage={setNotice} setError={setError}/>:requested==='public-booking-inbox'?<PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/>:requested==='public-booking-combined'?<><PublicBookingSettings setMessage={setNotice} setError={setError}/><PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/></>:view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError} supportRequest={platformSupportRequest}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'||requested==='taxi-form'} canTaxiDog searchQuery={search} onSaved={()=>setSearch('')}/>:view==='taxi-dog'?<TaxiDogPage setMessage={setNotice} setError={setError} onSetup={go} canSetup={()=>true}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError} onSettingsSaved={()=>setSessionVersion(value=>value+1)}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
   </AppShell>;
 }
 

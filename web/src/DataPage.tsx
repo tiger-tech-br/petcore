@@ -1,10 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {Plus, RefreshCw, Search} from 'lucide-react';
+import {CalendarPlus, PawPrint, Plus, RefreshCw, Search} from 'lucide-react';
 import {api, money, zonedToISO, type Obj} from './api';
 import FormDialog from './FormDialog';
 import {Empty, PageHeader} from './ui';
 import {parseCents} from './businessUi';
 import {taxiModeLabel,type TaxiMode} from './taxiDog';
+import ClientRegistrationDialog from './ClientRegistrationDialog';
+import ExistingClientPetDialog from './ExistingClientPetDialog';
 
 export type Resource = 'tutors'|'pets'|'professionals'|'services';
 type Field = {key:string; label:string; kind?:'select'|'date'|'number'|'email'|'textarea'|'checkbox'; required?:boolean; options?:{value:string;label:string}[]};
@@ -15,35 +17,41 @@ const config:Record<Resource,{label:string;singular:string;subtitle:string;field
   services:{label:'Serviços',singular:'serviço',subtitle:'Serviços, preços, duração e modalidades de transporte.',fields:[{key:'service_type',label:'Tipo de serviço',kind:'select',required:true,options:[{value:'appointment',label:'Atendimento (banho, tosa e outros)'},{value:'transport',label:'Táxi Dog'}]},{key:'name',label:'Nome do serviço',required:true},{key:'description',label:'Descrição',kind:'textarea'},{key:'price_cents',label:'Preço (R$)',kind:'number',required:true},{key:'duration_minutes',label:'Duração (minutos)',kind:'number',required:true},{key:'transport_mode',label:'Modalidade do Táxi Dog',kind:'select',required:true,options:[{value:'pickup',label:'Somente busca'},{value:'dropoff',label:'Somente entrega'},{value:'round_trip',label:'Busca e entrega'}]},{key:'active',label:'Ativo',kind:'checkbox'}]}
 };
 
-type Props = {resource:Resource; setMessage:(value:string)=>void; setError:(value:string)=>void; initialSearch?:string; onSetup?:(target:Resource)=>void; canSetup?:(target:Resource)=>boolean};
-export default function DataPage({resource,setMessage,setError,initialSearch='',onSetup,canSetup}:Props) {
+type Props = {resource:Resource; setMessage:(value:string)=>void; setError:(value:string)=>void; initialSearch?:string; initialNew?:boolean; onFormOpened?:()=>void; onSetup?:(target:Resource)=>void; canSetup?:(target:Resource)=>boolean; onBook?:(selection:{tutor_id:string;pet_id?:string})=>void; currentUser?:{id:string;name:string}};
+export default function DataPage({resource,setMessage,setError,initialSearch='',initialNew=false,onFormOpened,onSetup,canSetup,onBook,currentUser}:Props) {
   const [rows,setRows] = useState<any[]>([]), [tutors,setTutors] = useState<any[]>([]), [team,setTeam] = useState<any[]>([]);
   const [loading,setLoading] = useState(true), [loadError,setLoadError] = useState(''), [search,setSearch] = useState(initialSearch);
   const [editing,setEditing] = useState<any|null>(null), [form,setForm] = useState<Record<string,any>>({}), [showForm,setShowForm] = useState(false);
   const [scheduleId,setScheduleId] = useState<string|null>(null), [busy,setBusy] = useState<'save'|'upload'|null>(null);
   const [dialogError,setDialogError] = useState(''), [dialogNotice,setDialogNotice] = useState('');
+  const [clientPets,setClientPets]=useState<any[]>([]),[clientDialog,setClientDialog]=useState(false),[petOwner,setPetOwner]=useState<{id:string;name:string}|null>(null);
+  const canManagePets=canSetup?.('pets')!==false;
   const def = config[resource];
   const secondColumn=resource==='pets'?'Tutor':resource==='services'?'Preço':resource==='tutors'?'Telefone':'Situação';
   const thirdColumn=resource==='services'?'Duração / transporte':resource==='pets'?'Espécie':resource==='tutors'?'E-mail':'';
   const visibleFields=def.fields.filter(field=>resource!=='services'||(field.key!=='duration_minutes'||form.service_type!=='transport')&&(field.key!=='transport_mode'||form.service_type==='transport'));
-  const emptyMessages:Record<Resource,string>={tutors:'Cadastre o primeiro cliente em Adicionar cliente. Depois, abra a aba Pets para vincular seu animal.',pets:'Cadastre o cliente primeiro. Depois use Adicionar pet e selecione o tutor responsável.',professionals:'Use Adicionar profissional. Após salvar, clique em Horários para definir a jornada e habilitar os serviços.',services:'Use Adicionar serviço e informe o preço e a duração. Depois, habilite o serviço nos Horários do profissional.'};
+  const emptyMessages:Record<Resource,string>={tutors:'Use Adicionar cliente para cadastrar o responsável e seu pet juntos.',pets:'Os pets cadastrados junto com seus responsáveis aparecem aqui. Para um cliente que já existe, use Adicionar pet.',professionals:'Cadastre quem atende, inclusive você. Depois, informe os dias e horários de trabalho.',services:'Cadastre os serviços que você oferece, como Banho, Tosa ou Banho e tosa, com preço e duração.'};
 
   async function load(onError = setError) {
     setLoading(true);setLoadError('');
     try {
       setRows(await api<any[]>(`/data/${resource}`));
       if (resource === 'pets') setTutors(await api<any[]>('/options/pet-tutors'));
+      if (resource === 'tutors'&&canManagePets) setClientPets(await api<any[]>('/data/pets'));
       if (resource === 'professionals') setTeam(await api<any[]>('/options/professional-accounts'));
     } catch (error) {const message=(error as Error).message;setLoadError(message);onError(message);if (onError !== setError) setError(message);} finally {setLoading(false);}
   }
   useEffect(()=>{void load();},[resource]);
-  const filtered = rows.filter(row=>String(row.name||'').toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
+  const filtered = rows.filter(row=>[row.name,row.phone,row.email,...(resource==='tutors'?clientPets.filter(p=>p.tutor_id===row.id).map(p=>p.name):[])].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR').includes(search.toLocaleLowerCase('pt-BR')));
 
-  function open(record?:any) {
+  function open(record?:any,clientOnly=false) {
+    if(resource==='tutors'&&!record&&!clientOnly&&canManagePets){setClientDialog(true);setShowForm(false);return;}
     setEditing(record||null);
     setForm(record ? {...record,service_type:record.service_type||'appointment',transport_mode:record.transport_mode||'round_trip',price_cents:resource === 'services' ? record.price_cents/100 : record.price_cents} : {active:true,size:'medio',duration_minutes:60,price_cents:0,service_type:'appointment',transport_mode:'round_trip',notes:'',phone:'',description:'',email_reminders_opt_in:false});
     setDialogError('');setDialogNotice('');setScheduleId(null);setShowForm(true);
   }
+  useEffect(()=>{if(initialNew){open();onFormOpened?.();}},[initialNew]);
+  async function clientSaved(result:{tutor:any;pets:any[]}){setClientDialog(false);setMessage(`${result.tutor.name} e ${result.pets.length===1?result.pets[0].name:`${result.pets.length} pets`} cadastrados. Já pode agendar um atendimento.`);await load();}
   function closeForm() {if (!busy) setShowForm(false);}
   async function save(event:React.FormEvent) {
     event.preventDefault();if (busy || loading || loadError) return;
@@ -81,15 +89,17 @@ export default function DataPage({resource,setMessage,setError,initialSearch='',
   }
 
   return <>
-    <PageHeader eyebrow="CADASTROS DA EMPRESA" title={def.label} subtitle={def.subtitle} action={<button className="primary-btn" aria-haspopup="dialog" onClick={()=>open()}><Plus size={17}/>Adicionar {def.singular}</button>}/>
+    <PageHeader eyebrow="CADASTROS DA EMPRESA" title={resource==='professionals'?'Quem atende':def.label} subtitle={resource==='tutors'?'Responsáveis e seus pets, juntos no mesmo cadastro.':resource==='professionals'?'Cadastre você e as outras pessoas que fazem os atendimentos.':def.subtitle} action={<div className="page-header-actions">{resource==='professionals'&&currentUser&&!rows.some(row=>row.user_id===currentUser.id)&&<button className="ghost-btn" onClick={()=>{open();setForm(current=>({...current,name:currentUser.name,user_id:currentUser.id}));}}>Eu faço os atendimentos</button>}<button className="primary-btn" aria-haspopup="dialog" onClick={()=>open()}><Plus size={17}/>{resource==='professionals'?'Adicionar pessoa':`Adicionar ${def.singular}`}</button></div>}/>
     <div className="panel data-list-panel">
       <div className="list-tools"><div className="search-box"><Search size={17}/><input aria-label={`Buscar ${def.label}`} placeholder={`Buscar ${def.label.toLowerCase()}...`} value={search} onChange={event=>setSearch(event.target.value)}/></div><span className="count">{filtered.length} registros</span><button title="Atualizar" aria-label="Atualizar lista" className="icon-button" disabled={loading} onClick={()=>load()}><RefreshCw size={18}/></button></div>
       {loading ? <Empty label="Carregando registros..."/> : filtered.length ? <div className="table-wrap data-table-wrap"><table aria-label={`Cadastro de ${def.label.toLowerCase()}`} role="table"><thead role="rowgroup"><tr role="row"><th scope="col">Nome</th><th scope="col">{secondColumn}</th><th scope="col">{thirdColumn}</th><th scope="col">Ações</th></tr></thead><tbody role="rowgroup">{filtered.map(row=><tr key={row.id} role="row">
-        <td data-label="Nome" role="cell"><strong>{row.name}</strong></td><td data-label={secondColumn} role="cell">{resource === 'pets' ? row.tutor_name : resource === 'services' ? money(row.price_cents) : resource === 'tutors' ? row.phone||'Não informado' : row.active ? 'Ativo' : 'Inativo'}</td><td data-label={thirdColumn} role="cell">{resource === 'services' ? row.service_type==='transport'?'Táxi Dog · '+taxiModeLabel(row.transport_mode as TaxiMode):row.duration_minutes+' min' : resource === 'pets' ? row.species : resource === 'tutors' ? row.email||'Não informado' : null}</td>
-        <td data-label="Ações" className="data-table-actions" role="cell"><button className="table-action" aria-haspopup="dialog" onClick={()=>open(row)}>Editar</button>{resource === 'pets' && row.photo_key && <button className="table-action" onClick={async()=>{try {const result=await api<{url:string}>(`/pets/${row.id}/photo-url`);window.open(result.url,'_blank','noopener,noreferrer');} catch(error) {setError((error as Error).message);}}}>Ver foto</button>}{resource === 'professionals' && <button className="table-action" aria-haspopup="dialog" onClick={()=>{setScheduleId(row.id);setShowForm(false);}}>Horários</button>}</td>
+        <td data-label="Nome" role="cell"><strong>{row.name}</strong>{resource==='tutors'&&canManagePets&&<div className="client-pet-tags">{clientPets.filter(pet=>pet.tutor_id===row.id).map(pet=><span key={pet.id}><PawPrint size={14}/>{pet.name}</span>)}{!clientPets.some(pet=>pet.tutor_id===row.id)&&<span className="client-no-pet">Nenhum pet cadastrado</span>}</div>}</td><td data-label={secondColumn} role="cell">{resource === 'pets' ? row.tutor_name : resource === 'services' ? money(row.price_cents) : resource === 'tutors' ? row.phone||'Não informado' : row.active ? 'Ativo' : 'Inativo'}</td><td data-label={thirdColumn} role="cell">{resource === 'services' ? row.service_type==='transport'?'Táxi Dog · '+taxiModeLabel(row.transport_mode as TaxiMode):row.duration_minutes+' min' : resource === 'pets' ? row.species : resource === 'tutors' ? row.email||'Não informado' : null}</td>
+        <td data-label="Ações" className="data-table-actions" role="cell"><button className="table-action" aria-haspopup="dialog" onClick={()=>open(row)}>Editar</button>{resource==='tutors'&&canManagePets&&<button className="table-action" aria-haspopup="dialog" onClick={()=>setPetOwner({id:row.id,name:row.name})}><Plus size={14}/>Adicionar pet</button>}{resource==='tutors'&&onBook&&clientPets.some(p=>p.tutor_id===row.id)&&<button className="table-action" onClick={()=>{const pets=clientPets.filter(p=>p.tutor_id===row.id);onBook({tutor_id:row.id,...(pets.length===1?{pet_id:pets[0].id}:{})});}}><CalendarPlus size={14}/>Agendar</button>}{resource==='pets'&&onBook&&<button className="table-action" onClick={()=>onBook({tutor_id:row.tutor_id,pet_id:row.id})}><CalendarPlus size={14}/>Agendar</button>}{resource === 'pets' && row.photo_key && <button className="table-action" onClick={async()=>{try {const result=await api<{url:string}>(`/pets/${row.id}/photo-url`);window.open(result.url,'_blank','noopener,noreferrer');} catch(error) {setError((error as Error).message);}}}>Ver foto</button>}{resource === 'professionals' && <button className="table-action" aria-haspopup="dialog" onClick={()=>{setScheduleId(row.id);setShowForm(false);}}>Horários de atendimento</button>}</td>
       </tr>)}</tbody></table></div> : <Empty label={search ? 'Nenhum registro corresponde à busca.' : emptyMessages[resource]}/>}
       {resource==='professionals'&&rows.length>0&&<p className="business-form-hint">Depois do cadastro, use Horários para marcar os dias de trabalho e os serviços que cada profissional realiza. Essa configuração libera os horários na agenda.</p>}
     </div>
+    {resource==='tutors'&&canManagePets&&<ClientRegistrationDialog open={clientDialog} onClose={()=>setClientDialog(false)} onSaved={clientSaved} onError={setError} onClientOnly={()=>{setClientDialog(false);open(undefined,true);}}/>}
+    {resource==='tutors'&&petOwner&&<ExistingClientPetDialog tutor={petOwner} onClose={()=>setPetOwner(null)} onError={setError} onSaved={async()=>{setMessage('Pet cadastrado e vinculado ao cliente. Já pode agendar.');setPetOwner(null);await load();}}/>}
     {showForm && <FormDialog title={`${editing ? 'Editar' : 'Cadastrar'} ${def.singular}`} description={editing ? `Atualize as informações de ${editing.name}.` : def.subtitle} onClose={closeForm} busy={Boolean(busy)} error={dialogError||loadError} notice={dialogNotice} wide={resource === 'pets'}>
       <form onSubmit={save} className="form-grid">
         {loading && <p className="full-span muted" role="status">Carregando informações para o cadastro...</p>}

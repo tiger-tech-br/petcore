@@ -15,7 +15,8 @@ type Appointment = {
   professional_name:string; starts_at:string; status:string; services:Service[];
   taxi_dog?:{id:string;mode:'pickup'|'dropoff'|'round_trip';service_name:string;price_cents:number;cancelled_at:string|null;status:string}|null;
 };
-type AppointmentForm = {tutor_id:string; pet_id:string; professional_id:string; service_ids:string[]; starts_at:string; notes:string};
+type AppointmentForm = {tutor_id:string; pet_id:string; service_ids:string[]; starts_at:string; notes:string};
+type InitialSelection = {tutor_id:string;pet_id?:string};
 type HistoryRow = {id:string; created_at:string; actor_name:string; kind:string; reason?:string};
 
 // A API conserva os códigos de evento; somente a apresentação utiliza nomes em português.
@@ -34,11 +35,11 @@ const historyKindLabel = (kind:string):string => historyKindLabels[kind] ?? 'Alt
 type Move = 'reschedule'|'anticipate';
 type Step = 'details'|'move'|'history'|'taxi';
 export type SetupTarget = 'services'|'professionals'|'tutors'|'pets';
-type Props = {setMessage:(value:string)=>void; setError:(value:string)=>void; initialNew?:boolean; searchQuery?:string; onSetup?:(target:SetupTarget)=>void; canSetup?:(target:SetupTarget)=>boolean; canTaxiDog?:boolean;onSaved?:()=>void};
+type Props = {setMessage:(value:string)=>void; setError:(value:string)=>void; initialNew?:boolean; initialSelection?:InitialSelection; searchQuery?:string; onSetup?:(target:SetupTarget)=>void; canSetup?:(target:SetupTarget)=>boolean; canTaxiDog?:boolean;canReviewPublic?:boolean;onSaved?:()=>void};
 const blankOptions:Options = {tutors:[], pets:[], professionals:[], services:[]};
-const newForm = (date:string,timezone=schedulingTimezone,now=Date.now()):AppointmentForm => ({tutor_id:'', pet_id:'', professional_id:'', service_ids:[], starts_at:defaultAppointmentTime(date,timezone,now), notes:''});
+const newForm = (date:string,timezone=schedulingTimezone,now=Date.now()):AppointmentForm => ({tutor_id:'', pet_id:'', service_ids:[], starts_at:defaultAppointmentTime(date,timezone,now), notes:''});
 
-export default function CalendarPage({setMessage, setError, initialNew=false, searchQuery='', onSetup, canSetup, canTaxiDog=false, onSaved}:Props) {
+export default function CalendarPage({setMessage, setError, initialNew=false, initialSelection, searchQuery='', onSetup, canSetup, canTaxiDog=false, onSaved}:Props) {
   const [date,setDate] = useState(today());
   const [mode,setMode] = useState<'day'|'week'>('day');
   const [professionalFilter,setProfessionalFilter] = useState('');
@@ -67,6 +68,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   const loadRequest = useRef(0);
   const historyRequest = useRef(0);
   const initializedOptions = useRef(false);
+  const initialRequestConsumed = useRef(false);
   const initialDate = useRef(date);
   const timezone=options.timezone||schedulingTimezone;
   const taxiOptions=options.taxi_dog||{enabled:false,services:[],drivers:[]};
@@ -111,7 +113,12 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   }
   useEffect(()=>{void load(); return ()=>{loadRequest.current++;};},[date,mode,timezone]);
   useEffect(()=>{const timer=window.setInterval(()=>setClock(Date.now()),30000);return()=>window.clearInterval(timer);},[]);
-  useEffect(()=>{if(initialNew) openNew();},[initialNew]);
+  useEffect(()=>{
+    if(!initialNew){initialRequestConsumed.current=false;return;}
+    if(initialRequestConsumed.current)return;
+    initialRequestConsumed.current=true;
+    openNew(initialSelection);
+  },[initialNew,initialSelection?.tutor_id,initialSelection?.pet_id]);
   useEffect(()=>()=>{historyRequest.current++;taxiRequest.current++;},[]);
 
   const listed = rows.filter(item=>(!professionalFilter||item.professional_id===professionalFilter)&&
@@ -119,6 +126,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
   const pets = options.pets.filter(pet=>pet.tutor_id===form.tutor_id);
   const selectedServices = options.services.filter(service=>form.service_ids.includes(service.id));
   const duration = selectedServices.reduce((sum,service)=>sum+service.duration_minutes,0);
+  const serviceTotal=selectedServices.reduce((sum,service)=>sum+service.price_cents,0);
   useEffect(()=>{
     if(!showForm)return;
     setTaxiForm(current=>{
@@ -128,10 +136,10 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     });
   },[showForm,form.starts_at,duration,timezone]);
 
-  function openNew() {
+  function openNew(selection?:InitialSelection) {
     historyRequest.current++;
     taxiRequest.current++;setTaxiLoading(false);setTaxiBooking(null);
-    const next=newForm(date,timezone,Date.now()+clockOffset);
+    const next={...newForm(date,timezone,Date.now()+clockOffset),...(selection?{tutor_id:selection.tutor_id,pet_id:selection.pet_id||''}:{})};
     setSelected(null); setStep('details'); setDialogError(''); setForm(next);setTaxiForm(emptyTaxiForm(next.starts_at,timezone)); setClock(Date.now());setShowForm(true);
   }
   function openDetails(item:Appointment) {
@@ -176,10 +184,10 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     try {
       const start=zonedToISO(form.starts_at,timezone);
       if(Date.parse(start)<=Date.now()+clockOffset)throw Error('Escolha uma data e um horário futuros para o agendamento.');
-      await api('/calendar/appointments','POST',{...form,starts_at:start,...(taxiAvailable?{taxi_dog:taxiDraftFromForm(taxiForm,taxiOptions.services,timezone)}:{})});
-      setMessage('Atendimento agendado e gravado no banco.'); setShowForm(false);
+      const saved=await api<{professional_id:string}>('/calendar/appointments','POST',{...form,starts_at:start,...(taxiAvailable?{taxi_dog:taxiDraftFromForm(taxiForm,taxiOptions.services,timezone)}:{})});
+      setMessage('Atendimento agendado com sucesso.'); setShowForm(false);
       onSaved?.();
-      await showSavedAppointment(form.starts_at,form.professional_id);
+      await showSavedAppointment(form.starts_at,saved.professional_id);
     } catch (error) {setDialogError((error as Error).message);} finally {setSaving(false);}
   }
   async function changeStatus(id:string,next:string) {
@@ -243,7 +251,7 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
     : step==='history' ? `Histórico de ${selected.pet_name}` : step==='taxi'?`Táxi Dog de ${selected.pet_name}`:`Atendimento de ${selected.pet_name}` : '';
   const setupNeeds:{target:SetupTarget;missing:boolean;description:string;button:string}[]=[
     {target:'services',missing:!options.services.length,description:'serviços com preço e duração',button:'Ir para Serviços'},
-    {target:'professionals',missing:!options.professionals.length,description:'um profissional com jornada e serviços habilitados',button:'Ir para Profissionais'},
+    {target:'professionals',missing:!options.professionals.length,description:'quem atende e seus horários de trabalho',button:'Definir quem atende'},
     {target:'tutors',missing:!options.tutors.length,description:'o cliente (tutor responsável)',button:'Ir para Clientes'},
     {target:'pets',missing:!options.pets.length,description:'o pet vinculado ao cliente',button:'Ir para Pets'}
   ];
@@ -252,20 +260,20 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
 
   return <div className="calendar-page">
     <PageHeader eyebrow="ROTINA DE ATENDIMENTOS" title="Agenda de atendimentos"
-      subtitle="Organize horários, serviços e profissionais sem conflitos de reserva."
-      action={<button className="primary-btn" onClick={openNew} aria-haspopup="dialog"><Plus size={17}/>Novo agendamento</button>}/>
+      subtitle="Escolha o pet, o serviço e o horário. O sistema define quem atende."
+      action={<button className="primary-btn" onClick={()=>openNew()} aria-haspopup="dialog"><Plus size={17}/>Agendar atendimento</button>}/>
     <div className="panel calendar-panel">
       <div className="list-tools calendar-tools">
         <div className="calendar-period-filter"><span>Visualização</span><div className="segmented" aria-label="Período da agenda"><button className={mode==='day'?'chosen':''} aria-pressed={mode==='day'} onClick={()=>setMode('day')}>Dia</button><button className={mode==='week'?'chosen':''} aria-pressed={mode==='week'} onClick={()=>setMode('week')}>Semana</button></div></div>
         <label className="date-select">Data <input type="date" value={date} onChange={event=>setDate(event.target.value)}/></label>
-        <label className="calendar-professional-filter">Profissional<select aria-label="Filtrar por profissional" value={professionalFilter} onChange={event=>setProfessionalFilter(event.target.value)}><option value="">Todos</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
+        {options.professionals.length>1&&<label className="calendar-professional-filter">Quem atende<select aria-label="Filtrar por profissional" value={professionalFilter} onChange={event=>setProfessionalFilter(event.target.value)}><option value="">Todos</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>}
         <button className="icon-button calendar-refresh" onClick={load} title="Atualizar agenda" aria-label="Atualizar agenda" disabled={loading}><RefreshCw size={18}/></button>
       </div>
       {loading?<Empty label="Consultando a agenda..."/>:loadError?<div className="business-setup-hint"><p>Não foi possível consultar a agenda. Tente carregar novamente antes de criar um atendimento.</p><button type="button" className="text-link" onClick={()=>void load()}>Tentar novamente</button></div>:listed.length?<div className="appointment-list">{listed.map(item=><button key={item.id} className={`appointment-line ${selected?.id===item.id?'selected':''}`} onClick={()=>openDetails(item)} aria-haspopup="dialog">
         <div className="appointment-time"><Clock3 size={16}/>{new Date(item.starts_at).toLocaleTimeString('pt-BR',{timeZone:timezone,hour:'2-digit',minute:'2-digit'})}</div>
-        <div className="appointment-detail"><strong>{item.pet_name}</strong><span className="calendar-client"><span className="calendar-detail-label">Cliente:</span> {item.tutor_name}</span><small><span className="calendar-detail-label">Serviços:</span> {item.services.map(service=>service.name).join(' + ')}</small><small><span className="calendar-detail-label">Profissional:</span> {item.professional_name}</small>{item.taxi_dog&&!item.taxi_dog.cancelled_at&&<small className="taxi-calendar-summary"><Truck size={16}/>Táxi Dog · {taxiModeLabel(item.taxi_dog.mode)}</small>}</div>
+        <div className="appointment-detail"><strong>{item.pet_name}</strong><span className="calendar-client"><span className="calendar-detail-label">Cliente:</span> {item.tutor_name}</span><small><span className="calendar-detail-label">Serviços:</span> {item.services.map(service=>service.name).join(' + ')}</small><small><span className="calendar-detail-label">Quem atende:</span> {item.professional_name}</small>{item.taxi_dog&&!item.taxi_dog.cancelled_at&&<small className="taxi-calendar-summary"><Truck size={16}/>Táxi Dog · {taxiModeLabel(item.taxi_dog.mode)}</small>}</div>
         <Status status={item.status}/>
-      </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.map(item=>item.description).join('; ')}. Abra Novo agendamento para ver por onde começar.`:'Não há atendimentos no período selecionado. Use Novo agendamento para reservar um horário.'}/>}
+      </button>)}</div>:<Empty label={missingSetup.length?`Antes do primeiro agendamento, cadastre ${missingSetup.map(item=>item.description).join('; ')}. Abra Agendar atendimento para ver por onde começar.`:'Não há atendimentos no período selecionado. Use Agendar atendimento para reservar um horário.'}/>}
     </div>
 
     {selected&&<FormDialog title={detailsTitle} description={`${selected.tutor_name} · ${selected.professional_name} · ${dateTime(selected.starts_at)}`} onClose={closeDetails} busy={saving} error={dialogError} wide>
@@ -312,22 +320,29 @@ export default function CalendarPage({setMessage, setError, initialNew=false, se
       </>}
     </FormDialog>}
 
-    {showForm&&<FormDialog title="Novo agendamento" description={!loading&&nextSetup?'Prepare os cadastros abaixo para começar a reservar os horários.':'Preencha os dados do atendimento e confirme para reservar o horário.'} onClose={closeNew} busy={saving} error={dialogError||loadError} wide>
+    {showForm&&<FormDialog title="Agendar atendimento" description={!loading&&nextSetup?'Prepare os cadastros abaixo para começar.':'Cliente e pet, serviço e horário. Confirme para reservar.'} onClose={closeNew} busy={saving} error={dialogError||loadError} wide>
       {loading&&<p role="status" className="muted">Carregando opções do agendamento...</p>}
       <form className="form-grid" onSubmit={create} aria-busy={saving}>
-        {!loading&&!loadError&&nextSetup&&<div className="full-span business-setup-hint calendar-setup-guide"><strong>Vamos preparar sua agenda.</strong><p>Para reservar um horário, ainda é preciso cadastrar:</p><ul>{missingSetup.map(item=><li key={item.target}>{item.description}</li>)}</ul><p>Comece pelo cadastro indicado abaixo. Depois, volte à Agenda e escolha Novo agendamento.</p>{onSetup&&canSetup?.(nextSetup.target)?<button type="button" className="primary-btn" disabled={saving} onClick={()=>prepareSetup(nextSetup.target)}>{nextSetup.button}</button>:<p>Peça ao responsável pelo pet shop para preparar o cadastro de {nextSetup.description} ou liberar o acesso necessário.</p>}</div>}
+        {!loading&&!loadError&&nextSetup&&<div className="full-span business-setup-hint calendar-setup-guide"><strong>Vamos preparar sua agenda.</strong><p>Para reservar um horário, ainda é preciso cadastrar:</p><ul>{missingSetup.map(item=><li key={item.target}>{item.description}</li>)}</ul><p>Comece pelo cadastro indicado abaixo. Depois, volte à Agenda para marcar o atendimento.</p>{onSetup&&canSetup?.(nextSetup.target)?<button type="button" className="primary-btn" disabled={saving} onClick={()=>prepareSetup(nextSetup.target)}>{nextSetup.button}</button>:<p>Peça ao responsável pelo pet shop para preparar o cadastro de {nextSetup.description} ou liberar o acesso necessário.</p>}</div>}
         {!loading&&!loadError&&!missingSetup.length&&<>
-        <label>Cliente (tutor)<select required value={form.tutor_id} disabled={saving||loading} onChange={event=>setForm({...form,tutor_id:event.target.value,pet_id:''})}><option value="">Selecione um cliente</option>{options.tutors.map(tutor=><option key={tutor.id} value={tutor.id}>{tutor.name}</option>)}</select></label>
-        <label>Pet<select required value={form.pet_id} disabled={saving||loading} onChange={event=>setForm({...form,pet_id:event.target.value})}><option value="">Selecione um pet</option>{pets.map(pet=><option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
-        {!loading&&!loadError&&form.tutor_id&&!pets.length&&options.pets.length>0&&<div className="full-span business-setup-hint"><p>Este cliente ainda não tem um pet cadastrado. Cadastre o animal e vincule-o ao cliente antes de agendar.</p>{onSetup&&canSetup?.('pets')?<button type="button" className="text-link" disabled={saving} onClick={()=>prepareSetup('pets')}>Ir para Pets</button>:<p>Peça ao responsável pelo pet shop para cadastrar o pet.</p>}</div>}
-        <label>Profissional<select required value={form.professional_id} disabled={saving||loading} onChange={event=>setForm({...form,professional_id:event.target.value})}><option value="">Selecione um profissional</option>{options.professionals.map(professional=><option key={professional.id} value={professional.id}>{professional.name}</option>)}</select></label>
-        <label>Início (horário da empresa)<input required type="datetime-local" min={minimumTime} value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
-        <p className="full-span business-form-hint">Agende a partir de hoje, em um horário futuro no fuso da empresa.</p>
-        {taxiAvailable&&<TaxiDogFields value={taxiForm} onChange={setTaxiForm} options={taxiOptions} timezone={timezone} minimumTime={minimumTime} appointmentStart={form.starts_at} duration={duration} disabled={saving||loading}/>}
-        <div className="full-span"><strong className="field-title">Serviços</strong><div className="checks">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/>{service.name} · {service.duration_minutes} min · {money(service.price_cents)}</label>)}</div><p className="muted">Selecione os serviços. Tempo total: {duration} minutos.</p><p className="business-form-hint">O profissional precisa ter esses serviços habilitados e jornada disponível em Profissionais → Horários.</p></div>
-        <label className="full-span">Observações<textarea value={form.notes} disabled={saving} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
+        <fieldset className="full-span calendar-form-section"><legend>1. Cliente e pet</legend><div className="form-grid">
+          <label>Cliente<select required value={form.tutor_id} disabled={saving||loading} onChange={event=>setForm({...form,tutor_id:event.target.value,pet_id:''})}><option value="">Selecione um cliente</option>{options.tutors.map(tutor=><option key={tutor.id} value={tutor.id}>{tutor.name}</option>)}</select></label>
+          <label>Pet<select required value={form.pet_id} disabled={saving||loading||!form.tutor_id} onChange={event=>setForm({...form,pet_id:event.target.value})}><option value="">{form.tutor_id?'Selecione um pet':'Escolha o cliente primeiro'}</option>{pets.map(pet=><option key={pet.id} value={pet.id}>{pet.name}</option>)}</select></label>
+          {form.tutor_id&&!pets.length&&<div className="full-span business-setup-hint"><p>Este cliente ainda não tem um pet cadastrado. Abra o cliente para adicionar seu pet.</p>{onSetup&&canSetup?.('tutors')?<button type="button" className="text-link" disabled={saving} onClick={()=>prepareSetup('tutors')}>Ver clientes</button>:onSetup&&canSetup?.('pets')?<button type="button" className="text-link" disabled={saving} onClick={()=>prepareSetup('pets')}>Adicionar pet</button>:<p>Peça ao responsável pelo pet shop para cadastrar o pet.</p>}</div>}
+        </div></fieldset>
+        <fieldset className="full-span calendar-form-section"><legend>2. Serviço e horário</legend><div className="form-grid">
+          <div className="full-span calendar-service-choices" role="group" aria-label="Serviços do atendimento">{options.services.map(service=><label key={service.id}><input type="checkbox" checked={form.service_ids.includes(service.id)} disabled={saving||loading} onChange={event=>setForm({...form,service_ids:event.target.checked?[...form.service_ids,service.id]:form.service_ids.filter(id=>id!==service.id)})}/><span><strong>{service.name}</strong><small>{service.duration_minutes} minutos · {money(service.price_cents)}</small></span></label>)}</div>
+          <label className="full-span calendar-start-field">Data e horário<input required type="datetime-local" min={minimumTime} value={form.starts_at} disabled={saving||loading} onChange={event=>setForm({...form,starts_at:event.target.value})}/></label>
+          <p className="full-span calendar-automatic-assignment">Quem atende é escolhido automaticamente, conforme os serviços e a disponibilidade.</p>
+          <p className="full-span business-form-hint">Escolha um horário futuro. Se não houver disponibilidade, você poderá escolher outro.</p>
+          {selectedServices.length>0&&<div className="full-span calendar-booking-total"><span>Duração: <strong>{duration} minutos</strong></span><span>Serviços: <strong>{money(serviceTotal)}</strong></span></div>}
+        </div></fieldset>
+        <details className="full-span calendar-optional-fields"><summary>{taxiAvailable?'Observações e Táxi Dog (opcional)':'Adicionar observações (opcional)'}</summary><div className="form-grid">
+          <label className="full-span">Observações<textarea value={form.notes} maxLength={3000} rows={3} disabled={saving} onChange={event=>setForm({...form,notes:event.target.value})}/></label>
+          {taxiAvailable&&<TaxiDogFields value={taxiForm} onChange={setTaxiForm} options={taxiOptions} timezone={timezone} minimumTime={minimumTime} appointmentStart={form.starts_at} duration={duration} disabled={saving||loading}/>}
+        </div></details>
         </>}
-        <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={closeNew}>{!loading&&missingSetup.length?'Fechar':'Cancelar'}</button>{!loading&&!loadError&&!missingSetup.length&&<button type="submit" className="primary-btn" disabled={saving||!form.service_ids.length}>{saving?'Agendando...':'Agendar'}</button>}</div>
+        <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={saving} onClick={closeNew}>{!loading&&missingSetup.length?'Fechar':'Cancelar'}</button>{!loading&&!loadError&&!missingSetup.length&&<button type="submit" className="primary-btn" disabled={saving||!form.service_ids.length}>{saving?'Agendando...':'Confirmar agendamento'}</button>}</div>
       </form>
     </FormDialog>}
   </div>;

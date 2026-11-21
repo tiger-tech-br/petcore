@@ -5,6 +5,7 @@ import GlobalSearch from './GlobalSearch';
 import {api, dateTime, type Session} from './api';
 import {listenNativeBack} from './nativeAndroid';
 import {PlatformSupportBell} from './PlatformSupportAlerts';
+import './styles/_daily-ux.scss';
 
 export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
 type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;onOpenPlatformSupport?:()=>void;children:ReactNode};
@@ -12,22 +13,23 @@ type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(vie
 export default function AppShell({session,view,go,onSearch,company,logout,onOpenPlatformSupport,children}:Props) {
   const [drawer,setDrawer] = useState(false);
   const {user,companies} = session;
-  const can=(p?:string)=>!p||user.role==='admin'||user.permissions.includes(p);
+  const can=(p?:string)=>p==='inventory'&&session.features?.retail===false?false:!p||user.role==='admin'||user.permissions.includes(p);
   const role=user.role==='platform'?'Plataforma':user.role==='admin'?'Administrador':'Funcionário';
   useEffect(()=>listenNativeBack(()=>{if(!drawer)return false;setDrawer(false);return true;},true),[drawer]);
   const nav = [
-    {key:'overview',label:'Visão geral',icon:Home,show:true},
-    {key:'calendar',label:'Agenda',icon:CalendarDays,show:can('appointments')},
-    {key:can('tutors')?'tutors':'pets',label:'Clientes e pets',icon:PawPrint,show:can('tutors')||can('pets')},
-    {key:'crm',label:'CRM',icon:ContactRound,show:can('crm')},
-    {key:'professionals',label:'Profissionais',icon:UsersRound,show:can('professionals')},
-    {key:'services',label:'Serviços',icon:Scissors,show:can('services')},
-    {key:'waitlist',label:'Lista de espera',icon:CalendarClock,show:can('waitlist')},
-    {key:'taxi-dog',label:'Táxi Dog',icon:Truck,show:session.features?.taxi_dog===true&&can('taxi_dog')},
-    {key:'inventory',label:'Produtos e estoque',icon:Package,show:can('inventory')},
-    {key:'finance',label:'Financeiro',icon:Wallet,show:can('finance')},
-    {key:'reports',label:'Relatórios',icon:BarChart3,show:can('finance')}
+    {key:'overview',label:'Hoje',icon:Home,show:true,group:'Dia a dia'},
+    {key:'calendar',label:'Agenda',icon:CalendarDays,show:can('appointments'),group:'Dia a dia'},
+    {key:can('tutors')?'tutors':'pets',label:'Clientes e pets',icon:PawPrint,show:can('tutors')||can('pets'),group:'Dia a dia'},
+    {key:'waitlist',label:'Lista de espera',icon:CalendarClock,show:can('waitlist'),group:'Dia a dia'},
+    {key:'taxi-dog',label:'Táxi Dog',icon:Truck,show:session.features?.taxi_dog===true&&can('taxi_dog'),group:'Dia a dia'},
+    {key:'finance',label:'Financeiro',icon:Wallet,show:can('finance'),group:'Gestão'},
+    {key:'inventory',label:'Produtos e estoque',icon:Package,show:can('inventory'),group:'Gestão'},
+    {key:'crm',label:'Relacionamento',description:'Contatos e retornos',icon:ContactRound,show:can('crm'),group:'Gestão'},
+    {key:'reports',label:'Relatórios',icon:BarChart3,show:can('finance'),group:'Gestão'},
+    {key:'services',label:'Serviços e preços',icon:Scissors,show:can('services'),group:'Preparação'},
+    {key:'professionals',label:'Quem atende e horários',icon:UsersRound,show:can('professionals'),group:'Preparação'}
   ];
+  const navGroups=['Dia a dia','Gestão','Preparação'].map(label=>({label,items:nav.filter(item=>item.show&&item.group===label)})).filter(group=>group.items.length>0);
   useEffect(()=>{if(!drawer)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setDrawer(false);};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[drawer]);
   function navigate(key:MenuKey){go(key);setDrawer(false);}
   function pending(){navigate('overview');setTimeout(()=>document.getElementById('pending-panel')?.scrollIntoView({behavior:'smooth',block:'center'}),100);}
@@ -35,7 +37,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,onOpen
     {drawer&&<button className="shade" onClick={()=>setDrawer(false)} aria-label="Fechar menu"/>}
     <aside className={`sidebar ${drawer?'open':''}`} aria-label="Navegação PetCore">
       <div className="sidebar-brand"><Brand inverse/><button className="close-menu" onClick={()=>setDrawer(false)} aria-label="Fechar menu"><X/></button></div>
-      <nav aria-label="Menu principal">{user.role==='platform'?<button className="nav-item active" onClick={()=>navigate('platform')}><Building2 size={23}/>Empresas assinantes</button>:nav.filter(n=>n.show).map(n=><button key={n.key} className={`nav-item ${view===n.key||(n.label==='Clientes e pets'&&['tutors','pets'].includes(view))?'active':''}`} aria-current={view===n.key?'page':undefined} onClick={()=>navigate(n.key as MenuKey)}><n.icon size={23}/>{n.label}</button>)}</nav>
+      <nav aria-label="Menu principal">{user.role==='platform'?<button className="nav-item active" onClick={()=>navigate('platform')}><Building2 size={23}/>Empresas assinantes</button>:navGroups.map(group=><div className="daily-nav-group" key={group.label}><p className="daily-nav-label">{group.label}</p>{group.items.map(item=>{const active=view===item.key||['tutors','pets'].includes(item.key)&&['tutors','pets'].includes(view);return <button key={item.key} className={`nav-item ${active?'active':''}`} aria-current={active?'page':undefined} onClick={()=>navigate(item.key as MenuKey)}><item.icon size={23}/><span className="daily-nav-text">{item.label}{item.description&&<small>{item.description}</small>}</span></button>;})}</div>)}</nav>
       <div className="sidebar-footer">{user.role!=='platform'&&can('team')&&<button className={`nav-item ${view==='team'?'active':''}`} aria-current={view==='team'?'page':undefined} onClick={()=>navigate('team')}><Settings2 size={23}/>Configurações</button>}{user.role!=='platform'&&<><button className={`nav-item ${view==='subscription'?'active':''}`} aria-current={view==='subscription'?'page':undefined} onClick={()=>navigate('subscription')}><Star size={23}/>Plano e assinatura</button><button className={`nav-item ${view==='support'?'active':''}`} aria-current={view==='support'?'page':undefined} onClick={()=>navigate('support')}><Headphones size={23}/>Suporte</button>{user.role==='admin'&&<button className={`nav-item ${view==='privacy'?'active':''}`} aria-current={view==='privacy'?'page':undefined} onClick={()=>navigate('privacy')}><ShieldCheck size={23}/>Privacidade</button>}</>}<button className="nav-item" onClick={logout}><LogOut size={23}/>Sair</button></div>
     </aside>
     <main className="main-content">

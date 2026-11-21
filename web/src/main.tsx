@@ -9,6 +9,8 @@ import DataPage, {type Resource} from './DataPage';
 import CalendarPage from './CalendarPage';
 import WaitlistPage from './WaitlistPage';
 import TeamPage from './TeamPage';
+import PublicBookingPage from './PublicBookingPage';
+import PublicBookingInbox from './PublicBookingInbox';
 import TaxiDogPage from './TaxiDogPage';
 import PlatformPage from './PlatformPage';
 import CrmPage from './CrmPage';
@@ -29,9 +31,12 @@ function App(){
  const legalBack=useRef('/');
  const [supportTicketId,setSupportTicketId]=useState<string|null>(null);
  const [platformSupportRequest,setPlatformSupportRequest]=useState(0);
+ const [newClient,setNewClient]=useState(false),[bookingPreset,setBookingPreset]=useState<{tutor_id:string;pet_id?:string}|undefined>(),[calendarRevision,setCalendarRevision]=useState(0);
  function readLegal(kind:'privacy'|'terms'){legalBack.current=location.pathname+location.search;history.pushState(null,'',`/${kind}`);setLegalView(kind);}
  function closeLegal(){history.replaceState(null,'',legalBack.current);setLegalView(null);}
- function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setSupportTicketId(null);setError('');setMessage('');}
+ function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setNewClient(false);setBookingPreset(undefined);setSupportTicketId(null);setError('');setMessage('');}
+ function registerClient(){navigate('tutors');setNewClient(true);}
+ function bookForClient(selection:{tutor_id:string;pet_id?:string}){navigate('calendar');setBookingPreset(selection);setNewBooking(true);}
  useEffect(()=>listenNativeBack(()=>{
   if(legalView){closeLegal();return true;}
   if(session&&session.user.role!=='platform'&&view!=='overview'){navigate('overview');return true;}
@@ -61,7 +66,7 @@ function App(){
  if(checking)return <div className="full-center"><PawPrint/><p>Conectando ao PetCore...</p></div>;
  if(!session)return <AuthScreen onDone={refresh} onReadLegal={readLegal}/>;
  const {user}=session;
- const permitted=(permission?:string)=>!permission||user.role==='admin'||user.permissions.includes(permission);
+ const permitted=(permission?:string)=>permission==='inventory'&&session.features?.retail===false?false:!permission||user.role==='admin'||user.permissions.includes(permission);
  const termsRequired=session.legal?.required===true;
  const needsPlan=user.role==='admin'&&Boolean(user.tenantId)&&Boolean(session.subscription)&&!session.subscription?.onboarding_completed_at;
  return <><AppShell session={session} view={view} go={navigate} onSearch={(target,query)=>{navigate(target);setSearchQuery(query);}} company={company} logout={logout} onOpenPlatformSupport={()=>{navigate('platform');setPlatformSupportRequest(value=>value+1);}}>
@@ -69,10 +74,10 @@ function App(){
   {user.role!=='platform'&&session.subscription?.onboarding_completed_at&&!session.subscription.writable&&<div className="commercial-readonly-banner" role="status"><AlertCircle size={21}/><div><strong>Seu acesso está disponível para consulta.</strong><p>{user.role==='admin'?'Regularize a assinatura para voltar a cadastrar e alterar informações. Seus dados, suporte e solicitações de privacidade continuam disponíveis.':'Peça ao responsável pelo pet shop para conferir a assinatura. Seus dados continuam disponíveis para consulta.'}</p></div>{view!=='subscription'&&<button type="button" className="text-link" onClick={()=>navigate('subscription')}>Ver assinatura</button>}</div>}
   {searchQuery&&<div className="search-context">Resultados para “{searchQuery}”<button className="text-link" onClick={()=>setSearchQuery('')}><X size={14}/>Limpar busca</button></div>}
   {user.role==='platform'?<PlatformPage setError={setError} setMessage={setMessage} supportRequest={platformSupportRequest} initialTicketId={supportTicketId}/>:<>
-   {view==='overview'&&<Overview key={user.tenantId} go={navigate} can={permitted} isAdmin={user.role==='admin'} onNew={()=>{navigate('calendar');setNewBooking(true);}}/>}
+   {view==='overview'&&<Overview key={user.tenantId} go={navigate} can={permitted} isAdmin={user.role==='admin'} onRegisterClient={registerClient} onNew={()=>{navigate('calendar');setNewBooking(true);}}/>}
    {(view==='tutors'||view==='pets')&&<div className="resource-tabs" aria-label="Cadastros">{permitted('tutors')&&<button className={view==='tutors'?'selected':''} onClick={()=>navigate('tutors')}><UsersRound size={17}/>Clientes</button>}{permitted('pets')&&<button className={view==='pets'?'selected':''} onClick={()=>navigate('pets')}><PawPrint size={17}/>Pets</button>}</div>}
-   {(['tutors','pets','professionals','services'] as MenuKey[]).includes(view)&&permitted(view)&&<DataPage key={view+'-'+user.tenantId+'-'+searchQuery} resource={view as Resource} initialSearch={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
-   {view==='calendar'&&permitted('appointments')&&<CalendarPage key={user.tenantId} initialNew={newBooking} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} canTaxiDog={permitted('taxi_dog')} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);}}/>}
+   {(['tutors','pets','professionals','services'] as MenuKey[]).includes(view)&&permitted(view)&&<DataPage key={view+'-'+user.tenantId+'-'+searchQuery} resource={view as Resource} initialSearch={searchQuery} initialNew={newClient} onFormOpened={()=>setNewClient(false)} onBook={permitted('appointments')?bookForClient:undefined} currentUser={{id:user.id,name:user.name}} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
+   {view==='calendar'&&permitted('appointments')&&<>{(user.role==='admin'||user.permissions.includes('agenda:all'))&&<PublicBookingInbox key={'inbox-'+user.tenantId} setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} onChanged={()=>setCalendarRevision(value=>value+1)}/>}<CalendarPage key={user.tenantId+'-'+calendarRevision} initialNew={newBooking} initialSelection={bookingPreset} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} canTaxiDog={session.features?.taxi_dog===true&&permitted('taxi_dog')} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);setBookingPreset(undefined);}}/></>}
    {view==='taxi-dog'&&permitted('taxi_dog')&&<TaxiDogPage key={user.tenantId} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
    {view==='waitlist'&&permitted('waitlist')&&<WaitlistPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='crm'&&permitted('crm')&&<CrmPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
@@ -82,9 +87,10 @@ function App(){
    {view==='privacy'&&user.role==='admin'&&<PrivacyPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='subscription'&&<SubscriptionPage key={user.tenantId} setMessage={setMessage} setError={setError} onOpenSupport={id=>{navigate('support');setSupportTicketId(id);}}/>}
    {view==='support'&&<SupportPage key={user.tenantId} setMessage={setMessage} setError={setError} initialTicketId={supportTicketId}/>}
-   {view==='team'&&permitted('team')&&<TeamPage key={user.tenantId} setMessage={setMessage} setError={setError} onSettingsSaved={refresh}/>}
+   {view==='team'&&permitted('team')&&<TeamPage key={user.tenantId} isAdmin={user.role==='admin'} setMessage={setMessage} setError={setError} onSettingsSaved={refresh}/>}
   </>}
  </AppShell>{termsRequired?<TermsConsentDialog version={session.legal!.version} onAccepted={()=>void refresh()} onRead={readLegal} onLogout={()=>void logout()}/>:needsPlan?<PlanOnboardingDialog onDone={async(plan)=>{await refresh();navigate(plan&&plan!=='free'?'subscription':'overview');}} onLogout={()=>void logout()}/>:null}</>;
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App/></React.StrictMode>);
+const publicBookingToken=/^\/agendar\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{publicBookingToken?<PublicBookingPage token={publicBookingToken}/>:<App/>}</React.StrictMode>);
