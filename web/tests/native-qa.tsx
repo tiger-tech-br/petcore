@@ -77,6 +77,7 @@ let qaPublicSettings={enabled:parameters.get('public-state')!=='disabled',token:
 const qaPublicRequests=[{id:'10000000-0000-4000-8000-000000000031',receipt:'b'.repeat(40),status:'pending',starts_at:`${futureDay(1).slice(0,10)}T10:00:00-03:00`,ends_at:`${futureDay(1).slice(0,10)}T11:00:00-03:00`,created_at:qaTimestamp,updated_at:qaTimestamp,appointment_id:null as string|null,reviewed_at:null as string|null,rejection_reason:'',tutor:{name:'Ana Exemplo com Sobrenome Comprido',phone:'(11) 90000-0001',email:'ana.contato.demonstracao@example.test'},pet:{name:'Luna',species:'Cachorro',size:'pequeno',breed:'Shih-tzu'},services},
  {id:'10000000-0000-4000-8000-000000000032',receipt:'c'.repeat(40),status:'pending',starts_at:`${futureDay(2).slice(0,10)}T14:30:00-03:00`,ends_at:`${futureDay(2).slice(0,10)}T15:00:00-03:00`,created_at:qaTimestamp,updated_at:qaTimestamp,appointment_id:null as string|null,reviewed_at:null as string|null,rejection_reason:'',tutor:{name:'Bruno Exemplo',phone:'(11) 90000-0002',email:''},pet:{name:'Thor',species:'Cachorro',size:'grande',breed:'Sem raça definida'},services:[services[0]]}];
 const qaPublicReceipts=new Map<string,{receipt:string;message:string;ok:boolean;status:string}>();
+const qaClientRegistrations=new Map<string,unknown>();let qaClientSubmitCalls=0;
 let qaPublicSlotsCalls=0,qaPublicSubmitCalls=0;
 const fixtureExportTicket={id:'10000000-0000-4000-8000-000000000021',subject:'Exportação dos dados da Vila Pet • solicitação fictícia do administrador',status:'in_progress',created_at:qaTimestamp};
 let fixtureSupportReads=0;
@@ -140,7 +141,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
     qaPublicSubmitCalls++;const key=String(body.idempotency_key||'');
     if(!key)return reply({error:'A prévia precisa de identificador de envio.'},422);
     const existing=qaPublicReceipts.get(key),saved=existing??{ok:true,receipt:'d'.repeat(40),status:'pending',message:qaPublicNotice};qaPublicReceipts.set(key,saved);
-    if(parameters.get('public-state')==='uncertain'&&qaPublicSubmitCalls===1)throw new TypeError('Prévia: conexão interrompida após registrar pedido fictício.');
+    if(['uncertain','rate-error'].includes(parameters.get('public-state')||'')&&qaPublicSubmitCalls===1)throw new TypeError('Prévia: conexão interrompida após registrar pedido fictício.');
     if(parameters.get('public-state')==='rate-error'&&qaPublicSubmitCalls===2)return reply({error:'Prévia: aguarde antes de verificar novamente.'},429);
     return reply(saved,201);
   }
@@ -169,6 +170,14 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/auth/me')return reply(session);
   if(method==='GET'&&path==='/notifications')return reply({items:[],unreadCount:0});
   if(method==='GET'&&path==='/calendar/options')return reply(options());
+  if(method==='POST'&&path==='/data/clients-with-pets'){
+    qaClientSubmitCalls++;const key=String(body.idempotency_key||'');if(!key)return reply({error:'Identificador de envio obrigatório.'},422);
+    let saved=qaClientRegistrations.get(key);
+    if(!saved){const owner=body.tutor as Record<string,any>,animals=body.pets as Record<string,any>[];const tutor={id:crypto.randomUUID(),name:owner.name,phone:owner.phone||'',email:owner.email||''};tutors.push(tutor);const added=animals.map(pet=>({...pet,id:crypto.randomUUID(),tutor_id:tutor.id,tutor_name:tutor.name,name:String(pet.name),species:String(pet.species)}));pets.push(...added);saved={tutor,pets:added};qaClientRegistrations.set(key,saved);}
+    if(['uncertain','rate-error'].includes(parameters.get('client-state')||'')&&qaClientSubmitCalls===1)throw new TypeError('Prévia: envio fictício salvo antes da queda de conexão.');
+    if(parameters.get('client-state')==='rate-error'&&qaClientSubmitCalls===2)return reply({error:'Prévia: aguarde para verificar novamente.'},429);
+    return reply(saved,201);
+  }
   if(method==='GET'&&path==='/data/tutors')return reply(tutors);
   if(method==='GET'&&path==='/data/pets')return reply(pets);
   if(method==='GET'&&path==='/data/services')return reply([...services,...fixtureTaxiServices.map(item=>({...item,duration_minutes:0}))]);
@@ -248,7 +257,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='POST'&&path==='/auth/logout')return reply({ok:true});
   if(method==='POST'&&path==='/auth/password/forgot')return reply({message:'Prévia local: nenhum e-mail foi enviado.'});
   if(method==='POST'&&path==='/calendar/appointments'){
-    const tutor=tutors.find(item=>item.id===body.tutor_id),pet=pets.find(item=>item.id===body.pet_id),professional=professionals.find(item=>item.id===body.professional_id);
+    const tutor=tutors.find(item=>item.id===body.tutor_id),pet=pets.find(item=>item.id===body.pet_id),professional=body.professional_id?professionals.find(item=>item.id===body.professional_id):professionals[0];
     const chosen=services.filter(item=>Array.isArray(body.service_ids)&&body.service_ids.includes(item.id));
     if(!tutor||!pet||pet.tutor_id!==tutor.id||!professional||!chosen.length||typeof body.starts_at!=='string')return reply({error:'Escolha os cadastros fictícios para completar a prévia.'},422);
     const row:Appointment={id:`qa-local-created-${sequence++}`,tutor_name:tutor.name,pet_name:pet.name,professional_id:professional.id,professional_name:professional.name,starts_at:body.starts_at,status:'pending',services:chosen};

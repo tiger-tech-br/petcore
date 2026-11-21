@@ -17,7 +17,7 @@ const ownRateKeys=new Set<string>();let server:ReturnType<ReturnType<typeof crea
 let ipSerial=0;
 const email=(label:string)=>`${label}-${run}@example.test`;
 const body=(label:string)=>({tutor:{name:`${label} ${run}`,phone:'(11) 90000-0000',email:email(label)},pets:[{name:`Pet ${label} ${run}`,species:'Cão',size:'medio'}],idempotency_key:randomUUID()});
-async function call(path:string,method='GET',payload?:unknown,cookie=adminA){
+async function call(path:string,method='GET',payload?:unknown,cookie=adminA):Promise<{code:number;data:any;headers:Headers}>{
  const ip=`fd7e:${suffix.slice(0,4)}::${++ipSerial}`;
  if(path==='/auth/login')ownRateKeys.add(createHash('sha256').update('/login:'+ip).digest('hex'));
  const response=await fetch(base+'/api'+path,{method,headers:{Origin:process.env.APP_ORIGIN!,'X-PetCore-Request':'1','X-Forwarded-For':ip,'Content-Type':'application/json',Cookie:cookie},body:payload===undefined?undefined:JSON.stringify(payload),signal:AbortSignal.timeout(15000)});

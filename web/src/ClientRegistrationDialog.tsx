@@ -20,7 +20,7 @@ export default function ClientRegistrationDialog({open,onClose,onSaved,onError,o
  function changePet(key:string,field:keyof PetDraft,value:string){setPets(current=>current.map(pet=>pet.key===key?{...pet,[field]:value}:pet));}
  async function save(event:FormEvent){
   event.preventDefault();if(busy)return;setBusy(true);setError('');
-  let definitive=false;
+  let definitive=false,saved:Result|null=null;
   try{
    if(!attempt.current){
     const body={tutor:{name:name.trim(),phone:phone.trim(),email:email.trim()||null,notes:notes.trim(),email_reminders_opt_in:consent},pets:pets.map(({key:_,...pet})=>({...pet,name:pet.name.trim(),breed:pet.breed.trim()||null,birth_date:pet.birth_date||null,notes:pet.notes.trim()}))};
@@ -29,14 +29,15 @@ export default function ClientRegistrationDialog({open,onClose,onSaved,onError,o
    const body={...(attempt.current.body as object),idempotency_key:attempt.current.key};
    const response=await fetch('/api/data/clients-with-pets',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json','X-PetCore-Request':'1'},body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});
    const text=await response.text();let result:any;try{result=JSON.parse(text);}catch{throw Error('Não conseguimos confirmar o cadastro. Tente verificar novamente.');}
-   if(!response.ok){definitive=response.status>=400&&response.status<500&&response.status!==408;throw Error(result.error||'Não foi possível salvar o cadastro.');}
+   if(!response.ok){definitive=!uncertain&&response.status>=400&&response.status<500&&response.status!==408;throw Error(result.error||'Não foi possível salvar o cadastro.');}
    if(!result.tutor?.id||!Array.isArray(result.pets)||!result.pets.length)throw Error('Não conseguimos confirmar o cadastro. Tente verificar novamente.');
-   attempt.current=null;setUncertain(false);await onSaved(result);
+   attempt.current=null;setUncertain(false);saved=result;
   }catch(cause){
    const message=definitive?(cause as Error).message:'Não conseguimos confirmar se o cadastro foi salvo. Use “Verificar cadastro” para conferir sem cadastrar duas vezes.';
    if(definitive){attempt.current=null;setUncertain(false);}else setUncertain(true);
    setError(message);onError(message);
   }finally{setBusy(false);}
+  if(saved)try{await onSaved(saved);}catch{onError('Cadastro salvo. Atualize a lista de clientes para conferir.');}
  }
  if(!open)return null;
  return <FormDialog title="Novo cliente e pet" description="Cadastre o responsável e o pet no mesmo lugar." onClose={onClose} busy={busy} error={error} wide>

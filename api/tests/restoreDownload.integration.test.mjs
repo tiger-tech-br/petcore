@@ -3,7 +3,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes,randomUUID,createHash} from 'node:crypto';
-import {readFile,writeFile,mkdtemp,readdir,rm,realpath} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,mkdtemp,readdir,rm,realpath} from 'node:fs/promises';
 import {dirname,basename,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {Readable} from 'node:stream';
@@ -20,6 +20,7 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const keys=['DATABASE_URL','DATABASE_DIRECT_URL','DATABASE_SSL','NODE_ENV','RESTORE_DATABASE_URL','RESTORE_RETENTION_PAUSED','BACKUP_ENCRYPTION_KEY','BACKUP_STORAGE_ENDPOINT','BACKUP_STORAGE_REGION','BACKUP_STORAGE_BUCKET','BACKUP_STORAGE_ACCESS_KEY','BACKUP_STORAGE_SECRET_KEY','BACKUP_STORAGE_PREFIX','OBJECT_STORAGE_ENDPOINT','OBJECT_STORAGE_BUCKET','OBJECT_STORAGE_ACCESS_KEY','OBJECT_STORAGE_SECRET_KEY','PG_RESTORE_PATH','TEMP','TMP'];
 
 async function fixture(run){
+ await mkdir(privateRoot,{recursive:true,mode:0o700});
  const directory=await mkdtemp(join(privateRoot,'restore-download-fixture-'));
  const saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
  const originalSend=S3Client.prototype.send,originalConnect=pg.Pool.prototype.connect;
