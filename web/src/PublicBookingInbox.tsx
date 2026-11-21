@@ -52,7 +52,7 @@ export default function PublicBookingInbox({setMessage,setError,onChanged,writab
   const body=command==='reject'?{reason}:customerMode==='existing'?{tutor_id:tutorId,...(petId?{pet_id:petId}:{})}:{};
   try{
    await api(`/public-booking/requests/${request.id}/${command}`,'POST',body);
-   dialogSequence.current++;setDialog(null);setSelected(null);
+   dialogSequence.current++;setDialog(null);setSelected(null);setError('');
    setMessage(command==='confirm'?`Agendamento de ${request.pet.name} confirmado. Ele já aparece na Agenda.`:`Pedido de ${request.pet.name} marcado como não confirmado.`);
    await load();onChanged();
   }catch(cause){const text=errorText(cause);setDialogError(text);setError(text);}

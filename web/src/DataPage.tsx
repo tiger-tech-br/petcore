@@ -51,7 +51,7 @@ export default function DataPage({resource,setMessage,setError,initialSearch='',
     setDialogError('');setDialogNotice('');setScheduleId(null);setShowForm(true);
   }
   useEffect(()=>{if(initialNew){open();onFormOpened?.();}},[initialNew]);
-  async function clientSaved(result:{tutor:any;pets:any[]}){setClientDialog(false);setMessage(`${result.tutor.name} e ${result.pets.length===1?result.pets[0].name:`${result.pets.length} pets`} cadastrados. Já pode agendar um atendimento.`);await load();}
+  async function clientSaved(result:{tutor:any;pets:any[]}){setClientDialog(false);setError('');setMessage(`${result.tutor.name} e ${result.pets.length===1?result.pets[0].name:`${result.pets.length} pets`} cadastrados. Já pode agendar um atendimento.`);await load();}
   function closeForm() {if (!busy) setShowForm(false);}
   async function save(event:React.FormEvent) {
     event.preventDefault();if (busy || loading || loadError) return;
