@@ -1,3 +1,15 @@
+
+
+ATUALIZAÇÃO DE 21/11/2026
+O PetCore usa a revisão 7b9a9990d617c788ee7cf7869cecfd306664e936, com aplicação, banco,
+arquivos e agendadores na Hostinger. Banco: 53 tabelas/21 migrations; a 016
+continua excluída. O cadastro junta cliente e pet, e a agenda escolhe quem
+atende conforme a disponibilidade. Em Configurações há o perfil Só banho
+e tosa e o link/QR do pet shop. O link público continua desligado enquanto
+os documentos jurídicos estiverem sem publicação. Leia
+ docs/GUIA-RAPIDO-PETSHOP.md para orientar o cliente e
+ docs/evidence/SIMPLIFICACAO-AGENDAMENTO-20261121.json para os resultados.
+O APK 1.0.2 usa a mesma página remota; não foi gerado outro binário.
 GUIA DA TIGER TECH: HOSTINGER VPS DO ZERO AO DEPLOY
 Para projetos com Node.js, PostgreSQL e páginas web
 Atualizado em 20/11/2026, horário de Brasília

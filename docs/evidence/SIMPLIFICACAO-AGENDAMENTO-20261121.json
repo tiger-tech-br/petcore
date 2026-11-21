@@ -1,0 +1,151 @@
+{
+  "date": "2026-11-21",
+  "revision": "7b9a9990d617c788ee7cf7869cecfd306664e936",
+  "backendTestRevision": "3b1d5816b2e12e431e797ca56991d6dc9be23308",
+  "virtualMachineId": 2162451,
+  "publicUrl": "https://petcore.tigertech.dev.br",
+  "schema": {
+    "tables": 53,
+    "migrations": 21,
+    "newMigrations": [
+      "021_public_booking.sql",
+      "022_shop_operation_profile.sql"
+    ],
+    "excludedMigration": "016_taxi_driver_accounts.sql",
+    "runtimeCrudGrantsVerified": true
+  },
+  "release": {
+    "baseImage": "petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10",
+    "sourceVolume": "petcore_build_3b1d5816_20261121",
+    "apiSubpath": "source/api",
+    "webSubpath": "source/web/dist",
+    "modulesSubpath": "source/node_modules",
+    "readOnlyRuntime": true,
+    "productionDependenciesOnly": true,
+    "sourceOverlayWebFiles": [
+      {
+        "path": "web/src/DataPage.tsx",
+        "sha256": "465ed870081bac0b46694e10695f0d08da8655da9abaa5fcfbabce16b035185d"
+      },
+      {
+        "path": "web/src/PublicBookingInbox.tsx",
+        "sha256": "7b94d64832b91995476ef4be2d97c03c6393294dcf2edf38ac36a3411c237d0c"
+      }
+    ],
+    "appAndSchedulersUpdated": true,
+    "publicHealthHttp": 200,
+    "publicHtmlJs": "index-Dv7q12-V.js",
+    "publicHtmlCss": "index-BKRT5VOE.css"
+  },
+  "validation": {
+    "apiUnitTests": 45,
+    "webUnitTests": 22,
+    "mainIntegrationTests": 195,
+    "mainIntegrationFailures": 0,
+    "isolatedLoopbackBackupTests": 2,
+    "loopbackFailures": 0,
+    "integrationTotal": 197,
+    "firstWideAttempt": {
+      "passed": 186,
+      "failed": 10,
+      "reason": "Nine recovery fixtures needed the ignored private directory; one backup-publication file correctly refused a non-loopback database. Fixed fixture mkdir, reran 195 tests and ran the two guarded backup cases on a separate ephemeral loopback-only PostgreSQL."
+    },
+    "externalProvidersMockedInIntegration": true,
+    "liveCanary": {
+      "ok": true,
+      "event": "live_simple_booking_verified",
+      "revision": "7b9a9990d617c788ee7cf7869cecfd306664e936",
+      "checks": [
+        "LEGAL_DRAFT_GUARD",
+        "LOGIN",
+        "COOKIE",
+        "OWNER_CAN_ATTEND",
+        "CLIENT_WITH_TWO_PETS",
+        "IDEMPOTENT_RETRY",
+        "AUTOMATIC_OWNER_ASSIGNMENT",
+        "OCCUPIED_TIME_REJECTED",
+        "ESSENTIAL_PROFILE",
+        "ESSENTIAL_SESSION_FEATURES",
+        "PRIVATE_LINK_AND_LEGAL_GUARD",
+        "PUBLIC_LINK_STAYS_DISABLED",
+        "NO_DUPLICATED_RECORDS"
+      ],
+      "temporaryRecordsRemoved": true,
+      "emailsSent": 0,
+      "paymentsAttempted": 0,
+      "legalPublished": false,
+      "at": "2026-11-21T20:19:58.961Z"
+    },
+    "visualQA": {
+      "localFictitiousHarness": true,
+      "mobileWidth": 390,
+      "mobileDocumentWidth": 390,
+      "nativeNavigationPosition": "fixed",
+      "clientAndPetForm": true,
+      "clientTimeoutThen429ThenSameKeySuccess": true,
+      "publicHappyPath": true,
+      "existingClientPetConfirmation": true,
+      "linkAndQrVisible": true,
+      "compactInbox": true,
+      "viewportOverrideReset": true
+    },
+    "apk": {
+      "version": "1.0.2",
+      "versionCode": 3,
+      "newNativeBinaryGenerated": false,
+      "remoteWebOriginUnchanged": true,
+      "previousPhysicalAcceptancePreserved": true
+    }
+  },
+  "backup": {
+    "beforeMigrationId": "9d5326f4-0115-404a-be1b-c105b4d15294",
+    "ciphertextSha256": "13097d74056c7f2369e7454fb1052863e221a3b9a8bbb09ded48a69e0d4d3daf",
+    "ciphertextBytes": 189056,
+    "photosInSnapshot": 0,
+    "newBackupRestorePerformed": false,
+    "privateOffVpsCopy": {
+      "objects": 43,
+      "bytes": 3052946,
+      "sha256ReadbackVerifiedByArchiver": true
+    }
+  },
+  "operations": {
+    "maintenanceExitCode": 0,
+    "remindersExitCode": 0,
+    "nextDailyBackup": "2026-11-22T06:00:00.000Z",
+    "timezone": "America/Sao_Paulo",
+    "beautyBarberContainersPreserved": [
+      {
+        "id": "75dc45ada173",
+        "name": "beautybarber-api-1",
+        "state": "running",
+        "health": ""
+      },
+      {
+        "id": "4418d9bc80e8",
+        "name": "beautybarber-db-1",
+        "state": "running",
+        "health": "healthy"
+      },
+      {
+        "id": "d8b85e8da770",
+        "name": "beautybarber-web-1",
+        "state": "running",
+        "health": ""
+      }
+    ]
+  },
+  "publicBooking": {
+    "enabledByDefault": false,
+    "legalPublished": false,
+    "productionAnonymousBookingActivated": false,
+    "tutorChoosesProfessional": false,
+    "requestIsReservation": false,
+    "confirmationByAuthorizedShop": true,
+    "offlineQrGeneration": true,
+    "anonymousContactsRetainedDays": 30,
+    "reminderOptInNotGrantedByPublicForm": true
+  },
+  "commercialReleaseApproved": false,
+  "secretsOrRealCustomerContentIncluded": false
+}

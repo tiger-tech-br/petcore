@@ -1,5 +1,16 @@
 # PetCore — gestão para pet shops
 
+## Atualização de 21/11 — uso simplificado e agendamento público preparado
+
+A revisão `7b9a9990d617c788ee7cf7869cecfd306664e936` está publicada em <https://petcore.tigertech.dev.br>, com aplicação e agendadores atualizados. O banco tem **53 tabelas e 21 migrations**, incluindo 021/022 e excluindo a 016. Foram adicionados cadastro conjunto de cliente/pets, perfil “Só banho e tosa”, participação dos donos nos atendimentos, escolha automática de quem atende e link/QR com pedidos sujeitos à confirmação do pet shop. Os pedidos ficam em painel recolhível na Agenda. Veja o [guia rápido](docs/GUIA-RAPIDO-PETSHOP.md) e a [evidência](docs/evidence/SIMPLIFICACAO-AGENDAMENTO-20261121.json).
+
+Passaram 45 testes da API, 22 do web e **197 integrações** (195 em banco separado da VPS e dois casos com exigência de loopback em PostgreSQL temporário). O teste pelo endereço publicado comprovou os novos fluxos e removeu os cadastros temporários. Antes da migration, foi criado backup cifrado e guardada cópia privada fora da VPS. Manutenção e lembretes terminaram com código zero após a atualização; a próxima cópia diária permanece às 03h de Brasília. O Beauty Barber foi preservado.
+
+**O agendamento público permanece desativado:** os documentos continuam `published=false`, sem aprovação jurídica ou validação do mecanismo das transferências internacionais. O link e o QR podem ser conferidos nas Configurações; a API bloqueia a ativação e a recepção enquanto a publicação não estiver concluída. A política deve revisar também finalidade e retenção dos dados desse formulário. Isso não libera a comercialização. O APK continua 1.0.2/código 3, com a mesma origem remota e sem geração de binário novo nesta etapa.
+
+Os estados abaixo são históricos quando divergirem desta atualização.
+
+
 Continuação de 20/11: aplicação Hostinger na revisão **`34eb0847`**, com rascunhos de infraestrutura corrigidos e ainda não publicados; jobs preservados em `b89691af`. Recuperação de senha concluída com recebimento e login relatados pelo responsável, consumo do token e avanço da versão conferidos no banco e remoção do cadastro temporário. Saúde pública 200/banco OK. [Resultados e limites](docs/evidence/HOSTINGER-CONTINUATION-20261120.json), [serviços ativos e tarefas concluídas no painel](docs/HOSTINGER-PROJECTS.md). Os registros abaixo antecedem essa continuação.
 
 Estado de 20/11/2026, após a migração: **aplicação, PostgreSQL 18.7 e armazenamento privado Versity estão na VPS Hostinger**, em [petcore.tigertech.dev.br](https://petcore.tigertech.dev.br). Banco com TLS/papel restrito, 50 tabelas e 19 migrations; APK **1.0.2/código 3** mantém o mesmo endereço. A revisão de API **`b89691af`** está implantada sobre a imagem base `acde9dde`, em volume somente de leitura. Passaram o ensaio público autenticado, URLs pré-assinadas, recuperação de uma foto fictícia com rejeição de chave incorreta/sobrescrita e restauração real de um backup novo em banco isolado. Manutenção, lembretes e backup diário às 03h de Brasília estão na VPS; o Resend continua como provedor externo de e-mail.

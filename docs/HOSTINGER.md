@@ -1,5 +1,16 @@
 # Hostinger — operação e migração do PetCore
 
+## Atualização de 21/11 — uso simplificado e agendamento público preparado
+
+A revisão `7b9a9990d617c788ee7cf7869cecfd306664e936` está publicada em <https://petcore.tigertech.dev.br>, com aplicação e agendadores atualizados. O banco tem **53 tabelas e 21 migrations**, incluindo 021/022 e excluindo a 016. Foram adicionados cadastro conjunto de cliente/pets, perfil “Só banho e tosa”, participação dos donos nos atendimentos, escolha automática de quem atende e link/QR com pedidos sujeitos à confirmação do pet shop. Os pedidos ficam em painel recolhível na Agenda. Veja o [guia rápido](GUIA-RAPIDO-PETSHOP.md) e a [evidência](evidence/SIMPLIFICACAO-AGENDAMENTO-20261121.json).
+
+Passaram 45 testes da API, 22 do web e **197 integrações** (195 em banco separado da VPS e dois casos com exigência de loopback em PostgreSQL temporário). O teste pelo endereço publicado comprovou os novos fluxos e removeu os cadastros temporários. Antes da migration, foi criado backup cifrado e guardada cópia privada fora da VPS. Manutenção e lembretes terminaram com código zero após a atualização; a próxima cópia diária permanece às 03h de Brasília. O Beauty Barber foi preservado.
+
+**O agendamento público permanece desativado:** os documentos continuam `published=false`, sem aprovação jurídica ou validação do mecanismo das transferências internacionais. O link e o QR podem ser conferidos nas Configurações; a API bloqueia a ativação e a recepção enquanto a publicação não estiver concluída. A política deve revisar também finalidade e retenção dos dados desse formulário. Isso não libera a comercialização. O APK continua 1.0.2/código 3, com a mesma origem remota e sem geração de binário novo nesta etapa.
+
+Os estados abaixo são históricos quando divergirem desta atualização.
+
+
 ## Continuação posterior em 20/11
 
 A aplicação passou para `34eb0847` para corrigir os rascunhos de infraestrutura; os jobs mantêm `b89691af`. O rascunho salvo foi atualizado com auditoria e guarda de correspondência ao padrão anterior, sem publicação. A recuperação de senha foi concluída com um e-mail autorizado, recebimento e login relatados pelo responsável, token consumido e versão avançada conferidos no banco; os registros temporários foram removidos. A saúde pública respondeu 200 com banco OK. Veja [a evidência desta continuação](evidence/HOSTINGER-CONTINUATION-20261120.json).
