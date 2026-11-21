@@ -42,7 +42,8 @@ export async function exportSubject(company:string,requestId:string,user:string)
    (SELECT count(*) FROM crm_tasks WHERE tenant_id=$1 AND tutor_id=$2)+
    (SELECT count(*) FROM business_sales WHERE tenant_id=$1 AND tutor_id=$2)+
    (SELECT count(*) FROM taxi_bookings b JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
-   (SELECT count(*) FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2) AS total`,[company,item.tutor_id]);
+   (SELECT count(*) FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
+   (SELECT count(*) FROM public_booking_requests r JOIN appointments a ON a.tenant_id=r.tenant_id AND a.id=r.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2) AS total`,[company,item.tutor_id]);
   ensure(Number(size.rows[0].total)<=25000,413,'Este histórico precisa de exportação assistida em lotes pelo responsável pelo sistema.');
   const pets=await db.query('SELECT id,name,species,breed,size,birth_date,notes,created_at,photo_key FROM pets WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
   const appointments=await db.query(`SELECT a.id,a.pet_id,p.name AS pet_name,a.starts_at,a.ends_at,a.status,a.notes,
@@ -66,12 +67,19 @@ export async function exportSubject(company:string,requestId:string,user:string)
     COALESCE((SELECT json_agg(to_jsonb(i)-'tenant_id') FROM business_sale_items i WHERE i.tenant_id=s.tenant_id AND i.sale_id=s.id),'[]'::json) AS items,
     COALESCE((SELECT json_agg(to_jsonb(l)-'tenant_id'-'created_by') FROM business_ledger l WHERE l.tenant_id=s.tenant_id AND l.sale_id=s.id),'[]'::json) AS transactions
     FROM business_sales s WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY s.created_at,s.id`,[company,item.tutor_id]);
+  const publicBookings=await db.query(`SELECT r.id,r.status,r.tutor_name,r.tutor_phone,r.tutor_email,
+   r.pet_name,r.pet_species,r.pet_size,r.pet_breed,r.starts_at,r.ends_at,r.appointment_id,r.rejection_reason,r.created_at,r.reviewed_at,
+   COALESCE((SELECT json_agg(json_build_object('service_id',s.service_id,'name',s.name,'price_cents',s.price_cents,'duration_minutes',s.duration_minutes) ORDER BY s.position)
+    FROM public_booking_request_services s WHERE s.tenant_id=r.tenant_id AND s.request_id=r.id),'[]'::json) AS services
+   FROM public_booking_requests r JOIN appointments a ON a.tenant_id=r.tenant_id AND a.id=r.appointment_id
+   WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY r.created_at,r.id`,[company,item.tutor_id]);
   await db.query("UPDATE privacy_requests SET status='in_progress',updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,requestId]);
   await requestEvent(db,company,requestId,user,'exported','in_progress');
   await recordAudit(db,{tenantId:company,userId:user,action:'privacy.export',entityType:'privacy_request',entityId:requestId,metadata:{tutorId:item.tutor_id}});
   return {format:'petcore.subject-export.v1',exported_at:new Date().toISOString(),request_id:requestId,
    tutor:tutor.rows[0],pets:pets.rows,appointments:appointments.rows,contacts:contacts.rows,tasks:tasks.rows,
-   email_reminder_consent_history:consents.rows,waitlist:waitlist.rows,sales:sales.rows,taxi_dog:{bookings:taxiBookings.rows,trips:taxiTrips.rows}};
+   email_reminder_consent_history:consents.rows,waitlist:waitlist.rows,sales:sales.rows,
+   public_booking_requests:publicBookings.rows,taxi_dog:{bookings:taxiBookings.rows,trips:taxiTrips.rows}};
  });
  const configured=storage();
  const photoDownloads:{petId:string;url:string|null;expiresAt:string|null;status:string}[]=[];
@@ -140,6 +148,10 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   await db.query(`UPDATE tutors SET name='Titular anonimizado',phone='',email=NULL,notes='',anonymized_at=now(),
    email_reminders_opt_in=false,email_reminders_opt_in_at=NULL,email_reminders_opt_in_by=NULL WHERE tenant_id=$1 AND id=$2`,[company,item.tutor_id]);
   await db.query("UPDATE pets SET name='Pet de cadastro anonimizado',notes='',photo_key=NULL WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
+  // Explicit appointment identity is required: never merge/delete public contacts
+  // just because an unverified name, phone or email resembles this tutor.
+  await db.query(`DELETE FROM public_booking_requests r USING appointments a
+   WHERE a.tenant_id=$1 AND a.tutor_id=$2 AND r.tenant_id=a.tenant_id AND r.appointment_id=a.id`,[company,item.tutor_id]);
   await db.query("UPDATE crm_contacts SET summary='Conteúdo removido por solicitação de privacidade.' WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE crm_tasks SET title='Retorno encerrado por privacidade',notes='',status=CASE WHEN status='open' THEN 'cancelled' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE waitlist SET notes='',status=CASE WHEN status IN ('waiting','offered') THEN 'closed' ELSE status END WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);

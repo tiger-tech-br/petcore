@@ -3,8 +3,8 @@ import {pathToFileURL} from 'node:url';
 import {pool,tx} from './core.js';
 import {processObjectDeletionJobs} from './privacyService.js';
 
-// Não elimina dados de clientes, auditoria, solicitações ou documentos financeiros.
-// A retenção desses registros precisa de uma política aprovada e rotina específica.
+// Permanent customer, audit and financial records are untouched. Transient public
+// form contacts have the explicit 30-day rule below and can also be deleted by an admin.
 export async function runMaintenanceOnce(options:{prune?:boolean;files?:boolean}={}){
  const counts:Record<string,number>={};
  if(options.prune!==false)await tx(async db=>{
@@ -16,6 +16,13 @@ export async function runMaintenanceOnce(options:{prune?:boolean;files?:boolean}
    ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
   ) DELETE FROM password_resets r USING expired WHERE r.id=expired.id`)).rowCount??0;
   counts.expiredInvitations=(await db.query("DELETE FROM invitations WHERE expires_at<now()-interval '1 day'")).rowCount??0;
+  // Public form contacts are transient; confirmed appointments keep their own
+  // records. Delete only bounded, unlocked requests older than the 30-day window.
+  counts.expiredPublicBookingRequests=(await db.query(`WITH expired AS (
+   SELECT id FROM public_booking_requests
+   WHERE CASE WHEN status='pending' THEN created_at ELSE COALESCE(reviewed_at,created_at) END < now()-interval '30 days'
+   ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
+  ) DELETE FROM public_booking_requests r USING expired WHERE r.id=expired.id`)).rowCount??0;
  });
  let files:Record<string,unknown>={enabled:false};
  if(options.files!==false){

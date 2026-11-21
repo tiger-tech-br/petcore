@@ -17,6 +17,7 @@ import privacyRoutes from './privacyRoutes.js';
 import commercialRoutes,{publicCommercial} from './commercialRoutes.js';
 import {createOriginGuard} from './originGuard.js';
 import {startSupportEmailWorker} from './supportEmailService.js';
+import {publicBookingRouter} from './publicBookingRoutes.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
  if(env.NODE_ENV!=='production')return;
@@ -47,6 +48,7 @@ export function createApp(){
  app.get('/api/health',async(_req,res)=>{await pool.query('SELECT 1');res.json({ok:true,database:true});});
  app.use('/api/auth',authRoutes);
  app.use('/api/public',publicCommercial);
+ app.use('/api',publicBookingRouter);
  app.use('/api/commercial',commercialRoutes);
  app.use('/api/privacy',privacyRoutes);
  app.use('/api/business',businessRoutes);

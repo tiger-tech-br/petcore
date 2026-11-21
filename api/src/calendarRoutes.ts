@@ -5,9 +5,10 @@ import type { PoolClient } from 'pg';
 import {requireSubscriptionWrite} from './commercialService.js';
 import {assertFutureAppointmentStart} from './scheduling.js';
 import {canTaxi,cancelTaxiForAppointment,saveTaxiBooking,taxiDraft,taxiOptions,validateTaxiForAppointmentMove} from './taxiDogService.js';
+import {chooseAvailableProfessional} from './publicBookingService.js';
 const r=Router();r.use(auth,requireSubscriptionWrite);
 const datetime=z.iso.datetime({offset:true});
-const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default(''),taxi_dog:taxiDraft.nullable().optional()});
+const createInput=z.object({tutor_id:z.uuid(),pet_id:z.uuid(),professional_id:z.uuid().nullable().optional(),service_ids:z.array(z.uuid()).min(1).max(12),starts_at:datetime,notes:z.string().max(3000).default(''),taxi_dog:taxiDraft.nullable().optional()});
 const activeStatuses=['pending','confirmed','in_progress'];
 const notificationLabels: Record<string,string> = {
   created:'Novo agendamento',
@@ -107,19 +108,24 @@ async function servicesFor(db:PoolClient,company:string,ids:string[]){
 }
 async function putAppointment(db:PoolClient,req:import('express').Request,company:string,data:z.infer<typeof createInput>,kind:string){
  await lockTutor(db,company,data.tutor_id,422);
- allowProfessional(req,data.professional_id);
  const start=new Date(data.starts_at);assertFutureAppointmentStart(start);
  const svcs=await servicesFor(db,company,data.service_ids);const total=svcs.reduce((n,s)=>n+s.duration_minutes,0);
+ ensure(total<=1440,422,'A duração dos serviços ultrapassa um dia.');
  const end=new Date(start.getTime()+total*60000);
- await validateAvailability(db,company,data.professional_id,start,end,data.service_ids);
+ const scoped=req.access!.role==='employee'&&!req.access!.permissions.includes('agenda:all');
+ if(scoped)ensure(req.access!.scopeProfessionalId,403,'Vincule sua conta a um profissional para agendar.');
+ const professionalId=data.professional_id??await chooseAvailableProfessional(db,company,start,end,data.service_ids,scoped?req.access!.scopeProfessionalId:null);
+ ensure(professionalId,409,'Esse horário não está disponível para os serviços escolhidos. Escolha outro horário.');
+ allowProfessional(req,professionalId);
+ await validateAvailability(db,company,professionalId,start,end,data.service_ids);
  assertFutureAppointmentStart(start);
  const row=await db.query(`INSERT INTO appointments(tenant_id,tutor_id,pet_id,professional_id,starts_at,ends_at,notes,created_by)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[company,data.tutor_id,data.pet_id,data.professional_id,start,end,data.notes,req.access!.userId]);
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,[company,data.tutor_id,data.pet_id,professionalId,start,end,data.notes,req.access!.userId]);
  for(const s of svcs)await db.query(`INSERT INTO appointment_services(tenant_id,appointment_id,service_id,position,price_cents,duration_minutes) VALUES($1,$2,$3,$4,$5,$6)`,[company,row.rows[0].id,s.id,s.position,s.price_cents,s.duration_minutes]);
  if(data.taxi_dog)await saveTaxiBooking(db,req,company,row.rows[0],data.taxi_dog);
  const event=await db.query(`INSERT INTO appointment_events(tenant_id,appointment_id,actor_user_id,kind,new_start,new_end,new_professional_id)
- VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,[company,row.rows[0].id,req.access!.userId,kind,start,end,data.professional_id]);
- await notifyAppointmentEvent(db,company,event.rows[0].id,data.professional_id);
+ VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id`,[company,row.rows[0].id,req.access!.userId,kind,start,end,professionalId]);
+ await notifyAppointmentEvent(db,company,event.rows[0].id,professionalId);
  await syncReminder(db,company,row.rows[0].id,'pending',start.toISOString());return row.rows[0];
 }
 r.get('/calendar/appointments',permit('appointments'),async(req,res)=>{
@@ -149,14 +155,19 @@ r.post('/calendar/appointments',permit('appointments'),async(req,res)=>{
  res.status(201).json(saved);
 });
 r.post('/calendar/check',permit('appointments'),async(req,res)=>{
- const {starts_at,professional_id,service_ids}=z.object({starts_at:datetime,professional_id:z.uuid(),service_ids:z.array(z.uuid()).min(1)}).parse(req.body);
- allowProfessional(req,professional_id);
+ const {starts_at,professional_id,service_ids}=z.object({starts_at:datetime,professional_id:z.uuid().nullable().optional(),service_ids:z.array(z.uuid()).min(1).max(12)}).parse(req.body);
+ if(professional_id)allowProfessional(req,professional_id);
  const c=tenant(req);const result=await tx(async db=>{
   const start=new Date(starts_at);assertFutureAppointmentStart(start);
-  const svcs=await servicesFor(db,c,service_ids);const end=new Date(start.getTime()+svcs.reduce((n,s)=>n+s.duration_minutes,0)*60000);
-  await validateAvailability(db,c,professional_id,start,end,service_ids);
+  const svcs=await servicesFor(db,c,service_ids),duration=svcs.reduce((n,s)=>n+s.duration_minutes,0);ensure(duration<=1440,422,'A duração dos serviços ultrapassa um dia.');const end=new Date(start.getTime()+duration*60000);
+  const scoped=req.access!.role==='employee'&&!req.access!.permissions.includes('agenda:all');
+  if(scoped)ensure(req.access!.scopeProfessionalId,403,'Vincule sua conta a um profissional para consultar horários.');
+  const professionalId=professional_id??await chooseAvailableProfessional(db,c,start,end,service_ids,scoped?req.access!.scopeProfessionalId:null);
+  if(!professionalId)return {available:false,ends_at:end.toISOString()};
+  allowProfessional(req,professionalId);
+  await validateAvailability(db,c,professionalId,start,end,service_ids);
   const clash=await db.query(`SELECT 1 FROM appointments WHERE tenant_id=$1 AND professional_id=$2 AND status=ANY($5::text[])
- AND tstzrange(starts_at,ends_at,'[)') && tstzrange($3::timestamptz,$4::timestamptz,'[)') LIMIT 1`,[c,professional_id,start,end,activeStatuses]);
+ AND tstzrange(starts_at,ends_at,'[)') && tstzrange($3::timestamptz,$4::timestamptz,'[)') LIMIT 1`,[c,professionalId,start,end,activeStatuses]);
   assertFutureAppointmentStart(start);
   return {available:!clash.rowCount,ends_at:end.toISOString()};
  });res.json(result);

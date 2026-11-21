@@ -87,7 +87,7 @@ test('seletores de pets e profissionais funcionam com permissão mínima sem exp
   assert.ok(!serviceOptions.data.some((row:any)=>row.id===foreignService));
   const accounts=await call('/options/professional-accounts','GET',undefined,staffCookie);
   assert.equal(accounts.code,200);
-  assert.deepEqual(accounts.data.map((row:any)=>row.id),[employeeId]);
+  assert.deepEqual(accounts.data.map((row:any)=>row.id).sort(),[userA,employeeId].sort());
   assert.deepEqual(Object.keys(accounts.data[0]).sort(),['id','name']);
   assert.equal((await call('/data/services','GET',undefined,staffCookie)).code,403);
   assert.equal((await call('/team','GET',undefined,staffCookie)).code,403);

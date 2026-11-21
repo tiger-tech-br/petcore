@@ -58,6 +58,9 @@ export const tenantExportDatasets=[
  data('taxi_drivers','id,name,phone,active,created_at,updated_at'),
  data('taxi_bookings','id,appointment_id,service_id,service_name,price_cents,mode,address,reference,notes,cancelled_at,created_by,created_at,updated_at'),
  data('taxi_trips','id,booking_id,leg,driver_id,starts_at,ends_at,status,created_at,updated_at'),
+ data('public_booking_settings','enabled,notice,updated_by,updated_at','tenant_id'),
+ data('public_booking_requests','id,receipt,status,tutor_name,tutor_phone,tutor_email,pet_name,pet_species,pet_size,pet_breed,starts_at,ends_at,appointment_id,reviewed_by,reviewed_at,rejection_reason,created_at,updated_at'),
+ data('public_booking_request_services','request_id,service_id,position,name,price_cents,duration_minutes','request_id,position'),
  {name:'team',table:'memberships',columns:[],sql:'SELECT u.id AS user_id,u.name,u.email,m.role,m.permissions,m.active,u.created_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=$1 ORDER BY m.user_id'},
  {name:'terms_acceptances',table:null,columns:[],sql:'SELECT a.user_id,a.version,a.accepted_at FROM terms_acceptances a JOIN memberships m ON m.user_id=a.user_id WHERE m.tenant_id=$1 ORDER BY a.user_id,a.accepted_at'},
 ];
@@ -71,6 +74,7 @@ const reviewedHiddenColumns={
  reminder_jobs:['claimed_by','claim_expires_at','provider_message_id','last_error'],
  reminder_delivery_attempts:['provider_message_id','error_message'],
  subscription_payments:['idempotency_key'],audit_events:['metadata'],
+ public_booking_settings:['public_token'],public_booking_requests:['payload_hash','idempotency_key'],
 };
 const quote=value=>{if(!/^[a-z_][a-z0-9_]*$/.test(value))throw failure('TENANT_EXPORT_IDENTIFIER_INVALID');return '"'+value+'"';};
 
@@ -99,7 +103,7 @@ export async function assertTenantExportSchema(db){
  const columns=await db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=ANY($1::text[]) ORDER BY table_name,ordinal_position",[[...tenantExportDatasets.map(item=>item.table).filter(Boolean),'tenants','users','terms_acceptances']]);
  const reviewed=new Map(tenantExportDatasets.filter(item=>item.table).map(item=>[item.table,new Set(['tenant_id',...item.columns,...reviewedHiddenColumns[item.table]??[]])]));
  reviewed.set('memberships',new Set(['tenant_id','user_id','role','permissions','active']));
- reviewed.set('tenants',new Set(['id','name','timezone','late_tolerance_minutes','reminder_minutes_before','active','created_at','taxi_dog_enabled']));
+ reviewed.set('tenants',new Set(['id','name','timezone','late_tolerance_minutes','reminder_minutes_before','active','created_at','taxi_dog_enabled','operation_mode']));
  reviewed.set('users',new Set(['id','name','email','password_hash','session_version','is_platform_owner','created_at']));
  reviewed.set('terms_acceptances',new Set(['user_id','version','accepted_at']));
  if(columns.rows.some(row=>!reviewed.get(row.table_name)?.has(row.column_name)))throw failure('TENANT_EXPORT_SCHEMA_REVIEW_REQUIRED');
@@ -154,7 +158,7 @@ export async function exportTenant(args=process.argv.slice(2),dependencies={}){
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');transaction=true;
   await client.query("SET LOCAL statement_timeout='30s'");await client.query("SET LOCAL idle_in_transaction_session_timeout='35min'");
   const operator=await client.query('SELECT id FROM users WHERE id=$1 AND is_platform_owner=true',[options.operator]);if(operator.rowCount!==1)throw failure('TENANT_EXPORT_PLATFORM_OPERATOR_REQUIRED');
-  const company=await client.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,active,created_at,taxi_dog_enabled FROM tenants WHERE id=$1',[options.tenant]);if(company.rowCount!==1)throw failure('TENANT_EXPORT_COMPANY_NOT_FOUND');
+  const company=await client.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,active,created_at,taxi_dog_enabled,operation_mode FROM tenants WHERE id=$1',[options.tenant]);if(company.rowCount!==1)throw failure('TENANT_EXPORT_COMPANY_NOT_FOUND');
   if(options.reference.startsWith('support:')){
    const ticket=await client.query('SELECT id FROM support_tickets WHERE tenant_id=$1 AND id=$2',[options.tenant,options.reference.slice(8)]);if(ticket.rowCount!==1)throw failure('TENANT_EXPORT_REFERENCE_COMPANY_MISMATCH');
   }

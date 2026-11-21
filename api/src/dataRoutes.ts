@@ -1,11 +1,18 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { pool, tx, auth, tenant, permit, ensure, validateAvailability,lockTutor } from './core.js';
 import {requireSubscriptionWrite} from './commercialService.js';
 import {recordAudit} from './audit.js';
+import {mutate} from './businessService.js';
 const r=Router();r.use(auth,requireSubscriptionWrite);
 const tutor=z.object({name:z.string().trim().min(2).max(160),phone:z.string().max(40).default(''),email:z.union([z.email(),z.literal(''),z.null()]).optional(),notes:z.string().max(3000).default(''),email_reminders_opt_in:z.boolean().default(false)});
 const pet=z.object({name:z.string().trim().min(1).max(160),tutor_id:z.uuid(),species:z.string().trim().min(2),breed:z.string().nullable().optional(),size:z.enum(['pequeno','medio','grande']),birth_date:z.iso.date().nullable().optional(),notes:z.string().max(3000).default('')});
+const clientWithPets=z.object({
+ tutor:tutor.strict(),
+ pets:z.array(pet.omit({tutor_id:true}).extend({species:pet.shape.species.max(80),breed:z.string().max(160).nullable().optional()}).strict()).min(1).max(10),
+ idempotency_key:z.uuid().optional()
+}).strict();
 const professional=z.object({name:z.string().trim().min(2).max(160),user_id:z.uuid().nullable().optional(),active:z.boolean().default(true)});
 const service=z.object({name:z.string().trim().min(2).max(160),description:z.string().max(2000).default(''),price_cents:z.number().int().min(0).max(999999999),duration_minutes:z.number().int().min(0).max(1440),active:z.boolean().default(true),service_type:z.enum(['appointment','transport']).default('appointment'),transport_mode:z.enum(['pickup','dropoff','round_trip']).nullable().default(null)});
 const defs={tutors:{schema:tutor,permission:'tutors',columns:['name','phone','email','notes']},pets:{schema:pet,permission:'pets',columns:['name','tutor_id','species','breed','size','birth_date','notes']},professionals:{schema:professional,permission:'professionals',columns:['name','user_id','active']},services:{schema:service,permission:'services',columns:['name','description','price_cents','duration_minutes','active','service_type','transport_mode']}} as const;
@@ -35,7 +42,7 @@ r.get('/options/professional-services',permit('professionals'),async(req,res)=>{
 });
 r.get('/options/professional-accounts',permit('professionals'),async(req,res)=>{
  const rows=await pool.query(`SELECT u.id,u.name FROM memberships m JOIN users u ON u.id=m.user_id
-  WHERE m.tenant_id=$1 AND m.role='employee' ORDER BY u.name,u.id`,[tenant(req)]);
+  WHERE m.tenant_id=$1 AND m.active=true AND m.role IN ('admin','employee') ORDER BY u.name,u.id`,[tenant(req)]);
  res.json(rows.rows);
 });
 // Identificador da empresa nunca é fornecido pelo cliente nestas operações.
@@ -44,6 +51,37 @@ r.get('/data/:resource',async(req,res)=>{
  const fields=key==='pets'?'SELECT p.*,t.name AS tutor_name FROM pets p JOIN tutors t ON t.tenant_id=p.tenant_id AND t.id=p.tutor_id WHERE p.tenant_id=$1 ORDER BY p.name':
  `SELECT * FROM ${key} WHERE tenant_id=$1 ORDER BY name`;
  const rows=await pool.query(fields,[id]);res.json(rows.rows);
+});
+// A single submission creates the client and all their pets together. Failed
+// children roll back the client/consent too; retries store only scoped IDs.
+r.post('/data/clients-with-pets',permit('tutors'),permit('pets'),async(req,res)=>{
+ const company=tenant(req),input=clientWithPets.parse(req.body);
+ const optIn=input.tutor.email_reminders_opt_in;
+ if(optIn)ensure(eligibleReminderEmail(input.tutor.email),422,'Informe um e-mail real e valide a autorizacao do tutor antes de ativar lembretes.');
+ const payload={tutor:input.tutor,pets:input.pets};
+ const created=await mutate(req,input.idempotency_key??randomUUID(),'data.client_with_pets.create',payload,async(db,id,user)=>{
+  const person=input.tutor;
+  const tutorRow=await db.query(`INSERT INTO tutors
+   (tenant_id,name,phone,email,notes,email_reminders_opt_in,email_reminders_opt_in_at,email_reminders_opt_in_by)
+   VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+   [id,person.name,person.phone,person.email??null,person.notes,optIn,optIn?new Date():null,optIn?user:null]);
+  const tutorId=tutorRow.rows[0].id as string,petIds:string[]=[];
+  if(optIn)await db.query(`INSERT INTO tutor_email_reminder_consent_events
+   (tenant_id,tutor_id,actor_user_id,email,action) VALUES($1,$2,$3,$4,'granted')`,[id,tutorId,user,person.email]);
+  for(const animal of input.pets){
+   const row=await db.query(`INSERT INTO pets(tenant_id,tutor_id,name,species,breed,size,birth_date,notes)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+    [id,tutorId,animal.name,animal.species,animal.breed??null,animal.size,animal.birth_date??null,animal.notes]);
+   petIds.push(row.rows[0].id as string);
+  }
+  return {id:tutorId,petIds};
+ });
+ const [person,animals]=await Promise.all([
+  pool.query('SELECT * FROM tutors WHERE tenant_id=$1 AND id=$2 AND anonymized_at IS NULL',[company,created.id]),
+  pool.query('SELECT * FROM pets WHERE tenant_id=$1 AND tutor_id=$2 AND id=ANY($3::uuid[]) ORDER BY array_position($3::uuid[],id)',[company,created.id,created.petIds])
+ ]);
+ ensure(person.rowCount===1&&animals.rowCount===created.petIds.length,409,'Este cadastro mudou após ser salvo. Atualize a lista de clientes para conferir.');
+ res.status(201).json({tutor:person.rows[0],pets:animals.rows});
 });
 r.post('/data/:resource',async(req,res)=>{
  const key=getResource(req.params.resource as string),id=tenant(req);allowed(req,defs[key].permission);
@@ -168,18 +206,19 @@ r.post('/professionals/:id/absences',permit('professionals'),async(req,res)=>{
  });res.status(201).json(row.rows[0]);
 });
 r.get('/settings',async(req,res)=>{
- const row=await pool.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled FROM tenants WHERE id=$1',[tenant(req)]);res.json(row.rows[0]);
+ const row=await pool.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,operation_mode FROM tenants WHERE id=$1',[tenant(req)]);res.json(row.rows[0]);
 });
 r.patch('/settings',async(req,res)=>{
  ensure(req.access?.role==='admin',403,'Somente o administrador pode alterar configurações.');
- const input=z.object({late_tolerance_minutes:z.number().int().min(0).max(120).optional(),reminder_minutes_before:z.number().int().min(0).max(10080).optional(),taxi_dog_enabled:z.boolean().optional()}).strict().refine(value=>Object.keys(value).length>0).parse(req.body);
+ const input=z.object({late_tolerance_minutes:z.number().int().min(0).max(120).optional(),reminder_minutes_before:z.number().int().min(0).max(10080).optional(),taxi_dog_enabled:z.boolean().optional(),operation_mode:z.enum(['essential','complete']).optional()}).strict().refine(value=>Object.keys(value).length>0).parse(req.body);
  const row=await tx(async db=>{
   const company=tenant(req);await db.query('SELECT id FROM tenants WHERE id=$1 FOR UPDATE',[company]);
   if(input.taxi_dog_enabled===false){const pending=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND status IN ('scheduled','en_route','with_pet') LIMIT 1",[company]);ensure(!pending.rowCount,409,'Finalize ou cancele os transportes pendentes antes de desativar o Táxi Dog.');}
-  const result=await db.query('UPDATE tenants SET late_tolerance_minutes=COALESCE($2,late_tolerance_minutes),reminder_minutes_before=COALESCE($3,reminder_minutes_before),taxi_dog_enabled=COALESCE($4,taxi_dog_enabled) WHERE id=$1 RETURNING id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled',[company,input.late_tolerance_minutes??null,input.reminder_minutes_before??null,input.taxi_dog_enabled??null]);
+  const result=await db.query('UPDATE tenants SET late_tolerance_minutes=COALESCE($2,late_tolerance_minutes),reminder_minutes_before=COALESCE($3,reminder_minutes_before),taxi_dog_enabled=COALESCE($4,taxi_dog_enabled),operation_mode=COALESCE($5,operation_mode) WHERE id=$1 RETURNING id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,operation_mode',[company,input.late_tolerance_minutes??null,input.reminder_minutes_before??null,input.taxi_dog_enabled??null,input.operation_mode??null]);
   if(input.reminder_minutes_before!==undefined)await db.query(`UPDATE reminder_jobs j SET scheduled_for=a.starts_at-($2::int*interval '1 minute')
    FROM appointments a WHERE j.tenant_id=$1 AND a.tenant_id=j.tenant_id AND a.id=j.appointment_id AND j.state='queued'`,[tenant(req),input.reminder_minutes_before]);
   if(input.taxi_dog_enabled!==undefined)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'taxi.settings.update',entityType:'tenant',entityId:company,metadata:{enabled:input.taxi_dog_enabled}});
+  if(input.operation_mode!==undefined)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'shop.operation_mode.update',entityType:'tenant',entityId:company,metadata:{operation_mode:input.operation_mode}});
   return result;
  });res.json(row.rows[0]);
 });
