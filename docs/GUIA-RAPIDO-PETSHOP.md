@@ -31,6 +31,28 @@ Quando receber um pagamento, registre-o no **Financeiro**. O valor agendado não
 
 ## Pedidos pelo link e pelo QR Code
 
-Quando o recurso estiver liberado, o responsável poderá abrir **Configurações**, ativar o agendamento público e copiar o link ou compartilhar o QR Code. O tutor escolhe um serviço e um horário e envia um pedido. A pessoa do pet shop confere o pedido na **Agenda** e confirma ou recusa. Enviar o pedido não reserva o horário; a disponibilidade é verificada novamente na confirmação.
+O responsável pode abrir **Configurações**, ativar **Agendamento pelo cliente** e copiar o link ou compartilhar o QR Code. O tutor aponta a câmera do celular para o QR ou abre o link, escolhe um serviço e um horário e envia um pedido. A pessoa do pet shop confere o pedido na **Agenda** e confirma ou recusa. Enviar o pedido não reserva o horário; a disponibilidade é verificada novamente na confirmação.
 
-**Situação desta homologação:** o link público deve permanecer desligado na VPS enquanto os documentos jurídicos não estiverem publicados. Esta preparação não significa que o agendamento público já esteja liberado para clientes reais.
+**Situação conferida em 21/11:** o agendamento público está ativo para o Pet Shop Demonstração 1 na Hostinger. Em cada empresa, a disponibilidade depende da ativação do link, da empresa ativa e de uma assinatura que permita alterações. A publicação dos documentos continua pendente e não é apresentada como concluída pela ativação deste recurso.
+
+## Entregas de produtos — próxima atualização
+
+**Publicado e conferido na Hostinger em 22/11/2026.** Ative as entregas nas preferências do pet shop, marque os produtos que deseja oferecer e configure o catálogo antes de compartilhar o link.
+
+Se o pet shop vende rações e outros produtos e faz entregas, o responsável poderá ativar o recurso nas **Configurações**, usando o perfil **Atendimentos e venda de produtos**. Quem trabalha só com banho e tosa pode manter as entregas desligadas.
+
+### Pedido recebido por WhatsApp ou telefone
+
+Abra **Entregas de produtos** e use **Novo pedido**. Escolha o cliente, confira telefone e endereço, adicione produtos e quantidades e informe a taxa de entrega. Ao salvar, o PetCore cria a comanda e baixa o estoque uma única vez. Não cadastre outra venda para esse mesmo pedido.
+
+Acompanhe o cartão da entrega: **Preparando**, **Saiu para entrega** e **Entregue**. Marcar como entregue não registra dinheiro recebido. Confira a comanda e registre o recebimento no **Financeiro**. Para cancelar, informe o motivo e siga a conferência financeira mostrada pelo sistema.
+
+### Pedido escolhido pelo cliente no catálogo
+
+Na área do catálogo da tela de entregas, ative os pedidos públicos, informe a região atendida, o recado para o cliente e a taxa, se já estiver definida. Em **Produtos e estoque**, marque **Mostrar este produto no catálogo público de entregas** nos itens que deseja oferecer. Depois copie o link ou compartilhe o QR Code do **catálogo de produtos**. Esse QR é diferente do QR de agendamento de banho e tosa.
+
+O cliente escolhe os produtos e as quantidades e informa nome, telefone e endereço. O pedido chega em **Pedidos recebidos**. Confira a disponibilidade e os dados de entrega; selecione um cadastro existente ou crie um cliente e confirme. Só nessa confirmação são criadas a venda e a baixa do estoque. Se não puder atender, recuse o pedido e avise o cliente pelo contato informado.
+
+Se a taxa não estiver configurada, o catálogo informa que ela será combinada com o pet shop. Combine o valor antes de confirmar e informe a taxa, inclusive zero quando a entrega for gratuita. O pedido pelo catálogo não cobra o cliente pela internet. O pagamento é combinado com o pet shop e registrado no Financeiro quando recebido.
+
+As etapas são atualizadas pela equipe. Não há GPS, acompanhamento da localização do entregador ou cálculo automático de rota nesta atualização.

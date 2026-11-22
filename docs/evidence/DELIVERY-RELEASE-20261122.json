@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-22",
+  "revision": "b6ababb505caf8af76592a0a5127c8d58ae4cbe3",
+  "backendTestRevision": "a28012efaa2a993f6f63b8979ddf47f170d3f4a8",
+  "domain": "https://petcore.tigertech.dev.br",
+  "checks": {
+    "apiUnit": 45,
+    "webUnit": 24,
+    "apiIntegration": 247,
+    "integrationFailures": 0,
+    "live": {
+      "ok": true,
+      "event": "delivery_live_smoke_passed",
+      "checks": 12,
+      "revision": "b6ababb505caf8af76592a0a5127c8d58ae4cbe3",
+      "link": "https://petcore.tigertech.dev.br/loja/ad63b2d1bb99c9f91084b0a5f27426b15967c007726a4633",
+      "temporaryDataRemoved": true,
+      "noEmailOrPayment": true,
+      "at": "2026-11-22T19:08:49.635Z"
+    },
+    "ui": {
+      "fictitiousData": true,
+      "mobileWidth": 390,
+      "horizontalOverflow": false,
+      "bottomNavigation": "fixed",
+      "catalogSubmit": true,
+      "dispatch": true,
+      "inboxConfirm": true,
+      "qrCanvas": "320x320",
+      "physicalApkNewFlowTest": false
+    }
+  },
+  "database": {
+    "tables": 58,
+    "migrations": 23,
+    "migrationsAdded": [
+      "023_delivery_orders.sql",
+      "024_public_delivery.sql"
+    ],
+    "migration016Excluded": true,
+    "runtimeGrantsVerified": true
+  },
+  "backupBeforeMigration": {
+    "id": "4ed9b9d2-3435-477a-b8ac-18a39d886e4c",
+    "sha256": "7dbd71c75b3da09fcbc6b9131a4126f3a43ec988ea06925c78b104d12e3b22c7",
+    "sizeBytes": 204207,
+    "restorationVerified": false
+  },
+  "android": {
+    "version": "1.0.2",
+    "newBinaryRequired": false
+  },
+  "beautyBarberUnchanged": [
+    {
+      "id": "75dc45ada173",
+      "name": "beautybarber-api-1"
+    },
+    {
+      "id": "4418d9bc80e8",
+      "name": "beautybarber-db-1"
+    },
+    {
+      "id": "d8b85e8da770",
+      "name": "beautybarber-web-1"
+    }
+  ],
+  "gps": {
+    "implemented": false,
+    "futureScope": [
+      "taxi_dog",
+      "product_deliveries",
+      "customer_tracking"
+    ]
+  },
+  "legalDocumentsPublished": false
+}

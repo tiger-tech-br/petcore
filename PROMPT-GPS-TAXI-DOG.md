@@ -1,4 +1,4 @@
-# Prompt de continuidade — GPS e rotas do Táxi Dog
+# Prompt de continuidade — GPS e rotas do Táxi Dog e das entregas
 
 Preparado em 11/11/2026. **Este documento planeja a próxima implementação; GPS e rotas ainda não foram implementados ou ativados.**
 
@@ -12,7 +12,7 @@ Leia primeiro `PROMPT-CHATGPT-GRATUITO.md` e `docs/TAXI-DOG.md`. Esta solicitaç
 
 ### O que já existe
 
-- Interface React/TypeScript/Vite/SCSS, API Node.js/Express e PostgreSQL no Neon. Hospedagem no Railway; sessão autenticada no servidor e isolamento por empresa.
+- Interface React/TypeScript/Vite/SCSS, API Node.js/Express e PostgreSQL na VPS Hostinger. Aplicação, banco e arquivos na Hostinger; sessão autenticada no servidor e isolamento por empresa.
 - Táxi Dog opcional por pet shop, serviços e preços, motoristas, busca e entrega ligadas ao atendimento, horários separados da agenda do profissional, conflitos de motorista, etapas manuais e taxa na mesma comanda.
 - Preserve os controles de custódia do pet, volta para casa após cancelamento do banho, bloqueio de alterações após faturamento, snapshots de preço e cobrança única do transporte. O GPS não deve confirmar automaticamente coleta, chegada ou entrega, nem mudar preços por quilômetro.
 - O banco tem migrations até `015_taxi_dog.sql`. Confirme a última antes de criar a próxima; não edite migrations já aplicadas.
@@ -79,3 +79,11 @@ Leia primeiro `PROMPT-CHATGPT-GRATUITO.md` e `docs/TAXI-DOG.md`. Esta solicitaç
 - Cobrança e limites dessa API: https://developers.google.com/maps/documentation/routes/usage-and-billing
 
 Essas referências explicam as diferenças técnicas. A presença de uma referência Google não constitui escolha, contratação ou configuração desse fornecedor.
+
+## Ampliação pedida em 22/11/2026 — próxima etapa
+
+O responsável pediu também rotas, GPS e acompanhamento pelo cliente nas entregas de rações e produtos. Incluir as entregas internas e os pedidos do catálogo, além do Táxi Dog. O módulo atual usa etapas manuais; esta anotação não declara rastreamento implementado.
+
+Vincular a sessão de rastreamento a uma entrega e a um motorista autenticado da empresa. Compartilhar localização somente durante o serviço ativo, com autorização clara do motorista e encerramento ao concluir ou cancelar. O cliente recebe um link imprevisível, limitado àquela entrega e com validade, sem acesso à conta do motorista ou a outras entregas. Mostrar última atualização e localização indisponível quando perder sinal; não inventar posições. Definir retenção curta e controle de acesso no servidor.
+
+Preparar a seleção do serviço de mapas/rotas com custos concretos antes de ativar recursos pagos. Verificar a necessidade de atualização do APK do motorista e testar em aparelho o funcionamento em segundo plano; uma página aberta não garante GPS contínuo com a tela bloqueada. Preservar a venda, o estoque e o pagamento existentes.

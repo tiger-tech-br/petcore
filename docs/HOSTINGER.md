@@ -1,5 +1,12 @@
 # Hostinger — operação e migração do PetCore
 
+## Atualização de 22/11 — entregas e catálogo publicados
+
+A revisão `b6ababb505caf8af76592a0a5127c8d58ae4cbe3` foi publicada em https://petcore.tigertech.dev.br. Entregas opcionais recebem pedidos internos de WhatsApp/telefone e solicitações do catálogo público com link e QR próprios. O cliente escolhe produtos marcados para o catálogo; confirmar o pedido cria uma única comanda e baixa de estoque. As etapas são Preparando, Saiu para entrega, Entregue e Cancelado. Taxa fixa ou a combinar; recebimento registrado no Financeiro, sem cobrança on-line automática. Não há GPS/rotas nesta revisão; a ampliação para produtos e Táxi Dog está no prompt específico.
+
+Passaram 45 testes da API, 24 do web e 247 integrações em banco isolado. Um ensaio pelo HTTPS publicado passou em 12 verificações, preservou a repetição sem duplicações e removeu os dados temporários; sem e-mail ou pagamento real. O banco tem 58 tabelas e 23 migrations, com 023/024 e sem 016. Aplicação e agendadores usam a nova versão; Beauty Barber preservado. APK 1.0.2 recebe a interface remota ao reabrir; não houve novo teste físico destas entregas. Os documentos jurídicos continuam rascunhos. Resultados detalhados em `docs/evidence/DELIVERY-RELEASE-20261122.json`.
+
+
 ## Atualização de 21/11 — uso simplificado e agendamento público preparado
 
 A revisão `7b9a9990d617c788ee7cf7869cecfd306664e936` está publicada em <https://petcore.tigertech.dev.br>, com aplicação e agendadores atualizados. O banco tem **53 tabelas e 21 migrations**, incluindo 021/022 e excluindo a 016. Foram adicionados cadastro conjunto de cliente/pets, perfil “Só banho e tosa”, participação dos donos nos atendimentos, escolha automática de quem atende e link/QR com pedidos sujeitos à confirmação do pet shop. Os pedidos ficam em painel recolhível na Agenda. Veja o [guia rápido](GUIA-RAPIDO-PETSHOP.md) e a [evidência](evidence/SIMPLIFICACAO-AGENDAMENTO-20261121.json).

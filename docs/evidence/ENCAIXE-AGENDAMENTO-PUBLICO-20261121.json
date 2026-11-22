@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-21",
+  "revision": "bc1b48dc59c01d221b87b68a03ce969ea9549564",
+  "apiIntegration": {
+    "tests": 61,
+    "pass": 61,
+    "fail": 0,
+    "database": "isolated *_test"
+  },
+  "webUnit": {
+    "tests": 24,
+    "pass": 24
+  },
+  "deployment": {
+    "domain": "https://petcore.tigertech.dev.br",
+    "healthy": true,
+    "volume": "petcore_waitlist_bc1b48dc_20261121"
+  },
+  "publicBooking": {
+    "enabledTenant": "7ecccd74-61dc-4744-a72c-1daa61472c96",
+    "link": "https://petcore.tigertech.dev.br/agendar/e895c2a357c26735bd144f64dc21d532220e4255eeb08b91",
+    "documentsPublished": false
+  },
+  "waitlist": {
+    "expiredItemsPreserved": 3,
+    "automaticProfessional": true,
+    "closePreservesHistory": true
+  },
+  "android": {
+    "version": "1.0.2",
+    "newBinaryRequired": false,
+    "qrCanvas": true,
+    "physicalNewFlowTest": false
+  }
+}
