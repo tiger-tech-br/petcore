@@ -4,16 +4,14 @@ import {z} from 'zod';
 import {auth,ensure,permit,pool,tenant} from './core.js';
 import {recordAudit} from './audit.js';
 import {requireSubscriptionWrite} from './commercialService.js';
-import {appendLedger,cash,cashSelect,cents,csv,currentCash,dateQuery,expense,expenseColumns,financialSummary,idempotency,inPeriod,ledgerColumns,ledgerEntry,ledgerJoins,movement,movementColumns,movementJoins,moveStock,mutate,pageQuery,paymentMethod,product,productColumns,range,sale,saleSelect} from './businessService.js';
+import {appendLedger,cancelSale,cash,cashSelect,createSale,cents,csv,currentCash,dateQuery,expense,expenseColumns,financialSummary,idempotency,inPeriod,ledgerColumns,ledgerEntry,ledgerJoins,movement,movementColumns,movementJoins,moveStock,mutate,pageQuery,paymentMethod,product,productColumns,range,sale,saleSelect} from './businessService.js';
 
 const router=Router();router.use(auth,requireSubscriptionWrite);
 const completedTaxi=`EXISTS(SELECT 1 FROM taxi_bookings tb JOIN taxi_trips tt ON tt.tenant_id=tb.tenant_id AND tt.booking_id=tb.id
  WHERE tb.tenant_id=a.tenant_id AND tb.appointment_id=a.id AND tb.cancelled_at IS NULL AND tt.status='completed')`;
-const importableAppointment=(row:{status:string;starts_at:string|Date;completed_transport:boolean})=>
- (row.status==='done'&&new Date(row.starts_at)<=new Date())||(row.status==='cancelled'&&row.completed_transport);
 const page=(input:{page:number;page_size:number})=>({page:input.page,pageSize:input.page_size});
 const listResult=(items:unknown[],total:number,input:{page:number;page_size:number})=>({items,total,...page(input)});
-const productInput=z.object({name:z.string().trim().min(1).max(160),sku:z.string().trim().max(80).default(''),unit:z.string().trim().min(1).max(20).default('un.'),price_cents:cents,cost_cents:cents.default(0),min_stock:z.number().int().min(0).max(1000000).default(0)});
+const productInput=z.object({name:z.string().trim().min(1).max(160),sku:z.string().trim().max(80).default(''),unit:z.string().trim().min(1).max(20).default('un.'),price_cents:cents,cost_cents:cents.default(0),min_stock:z.number().int().min(0).max(1000000).default(0),public_catalog_visible:z.boolean().default(false)});
 const productCreate=productInput.extend({initial_stock:z.number().int().min(0).max(1000000).default(0),idempotency_key:idempotency}).strict();
 
 router.get('/products',permit('inventory'),async(req,res)=>{
@@ -30,13 +28,13 @@ router.get('/products',permit('inventory'),async(req,res)=>{
 router.post('/products',permit('inventory'),async(req,res)=>{
  const input=productCreate.parse(req.body);
  const ref=await mutate(req,input.idempotency_key,'business.product.create',input,async(db,company,user)=>{
-  const row=await db.query('INSERT INTO business_products(tenant_id,name,sku,unit,price_cents,cost_cents,min_stock) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[company,input.name,input.sku,input.unit,input.price_cents,input.cost_cents,input.min_stock]);
+  const row=await db.query('INSERT INTO business_products(tenant_id,name,sku,unit,price_cents,cost_cents,min_stock,public_catalog_visible) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',[company,input.name,input.sku,input.unit,input.price_cents,input.cost_cents,input.min_stock,input.public_catalog_visible]);
   if(input.initial_stock)await moveStock(db,company,user,row.rows[0].id,input.initial_stock,'initial');
   return {id:row.rows[0].id as string};
  });res.status(201).json(await product(pool,tenant(req),ref.id!));
 });
 router.patch('/products/:id',permit('inventory'),async(req,res)=>{
- const id=z.uuid().parse(req.params.id),input=z.object({name:z.string().trim().min(1).max(160).optional(),sku:z.string().trim().max(80).optional(),unit:z.string().trim().min(1).max(20).optional(),price_cents:cents.optional(),cost_cents:cents.optional(),min_stock:z.number().int().min(0).max(1000000).optional(),active:z.boolean().optional()}).strict().parse(req.body);
+ const id=z.uuid().parse(req.params.id),input=z.object({name:z.string().trim().min(1).max(160).optional(),sku:z.string().trim().max(80).optional(),unit:z.string().trim().min(1).max(20).optional(),price_cents:cents.optional(),cost_cents:cents.optional(),min_stock:z.number().int().min(0).max(1000000).optional(),active:z.boolean().optional(),public_catalog_visible:z.boolean().optional()}).strict().parse(req.body);
  const fields=Object.keys(input);ensure(fields.length,422,'Nenhuma alteração informada.');
  const ref=await mutate(req,randomUUID(),'business.product.update',{id,...input},async(db,company)=>{
   await product(db,company,id);
@@ -96,56 +94,8 @@ const itemInput=z.discriminatedUnion('kind',[
 ]);
 router.post('/sales',permit('finance'),async(req,res)=>{
  const input=z.object({tutor_id:z.uuid().nullable().default(null),appointment_id:z.uuid().nullable().default(null),items:z.array(itemInput).max(100).default([]),discount_cents:cents.default(0),due_date:z.iso.date(),notes:z.string().trim().max(3000).default(''),idempotency_key:idempotency}).strict().parse(req.body);
- const ref=await mutate(req,input.idempotency_key,'business.sale.create',input,async(db,company,user)=>{
-  type Line={kind:'product'|'service';product_id:string|null;service_id:string|null;description:string;quantity:number;unit_price_cents:number;total_cents:number};
-  const lines:Line[]=[];let tutorId=input.tutor_id;
-  if(input.appointment_id){
-   // Descobre o tutor antes de travar: a privacidade tambem trava tutor antes
-   // de limpar textos de atendimentos. A ordem evita deadlock na anonimizacao.
-   const appointment=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2`,[company,input.appointment_id]);
-   ensure(appointment.rowCount,404,'Atendimento não encontrado.');
-   ensure(importableAppointment(appointment.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
-   ensure(tutorId===null||tutorId===appointment.rows[0].tutor_id,422,'O tutor precisa corresponder ao atendimento.');
-   tutorId=appointment.rows[0].tutor_id as string;
-   ensure(input.items.every(item=>item.kind==='product'),422,'Os serviços do atendimento já foram importados; acrescente apenas produtos.');
-  }
-  if(tutorId){const tutor=await db.query('SELECT id,anonymized_at FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,tutorId]);ensure(tutor.rowCount,404,'Tutor não encontrado.');ensure(!tutor.rows[0].anonymized_at,409,'O cadastro deste tutor foi anonimizado e não pode receber novas vendas.');}
-  if(input.appointment_id){
-   const locked=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2 FOR UPDATE OF a`,[company,input.appointment_id]);
-   ensure(locked.rowCount&&locked.rows[0].tutor_id===tutorId,409,'O atendimento foi alterado. Atualize a tela.');
-   ensure(importableAppointment(locked.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
-   const previous=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND appointment_id=$2',[company,input.appointment_id]);ensure(!previous.rowCount,409,'Este atendimento já possui uma comanda.');
-   if(locked.rows[0].status==='done'){
-    const services=await db.query('SELECT s.id,s.name,a.price_cents FROM appointment_services a JOIN services s ON s.tenant_id=a.tenant_id AND s.id=a.service_id WHERE a.tenant_id=$1 AND a.appointment_id=$2 ORDER BY a.position',[company,input.appointment_id]);
-    ensure(services.rowCount,422,'O atendimento não possui serviços.');
-    for(const row of services.rows)lines.push({kind:'service',product_id:null,service_id:row.id,description:row.name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
-   }
-   // Transporte tem preço combinado próprio e não ocupa a agenda do banhista.
-   // A trava da reserva serializa importação, alteração e cancelamento da taxa.
-   const transport=await db.query('SELECT id,service_id,service_name,price_cents FROM taxi_bookings WHERE tenant_id=$1 AND appointment_id=$2 AND cancelled_at IS NULL FOR UPDATE',[company,input.appointment_id]);
-   for(const row of transport.rows)lines.push({kind:'service',product_id:null,service_id:row.service_id,description:row.service_name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
-  }
-  const duplicates=new Set<string>();
-  for(const item of [...input.items].sort((a,b)=>(a.kind==='product'?a.product_id:a.service_id).localeCompare(b.kind==='product'?b.product_id:b.service_id))){
-   const id=item.kind==='product'?item.product_id:item.service_id,key=item.kind+id;
-   ensure(!duplicates.has(key),422,'Não repita o mesmo produto ou serviço em linhas diferentes.');duplicates.add(key);
-   const row=await db.query(item.kind==='product'?'SELECT id,name,price_cents,active,stock_quantity FROM business_products WHERE tenant_id=$1 AND id=$2 FOR UPDATE':'SELECT id,name,price_cents,active FROM services WHERE tenant_id=$1 AND id=$2 FOR SHARE',[company,id]);
-   ensure(row.rowCount,404,'Produto ou serviço não encontrado.');ensure(row.rows[0].active,422,'Produto ou serviço inativo.');
-   if(item.kind==='product')ensure(row.rows[0].stock_quantity>=item.quantity,409,'Estoque insuficiente para esta venda.');
-   const total=item.quantity*Number(row.rows[0].price_cents);ensure(Number.isSafeInteger(total)&&total<=1000000000,422,'Valor da linha acima do limite.');
-   lines.push({kind:item.kind,product_id:item.kind==='product'?id:null,service_id:item.kind==='service'?id:null,description:row.rows[0].name,quantity:item.quantity,unit_price_cents:row.rows[0].price_cents,total_cents:total});
-  }
-  ensure(lines.length,422,'Inclua pelo menos um produto ou serviço.');
-  const subtotal=lines.reduce((sum,item)=>sum+item.total_cents,0);ensure(Number.isSafeInteger(subtotal)&&subtotal<=1000000000,422,'Valor da comanda acima do limite.');
-  ensure(input.discount_cents<=subtotal,422,'O desconto não pode ultrapassar o subtotal.');const total=subtotal-input.discount_cents;
-  const row=await db.query('INSERT INTO business_sales(tenant_id,tutor_id,appointment_id,subtotal_cents,discount_cents,total_cents,status,due_date,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',[company,tutorId,input.appointment_id,subtotal,input.discount_cents,total,total===0?'paid':'open',input.due_date,input.notes,user]);
-  const id=row.rows[0].id as string;
-  for(const item of lines){
-   await db.query('INSERT INTO business_sale_items(tenant_id,sale_id,kind,product_id,service_id,description,quantity,unit_price_cents,total_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[company,id,item.kind,item.product_id,item.service_id,item.description,item.quantity,item.unit_price_cents,item.total_cents]);
-   if(item.kind==='product')await moveStock(db,company,user,item.product_id!,-item.quantity,'sale','',id);
-  }
-  return {id};
- });res.status(201).json(await sale(pool,tenant(req),ref.id!));
+ const ref=await mutate(req,input.idempotency_key,'business.sale.create',input,(db,company,user)=>createSale(db,company,user,input));
+ res.status(201).json(await sale(pool,tenant(req),ref.id!));
 });
 router.post('/sales/:id/payments',permit('finance'),async(req,res)=>{
  const id=z.uuid().parse(req.params.id),input=z.object({amount_cents:cents.refine(value=>value>0),payment_method:paymentMethod,idempotency_key:idempotency}).strict().parse(req.body);
@@ -159,16 +109,8 @@ router.post('/sales/:id/payments',permit('finance'),async(req,res)=>{
 });
 router.post('/sales/:id/cancel',permit('finance'),async(req,res)=>{
  const id=z.uuid().parse(req.params.id),input=z.object({reason:z.string().trim().min(3).max(1000),idempotency_key:idempotency}).strict().parse(req.body);
- const ref=await mutate(req,input.idempotency_key,'business.sale.cancel',{id,...input},async(db,company,user)=>{
-  const locked=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(locked.rowCount,404,'Comanda não encontrada.');
-  const record=await sale(db,company,id);if(record.status==='cancelled')return {id};
-  const payments=await db.query("SELECT payment_method,SUM(CASE WHEN kind='sale_payment' THEN amount_cents ELSE -amount_cents END)::float8 AS amount FROM business_ledger WHERE tenant_id=$1 AND sale_id=$2 GROUP BY payment_method ORDER BY payment_method",[company,id]);
-  for(const payment of payments.rows)if(payment.amount>0)await appendLedger(db,company,user,{saleId:id,kind:'sale_refund',amount:payment.amount,method:payment.payment_method});
-  const products=await db.query("SELECT product_id,SUM(quantity)::int AS quantity FROM business_sale_items WHERE tenant_id=$1 AND sale_id=$2 AND kind='product' GROUP BY product_id ORDER BY product_id",[company,id]);
-  for(const item of products.rows)await moveStock(db,company,user,item.product_id,item.quantity,'sale_cancel','',id);
-  await db.query("UPDATE business_sales SET status='cancelled',cancelled_at=now(),cancellation_reason=$3,updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,id,input.reason]);
-  return {id};
- });res.json(await sale(pool,tenant(req),ref.id!));
+ const ref=await mutate(req,input.idempotency_key,'business.sale.cancel',{id,...input},(db,company,user)=>cancelSale(db,company,user,id,input.reason));
+ res.json(await sale(pool,tenant(req),ref.id!));
 });
 
 router.get('/expenses',permit('finance'),async(req,res)=>{

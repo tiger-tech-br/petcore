@@ -8,6 +8,10 @@ import AppShell, {type MenuKey} from './AppShell';
 import DataPage, {type Resource} from './DataPage';
 import CalendarPage from './CalendarPage';
 import WaitlistPage from './WaitlistPage';
+import DeliveryPage from './DeliveryPage';
+import PublicDeliveryPage from './PublicDeliveryPage';
+import PublicDeliverySettings from './PublicDeliverySettings';
+import PublicDeliveryInbox from './PublicDeliveryInbox';
 import TeamPage from './TeamPage';
 import PublicBookingPage from './PublicBookingPage';
 import PublicBookingInbox from './PublicBookingInbox';
@@ -32,9 +36,10 @@ function App(){
  const [supportTicketId,setSupportTicketId]=useState<string|null>(null);
  const [platformSupportRequest,setPlatformSupportRequest]=useState(0);
  const [newClient,setNewClient]=useState(false),[bookingPreset,setBookingPreset]=useState<{tutor_id:string;pet_id?:string}|undefined>(),[calendarRevision,setCalendarRevision]=useState(0);
+ const [deliveryRevision,setDeliveryRevision]=useState(0),[financeSaleId,setFinanceSaleId]=useState<string>();
  function readLegal(kind:'privacy'|'terms'){legalBack.current=location.pathname+location.search;history.pushState(null,'',`/${kind}`);setLegalView(kind);}
  function closeLegal(){history.replaceState(null,'',legalBack.current);setLegalView(null);}
- function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setNewClient(false);setBookingPreset(undefined);setSupportTicketId(null);setError('');setMessage('');}
+ function navigate(target:MenuKey){setView(target);setDrawer(false);setSearchQuery('');setNewBooking(false);setNewClient(false);setBookingPreset(undefined);setFinanceSaleId(undefined);setSupportTicketId(null);setError('');setMessage('');}
  function registerClient(){navigate('tutors');setNewClient(true);}
  function bookForClient(selection:{tutor_id:string;pet_id?:string}){navigate('calendar');setBookingPreset(selection);setNewBooking(true);}
  useEffect(()=>listenNativeBack(()=>{
@@ -80,9 +85,10 @@ function App(){
    {view==='calendar'&&permitted('appointments')&&<>{(user.role==='admin'||user.permissions.includes('agenda:all'))&&<PublicBookingInbox key={'inbox-'+user.tenantId} setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} onChanged={()=>setCalendarRevision(value=>value+1)}/>}<CalendarPage key={user.tenantId+'-'+calendarRevision} initialNew={newBooking} initialSelection={bookingPreset} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} canTaxiDog={session.features?.taxi_dog===true&&permitted('taxi_dog')} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);setBookingPreset(undefined);}}/></>}
    {view==='taxi-dog'&&permitted('taxi_dog')&&<TaxiDogPage key={user.tenantId} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
    {view==='waitlist'&&permitted('waitlist')&&<WaitlistPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
+   {view==='deliveries'&&session.features?.delivery===true&&permitted('finance')&&<DeliveryPage key={user.tenantId+'-'+deliveryRevision} setMessage={setMessage} setError={setError} onSetup={navigate} onOpenFinance={id=>{navigate('finance');setFinanceSaleId(id);}} publicSettings={user.role==='admin'?<PublicDeliverySettings setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true}/>:undefined} publicRequests={<PublicDeliveryInbox setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} isAdmin={user.role==='admin'} onChanged={()=>setDeliveryRevision(value=>value+1)}/>}/>}
    {view==='crm'&&permitted('crm')&&<CrmPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='inventory'&&permitted('inventory')&&<InventoryPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
-   {view==='finance'&&permitted('finance')&&<FinancePage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
+   {view==='finance'&&permitted('finance')&&<FinancePage key={user.tenantId} initialSaleId={financeSaleId} setMessage={setMessage} setError={setError}/>}
    {view==='reports'&&permitted('finance')&&<ReportsPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='privacy'&&user.role==='admin'&&<PrivacyPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='subscription'&&<SubscriptionPage key={user.tenantId} setMessage={setMessage} setError={setError} onOpenSupport={id=>{navigate('support');setSupportTicketId(id);}}/>}
@@ -93,4 +99,5 @@ function App(){
 }
 
 const publicBookingToken=/^\/agendar\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
-createRoot(document.getElementById('root')!).render(<React.StrictMode>{publicBookingToken?<PublicBookingPage token={publicBookingToken}/>:<App/>}</React.StrictMode>);
+const publicDeliveryToken=/^\/loja\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{publicBookingToken?<PublicBookingPage token={publicBookingToken}/>:publicDeliveryToken?<PublicDeliveryPage token={publicDeliveryToken}/>:<App/>}</React.StrictMode>);

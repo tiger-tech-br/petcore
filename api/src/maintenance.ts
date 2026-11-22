@@ -23,6 +23,11 @@ export async function runMaintenanceOnce(options:{prune?:boolean;files?:boolean}
    WHERE CASE WHEN status='pending' THEN created_at ELSE COALESCE(reviewed_at,created_at) END < now()-interval '30 days'
    ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
   ) DELETE FROM public_booking_requests r USING expired WHERE r.id=expired.id`)).rowCount??0;
+  counts.expiredPublicDeliveryRequests=(await db.query(`WITH expired AS (
+   SELECT id FROM public_delivery_requests
+   WHERE CASE WHEN status='pending' THEN created_at ELSE COALESCE(reviewed_at,created_at) END < now()-interval '30 days'
+   ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
+  ) DELETE FROM public_delivery_requests r USING expired WHERE r.id=expired.id`)).rowCount??0;
  });
  let files:Record<string,unknown>={enabled:false};
  if(options.files!==false){

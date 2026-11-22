@@ -206,19 +206,26 @@ r.post('/professionals/:id/absences',permit('professionals'),async(req,res)=>{
  });res.status(201).json(row.rows[0]);
 });
 r.get('/settings',async(req,res)=>{
- const row=await pool.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,operation_mode FROM tenants WHERE id=$1',[tenant(req)]);res.json(row.rows[0]);
+ const row=await pool.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,delivery_enabled,operation_mode FROM tenants WHERE id=$1',[tenant(req)]);res.json(row.rows[0]);
 });
 r.patch('/settings',async(req,res)=>{
  ensure(req.access?.role==='admin',403,'Somente o administrador pode alterar configurações.');
- const input=z.object({late_tolerance_minutes:z.number().int().min(0).max(120).optional(),reminder_minutes_before:z.number().int().min(0).max(10080).optional(),taxi_dog_enabled:z.boolean().optional(),operation_mode:z.enum(['essential','complete']).optional()}).strict().refine(value=>Object.keys(value).length>0).parse(req.body);
+ const input=z.object({late_tolerance_minutes:z.number().int().min(0).max(120).optional(),reminder_minutes_before:z.number().int().min(0).max(10080).optional(),taxi_dog_enabled:z.boolean().optional(),delivery_enabled:z.boolean().optional(),operation_mode:z.enum(['essential','complete']).optional()}).strict().refine(value=>Object.keys(value).length>0).parse(req.body);
  const row=await tx(async db=>{
   const company=tenant(req);await db.query('SELECT id FROM tenants WHERE id=$1 FOR UPDATE',[company]);
   if(input.taxi_dog_enabled===false){const pending=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND status IN ('scheduled','en_route','with_pet') LIMIT 1",[company]);ensure(!pending.rowCount,409,'Finalize ou cancele os transportes pendentes antes de desativar o Táxi Dog.');}
-  const result=await db.query('UPDATE tenants SET late_tolerance_minutes=COALESCE($2,late_tolerance_minutes),reminder_minutes_before=COALESCE($3,reminder_minutes_before),taxi_dog_enabled=COALESCE($4,taxi_dog_enabled),operation_mode=COALESCE($5,operation_mode) WHERE id=$1 RETURNING id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,operation_mode',[company,input.late_tolerance_minutes??null,input.reminder_minutes_before??null,input.taxi_dog_enabled??null,input.operation_mode??null]);
+  const disablingDelivery=input.delivery_enabled===false||input.operation_mode==='essential';
+  if(disablingDelivery){
+   const pending=await db.query("SELECT 1 FROM business_delivery_orders WHERE tenant_id=$1 AND status IN ('preparing','out_for_delivery') UNION ALL SELECT 1 FROM public_delivery_requests WHERE tenant_id=$1 AND status='pending' LIMIT 1",[company]);
+   ensure(!pending.rowCount,409,'Conclua ou cancele as entregas e confira os pedidos recebidos antes de desativar.');
+   await db.query('UPDATE public_delivery_settings SET enabled=false,updated_at=now() WHERE tenant_id=$1',[company]);
+  }
+  const result=await db.query('UPDATE tenants SET late_tolerance_minutes=COALESCE($2,late_tolerance_minutes),reminder_minutes_before=COALESCE($3,reminder_minutes_before),taxi_dog_enabled=COALESCE($4,taxi_dog_enabled),operation_mode=COALESCE($5,operation_mode),delivery_enabled=CASE WHEN $6 THEN false ELSE COALESCE($7,delivery_enabled) END WHERE id=$1 RETURNING id,name,timezone,late_tolerance_minutes,reminder_minutes_before,taxi_dog_enabled,delivery_enabled,operation_mode',[company,input.late_tolerance_minutes??null,input.reminder_minutes_before??null,input.taxi_dog_enabled??null,input.operation_mode??null,disablingDelivery,input.delivery_enabled??null]);
   if(input.reminder_minutes_before!==undefined)await db.query(`UPDATE reminder_jobs j SET scheduled_for=a.starts_at-($2::int*interval '1 minute')
    FROM appointments a WHERE j.tenant_id=$1 AND a.tenant_id=j.tenant_id AND a.id=j.appointment_id AND j.state='queued'`,[tenant(req),input.reminder_minutes_before]);
   if(input.taxi_dog_enabled!==undefined)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'taxi.settings.update',entityType:'tenant',entityId:company,metadata:{enabled:input.taxi_dog_enabled}});
   if(input.operation_mode!==undefined)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'shop.operation_mode.update',entityType:'tenant',entityId:company,metadata:{operation_mode:input.operation_mode}});
+  if(input.delivery_enabled!==undefined||disablingDelivery)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'delivery.settings.update',entityType:'tenant',entityId:company,metadata:{enabled:result.rows[0].delivery_enabled}});
   return result;
  });res.json(row.rows[0]);
 });

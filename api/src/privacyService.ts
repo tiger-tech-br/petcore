@@ -43,7 +43,10 @@ export async function exportSubject(company:string,requestId:string,user:string)
    (SELECT count(*) FROM business_sales WHERE tenant_id=$1 AND tutor_id=$2)+
    (SELECT count(*) FROM taxi_bookings b JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
    (SELECT count(*) FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
-   (SELECT count(*) FROM public_booking_requests r JOIN appointments a ON a.tenant_id=r.tenant_id AND a.id=r.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2) AS total`,[company,item.tutor_id]);
+   (SELECT count(*) FROM public_booking_requests r JOIN appointments a ON a.tenant_id=r.tenant_id AND a.id=r.appointment_id WHERE a.tenant_id=$1 AND a.tutor_id=$2)+
+   (SELECT count(*) FROM business_delivery_orders d JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id WHERE s.tenant_id=$1 AND s.tutor_id=$2)+
+   (SELECT count(*) FROM business_delivery_events e JOIN business_delivery_orders d ON d.tenant_id=e.tenant_id AND d.id=e.delivery_id JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id WHERE s.tenant_id=$1 AND s.tutor_id=$2)+
+   (SELECT count(*) FROM public_delivery_requests r JOIN business_delivery_orders d ON d.tenant_id=r.tenant_id AND d.id=r.delivery_order_id JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id WHERE s.tenant_id=$1 AND s.tutor_id=$2) AS total`,[company,item.tutor_id]);
   ensure(Number(size.rows[0].total)<=25000,413,'Este histórico precisa de exportação assistida em lotes pelo responsável pelo sistema.');
   const pets=await db.query('SELECT id,name,species,breed,size,birth_date,notes,created_at,photo_key FROM pets WHERE tenant_id=$1 AND tutor_id=$2 ORDER BY created_at,id',[company,item.tutor_id]);
   const appointments=await db.query(`SELECT a.id,a.pet_id,p.name AS pet_name,a.starts_at,a.ends_at,a.status,a.notes,
@@ -73,13 +76,29 @@ export async function exportSubject(company:string,requestId:string,user:string)
     FROM public_booking_request_services s WHERE s.tenant_id=r.tenant_id AND s.request_id=r.id),'[]'::json) AS services
    FROM public_booking_requests r JOIN appointments a ON a.tenant_id=r.tenant_id AND a.id=r.appointment_id
    WHERE a.tenant_id=$1 AND a.tutor_id=$2 ORDER BY r.created_at,r.id`,[company,item.tutor_id]);
+  const deliveries=await db.query(`SELECT d.id,d.sale_id,d.status,d.address,d.phone,d.reference,d.notes,d.cancellation_reason,
+   d.created_at,d.updated_at,d.out_for_delivery_at,d.delivered_at,d.cancelled_at
+   FROM business_delivery_orders d JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY d.created_at,d.id`,[company,item.tutor_id]);
+  const deliveryEvents=await db.query(`SELECT e.id,e.delivery_id,e.old_status,e.new_status,e.reason,e.created_at
+   FROM business_delivery_events e JOIN business_delivery_orders d ON d.tenant_id=e.tenant_id AND d.id=e.delivery_id
+   JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY e.created_at,e.id`,[company,item.tutor_id]);
+  const publicDeliveries=await db.query(`SELECT r.id,r.status,r.customer_name,r.phone,r.address,r.reference,r.notes,
+   r.subtotal_cents,r.quoted_delivery_fee_cents,r.delivery_order_id,r.rejection_reason,r.created_at,r.reviewed_at,
+   COALESCE((SELECT json_agg(json_build_object('product_id',i.product_id,'name',i.name,'unit',i.unit,'quantity',i.quantity,'unit_price_cents',i.unit_price_cents) ORDER BY i.position)
+    FROM public_delivery_request_items i WHERE i.tenant_id=r.tenant_id AND i.request_id=r.id),'[]'::json) AS items
+   FROM public_delivery_requests r JOIN business_delivery_orders d ON d.tenant_id=r.tenant_id AND d.id=r.delivery_order_id
+   JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY r.created_at,r.id`,[company,item.tutor_id]);
   await db.query("UPDATE privacy_requests SET status='in_progress',updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,requestId]);
   await requestEvent(db,company,requestId,user,'exported','in_progress');
   await recordAudit(db,{tenantId:company,userId:user,action:'privacy.export',entityType:'privacy_request',entityId:requestId,metadata:{tutorId:item.tutor_id}});
   return {format:'petcore.subject-export.v1',exported_at:new Date().toISOString(),request_id:requestId,
    tutor:tutor.rows[0],pets:pets.rows,appointments:appointments.rows,contacts:contacts.rows,tasks:tasks.rows,
    email_reminder_consent_history:consents.rows,waitlist:waitlist.rows,sales:sales.rows,
-   public_booking_requests:publicBookings.rows,taxi_dog:{bookings:taxiBookings.rows,trips:taxiTrips.rows}};
+   public_booking_requests:publicBookings.rows,taxi_dog:{bookings:taxiBookings.rows,trips:taxiTrips.rows},
+   deliveries:{orders:deliveries.rows,events:deliveryEvents.rows,public_requests:publicDeliveries.rows}};
  });
  const configured=storage();
  const photoDownloads:{petId:string;url:string|null;expiresAt:string|null;status:string}[]=[];
@@ -113,6 +132,11 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   ensure(item.identity_verified,409,'Verifique a identidade do titular antes de anonimizar.');
   ensure(!['completed','rejected'].includes(item.status),409,'Esta solicitação já foi encerrada.');
   ensure(!tutor.rows[0].anonymized_at,409,'Este cadastro já foi anonimizado.');
+  // Creating a delivery locks this tutor first. Closed delivery states cannot
+  // reopen, so contact details may be cleared only once fulfillment has ended.
+  const activeDelivery=await db.query(`SELECT 1 FROM business_delivery_orders d JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND d.status IN ('preparing','out_for_delivery') LIMIT 1`,[company,item.tutor_id]);
+  ensure(!activeDelivery.rowCount,409,'Conclua ou cancele as entregas de produtos pendentes antes de anonimizar este cadastro.');
   const appointments=await db.query(`SELECT a.id,a.status,
    EXISTS(SELECT 1 FROM appointment_events e WHERE e.tenant_id=a.tenant_id AND e.appointment_id=a.id AND e.kind='in_progress') AS previously_started
    FROM appointments a WHERE a.tenant_id=$1 AND a.tutor_id=$2 FOR UPDATE OF a`,[company,item.tutor_id]);
@@ -152,6 +176,11 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   // just because an unverified name, phone or email resembles this tutor.
   await db.query(`DELETE FROM public_booking_requests r USING appointments a
    WHERE a.tenant_id=$1 AND a.tutor_id=$2 AND r.tenant_id=a.tenant_id AND r.appointment_id=a.id`,[company,item.tutor_id]);
+  // Only a confirmed delivery/sale identity links a public request to a tutor.
+  // Unconfirmed contacts with a matching phone/name belong to no inferred user.
+  await db.query(`DELETE FROM public_delivery_requests r USING business_delivery_orders d,business_sales s
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND d.tenant_id=s.tenant_id AND d.sale_id=s.id
+    AND r.tenant_id=d.tenant_id AND r.delivery_order_id=d.id`,[company,item.tutor_id]);
   await db.query("UPDATE crm_contacts SET summary='Conteúdo removido por solicitação de privacidade.' WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE crm_tasks SET title='Retorno encerrado por privacidade',notes='',status=CASE WHEN status='open' THEN 'cancelled' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE waitlist SET notes='',status=CASE WHEN status IN ('waiting','offered') THEN 'closed' ELSE status END WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
@@ -173,6 +202,11 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   await db.query(`UPDATE reminder_delivery_attempts d SET error_message=NULL FROM appointments a
    WHERE a.tenant_id=$1 AND a.tutor_id=$2 AND d.tenant_id=a.tenant_id AND d.appointment_id=a.id`,[company,item.tutor_id]);
   await db.query("UPDATE business_sales SET notes='',cancellation_reason=CASE WHEN cancellation_reason IS NULL THEN NULL ELSE 'Texto removido por privacidade.' END WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
+  await db.query(`UPDATE business_delivery_orders d SET address='',phone='',reference='',notes='',cancellation_reason='',updated_at=now()
+   FROM business_sales s WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND d.tenant_id=s.tenant_id AND d.sale_id=s.id`,[company,item.tutor_id]);
+  await db.query(`UPDATE business_delivery_events e SET reason='' FROM business_delivery_orders d,business_sales s
+   WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND d.tenant_id=s.tenant_id AND d.sale_id=s.id
+    AND e.tenant_id=d.tenant_id AND e.delivery_id=d.id`,[company,item.tutor_id]);
   await db.query(`UPDATE business_stock_movements m SET note='' FROM business_sales s WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND m.tenant_id=s.tenant_id AND m.sale_id=s.id`,[company,item.tutor_id]);
   await db.query(`UPDATE privacy_requests SET description='Descrição removida após anonimização.',
    resolution='Cadastro e textos vinculados desidentificados. Registros financeiros preservados; arquivos e backups seguem o fluxo documentado.',

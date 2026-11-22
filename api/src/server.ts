@@ -19,6 +19,8 @@ import {createOriginGuard} from './originGuard.js';
 import {startSupportEmailWorker} from './supportEmailService.js';
 import {publicBookingRouter} from './publicBookingRoutes.js';
 import waitlistRoutes from './waitlistRoutes.js';
+import deliveryRoutes from './deliveryRoutes.js';
+import {publicDeliveryRouter} from './publicDeliveryRoutes.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
  if(env.NODE_ENV!=='production')return;
@@ -50,12 +52,14 @@ export function createApp(){
  app.use('/api/auth',authRoutes);
  app.use('/api/public',publicCommercial);
  app.use('/api',publicBookingRouter);
+ app.use('/api',publicDeliveryRouter);
  app.use('/api/commercial',commercialRoutes);
  app.use('/api/privacy',privacyRoutes);
  app.use('/api/business',businessRoutes);
  app.use('/api/crm',crmRoutes);
  app.use('/api/taxi-dog',taxiDogRoutes);
  app.use('/api/calendar/waitlist',waitlistRoutes);
+ app.use('/api/deliveries',deliveryRoutes);
  app.use('/api',dataRoutes);
  app.use('/api',calendarRoutes);
  app.use('/api',fileRoutes);

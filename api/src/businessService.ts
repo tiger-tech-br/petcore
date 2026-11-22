@@ -30,11 +30,11 @@ export async function mutate<T extends Reference>(req:Request,key:string,kind:st
  });}catch(cause){if((cause as {code?:string}).code==='55P03')error(409,'Outra alteração está em andamento. Aguarde alguns segundos e tente novamente.');throw cause;}
 }
 
-export const productColumns='p.id,p.name,p.sku,p.unit,p.price_cents,p.cost_cents,p.min_stock,p.stock_quantity,p.active,p.created_at,p.updated_at';
+export const productColumns='p.id,p.name,p.sku,p.unit,p.price_cents,p.cost_cents,p.min_stock,p.stock_quantity,p.active,p.public_catalog_visible,p.created_at,p.updated_at';
 export async function product(db:Db,company:string,id:string){const row=await db.query(`SELECT ${productColumns} FROM business_products p WHERE p.tenant_id=$1 AND p.id=$2`,[company,id]);ensure(row.rowCount,404,'Produto não encontrado.');return row.rows[0];}
 
 const saleColumns=`s.id,upper(left(s.id::text,8)) AS code,s.tutor_id,t.name AS tutor_name,s.appointment_id,s.status,
- s.subtotal_cents,s.discount_cents,s.total_cents,COALESCE(l.paid_cents,0)::float8 AS paid_cents,
+ s.subtotal_cents,s.discount_cents,s.delivery_fee_cents,s.total_cents,COALESCE(l.paid_cents,0)::float8 AS paid_cents,
  CASE WHEN s.status='cancelled' THEN 0 ELSE s.total_cents-COALESCE(l.paid_cents,0) END::float8 AS balance_cents,
  s.due_date::text,s.notes,s.created_at,s.cancelled_at,s.cancellation_reason`;
 const saleJoins=`FROM business_sales s LEFT JOIN tutors t ON t.tenant_id=s.tenant_id AND t.id=s.tutor_id
@@ -126,4 +126,84 @@ export async function financialSummary(company:string,period:DateRange){
 export function csv(rows:Record<string,unknown>[],columns:{key:string;title:string}[]){
  const cell=(value:unknown)=>{let text=value===null||value===undefined?'':value instanceof Date?value.toISOString():String(value);if(typeof value==='string'&&/^[\s\u0000-\u001f]*[=+@-]/u.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';};
  return '\ufeff'+[columns.map(column=>cell(column.title)).join(';'),...rows.map(row=>columns.map(column=>cell(row[column.key])).join(';'))].join('\r\n');
+}
+
+export type SaleCreationInput={tutor_id:string|null;appointment_id:string|null;items:({kind:'product';product_id:string;quantity:number}|{kind:'service';service_id:string;quantity:number})[];discount_cents:number;due_date:string;notes:string;delivery_fee_cents?:number};
+
+const completedTaxi=`EXISTS(SELECT 1 FROM taxi_bookings tb JOIN taxi_trips tt ON tt.tenant_id=tb.tenant_id AND tt.booking_id=tb.id
+ WHERE tb.tenant_id=a.tenant_id AND tb.appointment_id=a.id AND tb.cancelled_at IS NULL AND tt.status='completed')`;
+const importableAppointment=(row:{status:string;starts_at:string|Date;completed_transport:boolean})=>
+ (row.status==='done'&&new Date(row.starts_at)<=new Date())||(row.status==='cancelled'&&row.completed_transport);
+
+/** Caller owns the commercial transaction and its idempotency key. */
+export async function createSale(db:PoolClient,company:string,user:string,input:SaleCreationInput){
+  type Line={kind:'product'|'service';product_id:string|null;service_id:string|null;description:string;quantity:number;unit_price_cents:number;total_cents:number};
+  const lines:Line[]=[];let tutorId=input.tutor_id;
+  if(input.appointment_id){
+   // Descobre o tutor antes de travar: a privacidade tambem trava tutor antes
+   // de limpar textos de atendimentos. A ordem evita deadlock na anonimizacao.
+   const appointment=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2`,[company,input.appointment_id]);
+   ensure(appointment.rowCount,404,'Atendimento não encontrado.');
+   ensure(importableAppointment(appointment.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
+   ensure(tutorId===null||tutorId===appointment.rows[0].tutor_id,422,'O tutor precisa corresponder ao atendimento.');
+   tutorId=appointment.rows[0].tutor_id as string;
+   ensure(input.items.every(item=>item.kind==='product'),422,'Os serviços do atendimento já foram importados; acrescente apenas produtos.');
+  }
+  if(tutorId){const tutor=await db.query('SELECT id,anonymized_at FROM tutors WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,tutorId]);ensure(tutor.rowCount,404,'Tutor não encontrado.');ensure(!tutor.rows[0].anonymized_at,409,'O cadastro deste tutor foi anonimizado e não pode receber novas vendas.');}
+  if(input.appointment_id){
+   const locked=await db.query(`SELECT a.tutor_id,a.status,a.starts_at,${completedTaxi} AS completed_transport FROM appointments a WHERE a.tenant_id=$1 AND a.id=$2 FOR UPDATE OF a`,[company,input.appointment_id]);
+   ensure(locked.rowCount&&locked.rows[0].tutor_id===tutorId,409,'O atendimento foi alterado. Atualize a tela.');
+   ensure(importableAppointment(locked.rows[0]),422,'Importe um atendimento concluído ou o transporte realizado de um atendimento cancelado.');
+   const previous=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND appointment_id=$2',[company,input.appointment_id]);ensure(!previous.rowCount,409,'Este atendimento já possui uma comanda.');
+   if(locked.rows[0].status==='done'){
+    const services=await db.query('SELECT s.id,s.name,a.price_cents FROM appointment_services a JOIN services s ON s.tenant_id=a.tenant_id AND s.id=a.service_id WHERE a.tenant_id=$1 AND a.appointment_id=$2 ORDER BY a.position',[company,input.appointment_id]);
+    ensure(services.rowCount,422,'O atendimento não possui serviços.');
+    for(const row of services.rows)lines.push({kind:'service',product_id:null,service_id:row.id,description:row.name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
+   }
+   // Transporte tem preço combinado próprio e não ocupa a agenda do banhista.
+   // A trava da reserva serializa importação, alteração e cancelamento da taxa.
+   const transport=await db.query('SELECT id,service_id,service_name,price_cents FROM taxi_bookings WHERE tenant_id=$1 AND appointment_id=$2 AND cancelled_at IS NULL FOR UPDATE',[company,input.appointment_id]);
+   for(const row of transport.rows)lines.push({kind:'service',product_id:null,service_id:row.service_id,description:row.service_name,quantity:1,unit_price_cents:row.price_cents,total_cents:row.price_cents});
+  }
+  const duplicates=new Set<string>();
+  for(const item of [...input.items].sort((a,b)=>(a.kind==='product'?a.product_id:a.service_id).localeCompare(b.kind==='product'?b.product_id:b.service_id))){
+   const id=item.kind==='product'?item.product_id:item.service_id,key=item.kind+id;
+   ensure(!duplicates.has(key),422,'Não repita o mesmo produto ou serviço em linhas diferentes.');duplicates.add(key);
+   const row=await db.query(item.kind==='product'?'SELECT id,name,price_cents,active,stock_quantity FROM business_products WHERE tenant_id=$1 AND id=$2 FOR UPDATE':'SELECT id,name,price_cents,active FROM services WHERE tenant_id=$1 AND id=$2 FOR SHARE',[company,id]);
+   ensure(row.rowCount,404,'Produto ou serviço não encontrado.');ensure(row.rows[0].active,422,'Produto ou serviço inativo.');
+   if(item.kind==='product')ensure(row.rows[0].stock_quantity>=item.quantity,409,'Estoque insuficiente para esta venda.');
+   const total=item.quantity*Number(row.rows[0].price_cents);ensure(Number.isSafeInteger(total)&&total<=1000000000,422,'Valor da linha acima do limite.');
+   lines.push({kind:item.kind,product_id:item.kind==='product'?id:null,service_id:item.kind==='service'?id:null,description:row.rows[0].name,quantity:item.quantity,unit_price_cents:row.rows[0].price_cents,total_cents:total});
+  }
+  ensure(lines.length,422,'Inclua pelo menos um produto ou serviço.');
+  const subtotal=lines.reduce((sum,item)=>sum+item.total_cents,0);ensure(Number.isSafeInteger(subtotal)&&subtotal<=1000000000,422,'Valor da comanda acima do limite.');
+  ensure(input.discount_cents<=subtotal,422,'O desconto não pode ultrapassar o subtotal.');
+  const fee=input.delivery_fee_cents??0;ensure(Number.isInteger(fee)&&fee>=0&&fee<=1000000000,422,'Informe uma taxa de entrega válida.');
+  const total=subtotal-input.discount_cents+fee;ensure(Number.isSafeInteger(total)&&total<=1000000000,422,'Valor da comanda acima do limite.');
+  const row=await db.query('INSERT INTO business_sales(tenant_id,tutor_id,appointment_id,subtotal_cents,discount_cents,delivery_fee_cents,total_cents,status,due_date,notes,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id',[company,tutorId,input.appointment_id,subtotal,input.discount_cents,fee,total,total===0?'paid':'open',input.due_date,input.notes,user]);
+  const id=row.rows[0].id as string;
+  for(const item of lines){
+   await db.query('INSERT INTO business_sale_items(tenant_id,sale_id,kind,product_id,service_id,description,quantity,unit_price_cents,total_cents) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',[company,id,item.kind,item.product_id,item.service_id,item.description,item.quantity,item.unit_price_cents,item.total_cents]);
+   if(item.kind==='product')await moveStock(db,company,user,item.product_id!,-item.quantity,'sale','',id);
+  }
+  return {id};
+}
+
+/** A refund is recorded through the existing ledger and stock routines. */
+export async function cancelSale(db:PoolClient,company:string,user:string,id:string,reason:string){
+  const locked=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(locked.rowCount,404,'Comanda não encontrada.');
+  const record=await sale(db,company,id);if(record.status==='cancelled')return {id};
+  const payments=await db.query("SELECT payment_method,SUM(CASE WHEN kind='sale_payment' THEN amount_cents ELSE -amount_cents END)::float8 AS amount FROM business_ledger WHERE tenant_id=$1 AND sale_id=$2 GROUP BY payment_method ORDER BY payment_method",[company,id]);
+  for(const payment of payments.rows)if(payment.amount>0)await appendLedger(db,company,user,{saleId:id,kind:'sale_refund',amount:payment.amount,method:payment.payment_method});
+  const products=await db.query("SELECT product_id,SUM(quantity)::int AS quantity FROM business_sale_items WHERE tenant_id=$1 AND sale_id=$2 AND kind='product' GROUP BY product_id ORDER BY product_id",[company,id]);
+  for(const item of products.rows)await moveStock(db,company,user,item.product_id,item.quantity,'sale_cancel','',id);
+  await db.query("UPDATE business_sales SET status='cancelled',cancelled_at=now(),cancellation_reason=$3,updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,id,reason]);
+  // Only unfinished deliveries are cancelled. Delivered history stays delivered.
+  const delivery=await db.query("SELECT id,status FROM business_delivery_orders WHERE tenant_id=$1 AND sale_id=$2 AND status IN ('preparing','out_for_delivery') FOR UPDATE",[company,id]);
+  if(delivery.rowCount){
+   const order=delivery.rows[0];
+   await db.query("UPDATE business_delivery_orders SET status='cancelled',cancelled_at=now(),cancellation_reason=$3,updated_by=$4,updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,order.id,reason,user]);
+   await db.query("INSERT INTO business_delivery_events(tenant_id,delivery_id,old_status,new_status,reason,actor_user_id) VALUES($1,$2,$3,'cancelled',$4,$5)",[company,order.id,order.status,reason,user]);
+  }
+  return {id};
 }

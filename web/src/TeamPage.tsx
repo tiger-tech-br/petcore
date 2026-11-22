@@ -49,7 +49,7 @@ function SettingsDialog({onClose,setMessage,setPageError,onSaved}:{onClose:()=>v
   useEffect(()=>{void load();},[]);
   async function save(event:FormEvent) {
     event.preventDefault();if(busy||!settings)return;setBusy(true);setError('');
-    try {await api('/settings','PATCH',{late_tolerance_minutes:Number(settings.late_tolerance_minutes),reminder_minutes_before:Number(settings.reminder_minutes_before),taxi_dog_enabled:settings.taxi_dog_enabled===true,operation_mode:settings.operation_mode||'complete'});setMessage('Preferências do pet shop salvas.');onClose();await onSaved?.();}
+    try {await api('/settings','PATCH',{late_tolerance_minutes:Number(settings.late_tolerance_minutes),reminder_minutes_before:Number(settings.reminder_minutes_before),taxi_dog_enabled:settings.taxi_dog_enabled===true,delivery_enabled:settings.operation_mode!=='essential'&&settings.delivery_enabled===true,operation_mode:settings.operation_mode||'complete'});setMessage('Preferências do pet shop salvas.');onClose();await onSaved?.();}
     catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   return <FormDialog title="Preferências do pet shop" description="Escolha o que seu pet shop oferece e ajuste sua rotina de atendimento." onClose={onClose} busy={busy} error={error} wide>
@@ -59,6 +59,7 @@ function SettingsDialog({onClose,setMessage,setPageError,onSaved}:{onClose:()=>v
       <label>Lembrete antes do atendimento (minutos)<input type="number" min="0" max="10080" required disabled={busy} value={settings.reminder_minutes_before} onChange={e=>setSettings({...settings,reminder_minutes_before:e.target.value})}/></label>
       <p className="muted full-span">Os lembretes respeitam a autorização registrada para cada tutor e a configuração de envio da plataforma.</p>
       <div className="taxi-settings full-span"><label className="taxi-check"><input type="checkbox" disabled={busy} checked={settings.taxi_dog_enabled===true} onChange={event=>setSettings({...settings,taxi_dog_enabled:event.target.checked})}/><span>Ativar Táxi Dog neste pet shop</span></label><p>Libera o planejamento de buscas e entregas ligado aos agendamentos. Cadastre os valores em Serviços e os motoristas em Táxi Dog. A desativação exige concluir ou cancelar as viagens pendentes.</p></div>
+      <div className="taxi-settings full-span"><label className="taxi-check"><input type="checkbox" disabled={busy||settings.operation_mode==='essential'} checked={settings.operation_mode!=='essential'&&settings.delivery_enabled===true} onChange={event=>setSettings({...settings,delivery_enabled:event.target.checked})}/><span>Ativar entregas de produtos</span></label><p>Mostra pedidos de entrega e o catálogo para rações e produtos. Disponível no modo com venda de produtos. A equipe autorizada no Financeiro pode gerenciar os pedidos.</p></div>
       <div className="form-actions full-span"><button type="button" className="ghost-btn" disabled={busy} onClick={onClose}>Cancelar</button><button type="submit" className="primary-btn" disabled={busy}>{busy?'Salvando...':'Salvar preferências'}</button></div>
     </form>:<button className="ghost-btn" onClick={()=>void load()}>Tentar novamente</button>}
   </FormDialog>;

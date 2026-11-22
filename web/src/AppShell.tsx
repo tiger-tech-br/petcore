@@ -7,7 +7,7 @@ import {listenNativeBack} from './nativeAndroid';
 import {PlatformSupportBell} from './PlatformSupportAlerts';
 import './styles/_daily-ux.scss';
 
-export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
+export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'deliveries'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
 type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;onOpenPlatformSupport?:()=>void;children:ReactNode};
 
 export default function AppShell({session,view,go,onSearch,company,logout,onOpenPlatformSupport,children}:Props) {
@@ -22,6 +22,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,onOpen
     {key:can('tutors')?'tutors':'pets',label:'Clientes e pets',icon:PawPrint,show:can('tutors')||can('pets'),group:'Dia a dia'},
     {key:'waitlist',label:'Lista de espera',icon:CalendarClock,show:can('waitlist'),group:'Dia a dia'},
     {key:'taxi-dog',label:'Táxi Dog',icon:Truck,show:session.features?.taxi_dog===true&&can('taxi_dog'),group:'Dia a dia'},
+    {key:'deliveries',label:'Entregas de produtos',icon:Package,show:session.features?.delivery===true&&can('finance'),group:'Dia a dia'},
     {key:'finance',label:'Financeiro',icon:Wallet,show:can('finance'),group:'Gestão'},
     {key:'inventory',label:'Produtos e estoque',icon:Package,show:can('inventory'),group:'Gestão'},
     {key:'crm',label:'Relacionamento',description:'Contatos e retornos',icon:ContactRound,show:can('crm'),group:'Gestão'},
