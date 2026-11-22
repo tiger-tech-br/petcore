@@ -3,7 +3,7 @@
 ALTER TABLE tenants ADD COLUMN delivery_enabled boolean NOT NULL DEFAULT false;
 ALTER TABLE business_sales ADD COLUMN delivery_fee_cents integer NOT NULL DEFAULT 0
  CHECK(delivery_fee_cents BETWEEN 0 AND 1000000000);
-ALTER TABLE business_sales DROP CONSTRAINT business_sales_total_cents_check;
+ALTER TABLE business_sales DROP CONSTRAINT business_sales_check1;
 ALTER TABLE business_sales ADD CONSTRAINT business_sales_total_cents_check
  CHECK(total_cents BETWEEN 0 AND 1000000000 AND total_cents=subtotal_cents-discount_cents+delivery_fee_cents);
 
