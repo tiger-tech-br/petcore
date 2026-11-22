@@ -16,6 +16,10 @@ import TeamPage from '../src/TeamPage';
 import PublicBookingPage from '../src/PublicBookingPage';
 import PublicBookingSettings from '../src/PublicBookingSettings';
 import PublicBookingInbox from '../src/PublicBookingInbox';
+import DeliveryPage from '../src/DeliveryPage';
+import PublicDeliveryPage from '../src/PublicDeliveryPage';
+import PublicDeliverySettings from '../src/PublicDeliverySettings';
+import PublicDeliveryInbox from '../src/PublicDeliveryInbox';
 import TaxiDogPage from '../src/TaxiDogPage';
 import type {TaxiBooking,TaxiDriver,TaxiService,TaxiTrip} from '../src/taxiDog';
 import PrivacyPage from '../src/PrivacyPage';
@@ -38,7 +42,7 @@ const fixtureTaxiServices:TaxiService[]=[{id:'10000000-0000-4000-8000-0000000000
 const fixtureTaxiDrivers:TaxiDriver[]=[{id:'10000000-0000-4000-8000-000000000016',name:'Pedro Exemplo',phone:'11900000003',active:true},{id:'10000000-0000-4000-8000-000000000017',name:'Carolina Exemplo',phone:'11900000004',active:true}];
 const taxiOptions=()=>({enabled:taxiEnabled,can_manage:true,timezone:'America/Sao_Paulo',server_now:new Date().toISOString(),services:fixtureTaxiServices,drivers:fixtureTaxiDrivers});
 const options=()=>({tutors,pets,professionals,services,timezone:'America/Sao_Paulo',server_now:new Date().toISOString(),taxi_dog:taxiOptions()});
-const session:Session={user:{id:ids.user,name:'Marina Exemplo',role:'admin',tenantId:ids.company,companyName:'Vila Pet • demonstração',scopeProfessionalId:null,permissions:[]},companies:[{id:ids.company,name:'Vila Pet • demonstração',role:'admin'}],features:{taxi_dog:taxiEnabled},legal:{required:false,version:'qa-unpublished'},subscription:{writable:true,access_until:null,trial_ends_at:null,paid_through:null,status:'trial',onboarding_completed_at:'2026-11-09T12:00:00Z',trial_started_at:'2026-11-09T12:00:00Z',onboarding_plan:'free',trial_days:30}};
+const session:Session={user:{id:ids.user,name:'Marina Exemplo',role:'admin',tenantId:ids.company,companyName:'Vila Pet • demonstração',scopeProfessionalId:null,permissions:[]},companies:[{id:ids.company,name:'Vila Pet • demonstração',role:'admin'}],features:{taxi_dog:taxiEnabled,delivery:parameters.get('screen')==='deliveries'||parameters.get('screen')?.startsWith('public-delivery')===true},legal:{required:false,version:'qa-unpublished'},subscription:{writable:true,access_until:null,trial_ends_at:null,paid_through:null,status:'trial',onboarding_completed_at:'2026-11-09T12:00:00Z',trial_started_at:'2026-11-09T12:00:00Z',onboarding_plan:'free',trial_days:30}};
 const futureDay=(days:number)=>{const date=new Date(today()+'T12:00:00Z');date.setUTCDate(date.getUTCDate()+days);return date.toISOString();};
 const paidBilling=parameters.get('billing')==='paid';
 const checkoutPlans=[{id:'monthly',name:'PetCore Mensal',amount_cents:3500,interval_months:1,checkout_reviewed:true,checkout_url:'https://pag.ae/82jFKCTjo',active:true},{id:'yearly',name:'PetCore Anual',amount_cents:35000,interval_months:12,checkout_reviewed:true,checkout_url:'https://pag.ae/82jFLbrjr',active:true}];
@@ -55,6 +59,26 @@ const fixtureProducts=[
   {id:'qa-product-a',name:'Shampoo suave para cães e gatos',sku:'SHAMPOO-500',unit:'frasco',price_cents:4500,cost_cents:2200,min_stock:5,stock_quantity:3,active:true,created_at:qaTimestamp,updated_at:qaTimestamp},
   {id:'qa-product-b',name:'Escova para cuidados diários',sku:'ESCOVA-01',unit:'un.',price_cents:2800,cost_cents:1200,min_stock:2,stock_quantity:12,active:true,created_at:qaTimestamp,updated_at:qaTimestamp}
 ];
+// Delivery fixtures are private to this development harness. Orders, inventory,
+// customer contacts and receipts below never reach a backend or a provider.
+const qaDeliveryState=parameters.get('delivery-state')||'',qaCatalogState=parameters.get('public-delivery-state')||'';
+const qaDeliveryProducts=[...fixtureProducts,
+ {id:'10000000-0000-4000-8000-000000000041',name:'Ração para cães adultos sabor frango — pacote de 10 kg',sku:'RACAO-10',unit:'pacote',price_cents:12990,cost_cents:8000,min_stock:2,stock_quantity:18,active:true,created_at:qaTimestamp,updated_at:qaTimestamp},
+ {id:'10000000-0000-4000-8000-000000000042',name:'Petisco natural para cães de pequeno porte',sku:'PETISCO-01',unit:'pacote',price_cents:2190,cost_cents:900,min_stock:2,stock_quantity:0,active:true,created_at:qaTimestamp,updated_at:qaTimestamp}
+];
+type QaDeliveryStatus='preparing'|'out_for_delivery'|'delivered'|'cancelled';
+type QaDelivery={id:string;code:string;sale_id:string;sale_code:string;tutor_id:string;tutor_name:string;phone:string;tutor_phone:string;address:string;reference:string;notes:string;status:QaDeliveryStatus;delivery_fee_cents:number;subtotal_cents:number;discount_cents:number;total_cents:number;paid_cents:number;balance_cents:number;sale_status:'open'|'paid'|'cancelled';due_date:string;created_at:string;updated_at:string;out_for_delivery_at:string|null;delivered_at:string|null;cancelled_at:string|null;cancellation_reason:string;items:{id:string;product_id:string;description:string;quantity:number;unit_price_cents:number;total_cents:number}[];timezone:string};
+const qaDeliveries:QaDelivery[]=qaDeliveryState==='empty'?[]:[
+ {id:'10000000-0000-4000-8000-000000000043',code:'ENT-0001',sale_id:'10000000-0000-4000-8000-000000000044',sale_code:'CMD-ENT1',tutor_id:ids.tutorA,tutor_name:tutors[0].name,phone:tutors[0].phone,tutor_phone:tutors[0].phone,address:'Rua dos Exemplos, 120, Jardim das Flores, Santo André — SP\nCasa 2, portão azul',reference:'Em frente à praça. Avisar antes de chegar.',notes:'Pedido fictício recebido pelo WhatsApp. Não enviar mensagem real.',status:'preparing',delivery_fee_cents:700,subtotal_cents:12990,discount_cents:0,total_cents:13690,paid_cents:0,balance_cents:13690,sale_status:'open',due_date:today(),created_at:qaTimestamp,updated_at:qaTimestamp,out_for_delivery_at:null,delivered_at:null,cancelled_at:null,cancellation_reason:'',items:[{id:'qa-delivery-line-a',product_id:qaDeliveryProducts[2].id,description:qaDeliveryProducts[2].name,quantity:1,unit_price_cents:12990,total_cents:12990}],timezone:'America/Sao_Paulo'},
+ {id:'10000000-0000-4000-8000-000000000045',code:'ENT-0002',sale_id:'10000000-0000-4000-8000-000000000046',sale_code:'CMD-ENT2',tutor_id:ids.tutorB,tutor_name:'Bruno Exemplo com Sobrenome Comprido',phone:tutors[1].phone,tutor_phone:tutors[1].phone,address:'Avenida da Demonstração, 987, apartamento 123, Bloco das Acácias, São Bernardo do Campo — SP',reference:'Deixar com o responsável na portaria.',notes:'Pedido fictício recebido por telefone.',status:'out_for_delivery',delivery_fee_cents:900,subtotal_cents:5600,discount_cents:0,total_cents:6500,paid_cents:6500,balance_cents:0,sale_status:'paid',due_date:today(),created_at:qaTimestamp,updated_at:qaTimestamp,out_for_delivery_at:qaTimestamp,delivered_at:null,cancelled_at:null,cancellation_reason:'',items:[{id:'qa-delivery-line-b',product_id:qaDeliveryProducts[1].id,description:qaDeliveryProducts[1].name,quantity:2,unit_price_cents:2800,total_cents:5600}],timezone:'America/Sao_Paulo'}
+];
+const qaPublicDeliveryToken='f'.repeat(48),qaDeliveryNotice='Seu pedido será conferido pelo pet shop. A entrega, a disponibilidade e o pagamento serão confirmados no contato informado.';
+let qaPublicDeliverySettings={enabled:qaCatalogState!=='disabled',token:qaPublicDeliveryToken,link:'',coverage_note:'Entregas fictícias nos bairros Jardim e Centro de Santo André. Consulte a disponibilidade para outros locais.',notice:'Atendimento de segunda a sábado. O pagamento será combinado após a confirmação.',delivery_fee_cents:qaCatalogState==='fixed-fee'?700:null as number|null,delivery_enabled:qaCatalogState!=='feature-off',operation_mode:'complete',subscription_writable:qaCatalogState!=='expired',confirmation_notice:qaDeliveryNotice,updated_at:qaTimestamp};
+type QaDeliveryRequest={id:string;receipt:string;status:'pending'|'confirmed'|'rejected';customer_name:string;phone:string;address:string;reference:string;notes:string;subtotal_cents:number;quoted_delivery_fee_cents:number|null;delivery_order_id:string|null;rejection_reason:string;created_at:string;reviewed_at:string|null;items:{product_id:string;name:string;unit:string;quantity:number;unit_price_cents:number}[]};
+const qaDeliveryRequests:QaDeliveryRequest[]=qaCatalogState==='empty-inbox'?[]:[{id:'10000000-0000-4000-8000-000000000047',receipt:'1'.repeat(40),status:'pending',customer_name:'Ana Exemplo com Nome Comprido',phone:'11900000001',address:'Rua dos Exemplos, 120, Jardim das Flores, Santo André — SP\nCasa 2, portão azul',reference:'Em frente à praça.',notes:'Por favor, confirmar a entrega antes de separar os produtos. Pedido fictício.',subtotal_cents:12990,quoted_delivery_fee_cents:null,delivery_order_id:null,rejection_reason:'',created_at:qaTimestamp,reviewed_at:null,items:[{product_id:qaDeliveryProducts[2].id,name:qaDeliveryProducts[2].name,unit:'pacote',quantity:1,unit_price_cents:12990}]},
+ {id:'10000000-0000-4000-8000-000000000048',receipt:'2'.repeat(40),status:'pending',customer_name:'Bruno Exemplo',phone:'11900000002',address:'Avenida das Demonstrações, 987, apartamento 123, Santo André — SP',reference:'Conferir nome na portaria.',notes:'',subtotal_cents:5600,quoted_delivery_fee_cents:900,delivery_order_id:null,rejection_reason:'',created_at:qaTimestamp,reviewed_at:null,items:[{product_id:qaDeliveryProducts[1].id,name:qaDeliveryProducts[1].name,unit:'un.',quantity:2,unit_price_cents:2800}]}];
+const qaDeliveryOperations=new Map<string,{fingerprint:string;delivery:QaDelivery}>(),qaDeliveryReceiptOperations=new Map<string,{fingerprint:string;request:QaDeliveryRequest}>();
+let qaDeliverySubmitCalls=0;
 const fixtureDaily=Array.from({length:10},(_,index)=>({date:`${today().slice(0,7)}-${String(index+1).padStart(2,'0')}`,receipts_cents:15000+index*3500,refunds_cents:index===3?2000:0,expenses_cents:6000+index*900,expense_refunds_cents:0,net_cents:9000+index*2600-(index===3?2000:0)}));
 const fixtureTotals={receipts_cents:307500,refunds_cents:2000,expenses_cents:100500,expense_refunds_cents:0,net_cents:205000,receivables_cents:5500,payables_cents:22000};
 const fixtureCash={id:'qa-cash',opened_at:qaTimestamp,closed_at:null,opening_cents:10000,counted_cents:null,expected_cents:38500,difference_cents:null,notes:'Fundo de caixa fictício para a demonstração.',closing_notes:'',opened_by_name:'Marina Exemplo',closed_by_name:null};
@@ -120,6 +144,22 @@ function setQaTaxiBooking(appointmentId:string,draft:Record<string,any>|null,app
 }
 const taxiSummary=(appointmentId:string)=>{const booking=fixtureTaxiBookings[appointmentId];return booking?{id:booking.id,mode:booking.mode,service_name:booking.service_name,price_cents:booking.price_cents,cancelled_at:booking.cancelled_at,status:booking.cancelled_at?'cancelled':booking.trips.every(item=>item.status==='completed')?'completed':booking.trips.some(item=>['en_route','with_pet'].includes(item.status))?'active':'scheduled'}:null;};
 
+function createQaDelivery(draft:Record<string,unknown>):QaDelivery{
+ const tutor=tutors.find(item=>item.id===draft.tutor_id);if(!tutor)throw Error('Escolha um cliente fictício.');
+ if(!String(draft.phone||'').trim()||!String(draft.address||'').trim())throw Error('Informe telefone e endereço fictícios para a entrega.');
+ if(!Array.isArray(draft.items)||!draft.items.length)throw Error('Escolha os produtos fictícios.');
+ const seen=new Set<string>(),lines=draft.items.map((raw,index)=>{
+  const item=raw as Record<string,unknown>,product=qaDeliveryProducts.find(row=>row.id===item.product_id),quantity=Number(item.quantity);
+  if(!product||seen.has(product.id)||!Number.isInteger(quantity)||quantity<1||quantity>product.stock_quantity)throw Error('Produto ou quantidade sem disponibilidade na prévia.');
+  seen.add(product.id);return{id:`qa-delivery-line-${sequence++}-${index}`,product_id:product.id,description:product.name,quantity,unit_price_cents:product.price_cents,total_cents:quantity*product.price_cents};
+ });
+ const fee=Number(draft.delivery_fee_cents??0);if(!Number.isInteger(fee)||fee<0)throw Error('Informe uma taxa de entrega válida.');
+ const subtotal=lines.reduce((sum,line)=>sum+line.total_cents,0),id=crypto.randomUUID(),saleId=crypto.randomUUID(),now=new Date().toISOString();
+ const row:QaDelivery={id,code:id.slice(0,8).toUpperCase(),sale_id:saleId,sale_code:saleId.slice(0,8).toUpperCase(),tutor_id:tutor.id,tutor_name:tutor.name,phone:String(draft.phone),tutor_phone:String(draft.phone),address:String(draft.address),reference:String(draft.reference||''),notes:String(draft.notes||''),status:'preparing',delivery_fee_cents:fee,subtotal_cents:subtotal,discount_cents:0,total_cents:subtotal+fee,paid_cents:0,balance_cents:subtotal+fee,sale_status:'open',due_date:String(draft.due_date||today()),created_at:now,updated_at:now,out_for_delivery_at:null,delivered_at:null,cancelled_at:null,cancellation_reason:'',items:lines,timezone:'America/Sao_Paulo'};
+ for(const line of lines)qaDeliveryProducts.find(product=>product.id===line.product_id)!.stock_quantity-=line.quantity;
+ qaDeliveries.unshift(row);return row;
+}
+
 // This replaces fetch before any component effect executes. No original fetch is retained.
 window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>{
   const raw=input instanceof Request?input.url:String(input);
@@ -129,6 +169,75 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   const path=url.pathname.slice(4);
   let body:Record<string,unknown>={};
   if(typeof init?.body==='string'){try{body=JSON.parse(init.body) as Record<string,unknown>;}catch{return reply({error:'Corpo fictício inválido.'},400);}}
+  if(path.startsWith('/public/delivery/')){
+    const expected=`/public/delivery/${qaPublicDeliverySettings.token}`;
+    if(!path.startsWith(expected)||['notfound','feature-off'].includes(qaCatalogState)||!qaPublicDeliverySettings.enabled||!qaPublicDeliverySettings.subscription_writable)return reply({error:'Catálogo fictício indisponível.'},404);
+    if(method==='GET'&&path===expected){
+      const query=(url.searchParams.get('q')||'').toLowerCase(),page=Math.max(1,Number(url.searchParams.get('page')||1));
+      const products=qaCatalogState==='empty'?[]:qaDeliveryProducts.filter(product=>product.active&&product.name.toLowerCase().includes(query));
+      return reply({businessName:'Vila Pet • produtos e cuidados',coverage_note:qaPublicDeliverySettings.coverage_note,notice:qaPublicDeliverySettings.notice,delivery_fee_cents:qaPublicDeliverySettings.delivery_fee_cents,confirmation_notice:qaDeliveryNotice,products:products.slice((page-1)*24,page*24).map(({id,name,unit,price_cents,stock_quantity})=>({id,name,unit,price_cents,available:stock_quantity>0})),total:products.length,page,page_size:24});
+    }
+    if(method==='POST'&&path===expected+'/requests'){
+      qaDeliverySubmitCalls++;const key=String(body.idempotency_key||''),fingerprint=JSON.stringify(body),prior=qaDeliveryReceiptOperations.get(key);
+      if(!key)return reply({error:'Identificador de envio fictício obrigatório.'},422);
+      if(prior){if(prior.fingerprint!==fingerprint)return reply({error:'A chave fictícia já foi usada com outros dados.'},409);return reply({ok:true,receipt:prior.request.receipt,status:'pending',message:qaDeliveryNotice},201);}
+      if(body.website||!String(body.customer_name||'').trim()||!String(body.phone||'').trim()||String(body.address||'').trim().length<8||!Array.isArray(body.items)||!body.items.length)return reply({error:'Preencha seus dados fictícios e escolha os produtos.'},422);
+      const requested=body.items as {product_id:string;quantity:number}[],seen=new Set<string>();
+      const lines=[];
+      for(const item of requested){const product=qaDeliveryProducts.find(row=>row.id===item.product_id);if(!product||!product.active||seen.has(product.id)||!Number.isInteger(item.quantity)||item.quantity<1||item.quantity>product.stock_quantity)return reply({error:'Um produto ou quantidade não está disponível na prévia.'},409);seen.add(product.id);lines.push({product_id:product.id,name:product.name,unit:product.unit,quantity:item.quantity,unit_price_cents:product.price_cents});}
+      const row:QaDeliveryRequest={id:crypto.randomUUID(),receipt:crypto.randomUUID().replace(/-/g,'')+'3'.repeat(8),status:'pending',customer_name:String(body.customer_name),phone:String(body.phone),address:String(body.address),reference:String(body.reference||''),notes:String(body.notes||''),subtotal_cents:lines.reduce((sum,line)=>sum+line.quantity*line.unit_price_cents,0),quoted_delivery_fee_cents:qaPublicDeliverySettings.delivery_fee_cents,delivery_order_id:null,rejection_reason:'',created_at:new Date().toISOString(),reviewed_at:null,items:lines};
+      qaDeliveryRequests.unshift(row);qaDeliveryReceiptOperations.set(key,{fingerprint,request:row});
+      if(qaCatalogState==='uncertain'&&qaDeliverySubmitCalls===1)throw new TypeError('Prévia: pedido fictício salvo antes de uma interrupção da rede.');
+      return reply({ok:true,receipt:row.receipt,status:'pending',message:qaDeliveryNotice},201);
+    }
+  }
+  if(method==='GET'&&path==='/public-delivery/settings')return reply(qaPublicDeliverySettings);
+  if(method==='PUT'&&path==='/public-delivery/settings'){
+    if(!qaPublicDeliverySettings.subscription_writable)return reply({error:'Regularize a assinatura fictícia para alterar o catálogo.'},402);
+    const token=body.rotate_token?'9'.repeat(48):qaPublicDeliverySettings.token;
+    qaPublicDeliverySettings={...qaPublicDeliverySettings,enabled:body.enabled===true,coverage_note:String(body.coverage_note||''),notice:String(body.notice||''),delivery_fee_cents:body.delivery_fee_cents===null?null:Number(body.delivery_fee_cents),token,link:'',updated_at:new Date().toISOString()};return reply(qaPublicDeliverySettings);
+  }
+  if(method==='GET'&&path==='/deliveries/public-requests')return reply({items:qaDeliveryRequests.filter(item=>url.searchParams.get('status')==='all'||item.status==='pending')});
+  if(/^\/deliveries\/public-requests\/[^/]+(?:\/(?:confirm|reject))?$/.test(path)){
+    const id=path.split('/')[3],row=qaDeliveryRequests.find(item=>item.id===id);if(!row)return reply({error:'Pedido fictício não encontrado.'},404);
+    if(method==='DELETE'){qaDeliveryRequests.splice(qaDeliveryRequests.indexOf(row),1);return reply({ok:true});}
+    if(method==='POST'&&path.endsWith('/reject')){if(row.status!=='pending')return reply({error:'O pedido fictício já foi conferido.'},409);row.status='rejected';row.rejection_reason=String(body.reason||'');row.reviewed_at=new Date().toISOString();return reply({ok:true});}
+    if(method==='POST'&&path.endsWith('/confirm')){
+      const key=String(body.idempotency_key||''),fingerprint=path+JSON.stringify(body),prior=qaDeliveryOperations.get(key);
+      if(prior)return prior.fingerprint===fingerprint?reply(prior.delivery,201):reply({error:'Operação fictícia com dados diferentes.'},409);
+      if(qaCatalogState==='conflict')return reply({error:'O produto mudou de preço ou ficou sem estoque. Confira o pedido com o cliente.'},409);
+      if(row.status!=='pending')return reply({error:'O pedido fictício já foi conferido.'},409);
+      if(row.quoted_delivery_fee_cents===null&&body.delivery_fee_cents===undefined)return reply({error:'Informe a taxa de entrega combinada, inclusive zero se gratuita.'},422);
+      let tutorId=String(body.tutor_id||'');
+      if(!tutorId){const tutor={id:crypto.randomUUID(),name:row.customer_name,phone:row.phone,email:''};tutors.push(tutor);tutorId=tutor.id;}
+      try{const delivery=createQaDelivery({tutor_id:tutorId,phone:row.phone,address:row.address,reference:row.reference,notes:row.notes,items:row.items.map(item=>({product_id:item.product_id,quantity:item.quantity})),delivery_fee_cents:body.delivery_fee_cents??row.quoted_delivery_fee_cents,due_date:body.due_date||today()});row.status='confirmed';row.delivery_order_id=delivery.id;row.reviewed_at=new Date().toISOString();qaDeliveryOperations.set(key,{fingerprint,delivery});return reply(delivery,201);}catch(cause){return reply({error:(cause as Error).message},409);}
+    }
+  }
+  if(method==='GET'&&path==='/deliveries/options')return reply({tutors,products:qaDeliveryProducts,timezone:'America/Sao_Paulo'});
+  if(method==='GET'&&path==='/deliveries'){
+    const status=url.searchParams.get('status')||'active',query=(url.searchParams.get('q')||'').toLowerCase(),page=Math.max(1,Number(url.searchParams.get('page')||1)),pageSize=Math.min(100,Math.max(1,Number(url.searchParams.get('page_size')||20)));
+    const rows=qaDeliveries.filter(item=>(status==='all'||status==='active'&&['preparing','out_for_delivery'].includes(item.status)||item.status===status)&&(!query||[item.code,item.sale_code,item.tutor_name,item.phone].some(value=>value.toLowerCase().includes(query))));
+    return reply({items:rows.slice((page-1)*pageSize,page*pageSize),total:rows.length,page,pageSize});
+  }
+  if(method==='POST'&&path==='/deliveries'){
+    const key=String(body.idempotency_key||''),fingerprint=path+JSON.stringify(body),prior=qaDeliveryOperations.get(key);
+    if(prior)return prior.fingerprint===fingerprint?reply(prior.delivery,201):reply({error:'Operação fictícia com dados diferentes.'},409);
+    try{const delivery=createQaDelivery(body);qaDeliveryOperations.set(key,{fingerprint,delivery});return reply(delivery,201);}catch(cause){return reply({error:(cause as Error).message},422);}
+  }
+  if(method==='GET'&&/^\/deliveries\/[^/]+$/.test(path)){const row=qaDeliveries.find(item=>item.id===path.split('/')[2]);return row?reply(row):reply({error:'Entrega fictícia não encontrada.'},404);}
+  if(method==='POST'&&/^\/deliveries\/[^/]+\/status$/.test(path)){
+    const row=qaDeliveries.find(item=>item.id===path.split('/')[2]);if(!row)return reply({error:'Entrega fictícia não encontrada.'},404);
+    const key=String(body.idempotency_key||''),fingerprint=path+JSON.stringify(body),prior=qaDeliveryOperations.get(key);
+    if(prior)return prior.fingerprint===fingerprint?reply(prior.delivery):reply({error:'Operação fictícia com dados diferentes.'},409);
+    const status=String(body.status) as QaDeliveryStatus;if(row.status===status)return reply(row);
+    if(['delivered','cancelled'].includes(row.status)||status==='delivered'&&row.status!=='out_for_delivery'||status==='out_for_delivery'&&row.status!=='preparing'||!['out_for_delivery','delivered','cancelled'].includes(status))return reply({error:'Confira a situação atual antes de avançar a entrega.'},409);
+    if(status==='cancelled'&&String(body.reason||'').trim().length<3)return reply({error:'Informe o motivo do cancelamento fictício.'},422);
+    row.status=status;row.updated_at=new Date().toISOString();
+    if(status==='out_for_delivery')row.out_for_delivery_at=row.updated_at;
+    if(status==='delivered')row.delivered_at=row.updated_at;
+    if(status==='cancelled'){row.cancelled_at=row.updated_at;row.cancellation_reason=String(body.reason);row.sale_status='cancelled';row.balance_cents=0;for(const item of row.items)qaDeliveryProducts.find(product=>product.id===item.product_id)!.stock_quantity+=item.quantity;}
+    qaDeliveryOperations.set(key,{fingerprint,delivery:row});return reply(row);
+  }
   if(path.startsWith(`/public/booking/${qaPublicToken}`)&&(parameters.get('public-state')==='notfound'||!qaPublicSettings.enabled||!qaPublicSettings.subscription_writable))return reply({error:'Agendamento público indisponível.'},404);
   if(method==='GET'&&path===`/public/booking/${qaPublicToken}`){
     return reply({businessName:'Vila Pet • Banho e Tosa',timezone:'America/Sao_Paulo',services,notice:qaPublicSettings.notice,confirmation_notice:qaPublicNotice,enabled:true,horizon_days:90});
@@ -168,7 +277,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='PATCH'&&/^\/taxi-dog\/trips\/[^/]+\/status$/.test(path)){const trip=Object.values(fixtureTaxiBookings).flatMap(item=>item.trips).find(item=>item.id===path.split('/')[3]);if(!trip)return reply({error:'Viagem fictícia não encontrada.'},404);if(trip.status!==body.expected_status)return reply({error:'A viagem foi alterada. Atualize a prévia.'},409);trip.status=body.status as TaxiTrip['status'];return reply({ok:true});}
   if(method==='GET'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const booking=fixtureTaxiBookings[path.split('/')[3]];return reply({booking:booking?{...booking,editable:booking.cancelled_at!==null||booking.trips.every(item=>item.status==='scheduled')}:null});}
   if(method==='PUT'&&/^\/taxi-dog\/appointments\/[^/]+$/.test(path)){const id=path.split('/')[3];setQaTaxiBooking(id,body.taxi_dog as Record<string,any>|null,localAppointments.find(item=>item.id===id));return reply({ok:true});}
-  if(method==='PATCH'&&path==='/settings'){taxiEnabled=body.taxi_dog_enabled===true;session.features={taxi_dog:taxiEnabled};return reply({ok:true});}
+  if(method==='PATCH'&&path==='/settings'){taxiEnabled=body.taxi_dog_enabled===true;session.features={...session.features,taxi_dog:taxiEnabled,delivery:body.delivery_enabled===true};qaPublicDeliverySettings.delivery_enabled=body.delivery_enabled===true;return reply({ok:true});}
   if(method==='GET'&&path==='/public/legal')return reply({published:false,version:'qa-unpublished',effectiveDate:null,operator:{brand:'PetCore • prévia local',legalName:'Responsável fictício',address:null,supportEmail:'suporte@example.test',privacyEmail:'privacidade@example.test'},documents:{privacy:'Documento fictício apenas para conferir esta tela. Não é uma política publicada.',terms:'Termos fictícios apenas para conferir esta tela. Não representam aceite contratual.'},subprocessors:[]});
   if(method==='GET'&&path==='/auth/me')return reply(session);
   if(method==='GET'&&path==='/notifications')return reply({items:[],unreadCount:0});
@@ -193,7 +302,11 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
   if(method==='GET'&&path==='/business/products')return reply({...pageOf(fixtureProducts),summary:{products:2,lowStock:1,units:15}});
   if(method==='GET'&&path==='/business/options')return reply({...options(),services:[...services,...fixtureTaxiServices.map(item=>({...item,duration_minutes:0}))],products:fixtureProducts,appointments:fixturesFor(today()),timezone:'America/Sao_Paulo'});
   if(method==='GET'&&path==='/business/cash')return reply({current:fixtureCash,recent:[fixtureCash],timezone:'America/Sao_Paulo'});
-  if(method==='GET'&&path==='/business/sales')return reply(pageOf(fixtureSales));
+  if(method==='GET'&&path==='/business/sales')return reply(pageOf([...fixtureSales,...qaDeliveries.map(row=>({id:row.sale_id,code:row.sale_code,tutor_id:row.tutor_id,tutor_name:row.tutor_name,appointment_id:null,status:row.sale_status,subtotal_cents:row.subtotal_cents,discount_cents:row.discount_cents,delivery_fee_cents:row.delivery_fee_cents,total_cents:row.total_cents,paid_cents:row.paid_cents,balance_cents:row.balance_cents,due_date:row.due_date,notes:'Comanda da entrega fictícia.',created_at:row.created_at,cancelled_at:row.cancelled_at,cancellation_reason:row.cancellation_reason}))]));
+  if(method==='GET'&&/^\/business\/sales\/[^/]+$/.test(path)){
+    const row=qaDeliveries.find(item=>item.sale_id===path.split('/')[3]);
+    if(row)return reply({sale:{id:row.sale_id,code:row.sale_code,tutor_id:row.tutor_id,tutor_name:row.tutor_name,appointment_id:null,status:row.sale_status,subtotal_cents:row.subtotal_cents,discount_cents:row.discount_cents,delivery_fee_cents:row.delivery_fee_cents,total_cents:row.total_cents,paid_cents:row.paid_cents,balance_cents:row.balance_cents,due_date:row.due_date,notes:'Comanda da entrega fictícia.',created_at:row.created_at,cancelled_at:row.cancelled_at,cancellation_reason:row.cancellation_reason},items:row.items,payments:row.paid_cents?[{id:'qa-delivery-payment',kind:'sale_payment',amount_cents:row.paid_cents,payment_method:'pix',created_at:row.created_at,created_by_name:'Marina Exemplo'}]:[],timezone:row.timezone});
+  }
   if(method==='GET'&&path.startsWith('/business/sales/'))return reply({sale:fixtureSales.find(item=>path.endsWith(item.id))??fixtureSales[0],items:[{id:'qa-line-a',description:'Banho',quantity:1,unit_price_cents:3500,total_cents:3500},{id:'qa-line-b',description:fixtureProducts[0].name,quantity:1,unit_price_cents:4500,total_cents:4500}],payments:[{id:'qa-payment',kind:'sale_payment',amount_cents:2000,payment_method:'pix',created_at:qaTimestamp,created_by_name:'Marina Exemplo'}],timezone:'America/Sao_Paulo'});
   if(method==='GET'&&path==='/business/expenses')return reply(pageOf(fixtureExpenses));
   if(method==='GET'&&path==='/business/stock-movements')return reply(pageOf([{id:'qa-movement',product_id:fixtureProducts[0].id,product_name:fixtureProducts[0].name,quantity_delta:-2,balance_after:3,reason:'usage',note:'Consumo fictício em atendimentos de banho e tosa.',created_at:qaTimestamp,created_by_name:'Juliana Exemplo'}]));
@@ -249,7 +362,7 @@ window.fetch=(async(input:RequestInfo|URL,init?:RequestInit):Promise<Response>=>
     }
   }
   if(method==='GET'&&path==='/team')return reply(fixtureTeam);
-  if(method==='GET'&&path==='/settings')return reply({name:'Vila Pet • demonstração',timezone:'America/Sao_Paulo',operation_mode:parameters.get('operation')==='complete'?'complete':'essential',late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled});
+  if(method==='GET'&&path==='/settings')return reply({name:'Vila Pet • demonstração',timezone:'America/Sao_Paulo',operation_mode:parameters.get('operation')==='complete'||session.features?.delivery?'complete':'essential',late_tolerance_minutes:15,reminder_minutes_before:120,taxi_dog_enabled:taxiEnabled,delivery_enabled:qaPublicDeliverySettings.delivery_enabled});
   if(method==='GET'&&path==='/privacy/requests')return reply({...pageOf(fixturePrivacy),timezone:'America/Sao_Paulo',summary:{open:0,inProgress:1,completed:0,rejected:0,filesPending:1}});
   if(method==='GET'&&path.startsWith('/privacy/requests/'))return reply({request:fixturePrivacy[0],events:[{id:'qa-privacy-event',action:'created',status:'open',created_at:qaTimestamp,actor_name:'Marina Exemplo',reason_code:null}]});
   if(method==='GET'&&path==='/privacy/tutors')return reply({items:tutors.map(item=>({...item,anonymized_at:null}))});
@@ -322,23 +435,26 @@ function localScreen(screen:'login'|'agenda'|'form'|'overview'|'clients'|'subscr
 }
 function Harness(){
   const requested=new URLSearchParams(location.search).get('screen')||'login';
-  const businessScreens:MenuKey[]=['taxi-dog','crm','finance','inventory','reports','waitlist','team','privacy','support'];
-  const initialView:MenuKey=requested==='overview'||requested==='onboarding'?'overview':requested==='clients'?'tutors':requested==='subscription'?'subscription':requested==='platform'?'platform':requested==='taxi'?'taxi-dog':businessScreens.includes(requested as MenuKey)?requested as MenuKey:'calendar';
+  const businessScreens:MenuKey[]=['taxi-dog','deliveries','crm','finance','inventory','reports','waitlist','team','privacy','support'];
+  const initialView:MenuKey=requested==='overview'||requested==='onboarding'?'overview':requested==='clients'?'tutors':requested==='subscription'?'subscription':requested==='platform'?'platform':requested.startsWith('public-delivery')?'deliveries':requested==='taxi'?'taxi-dog':businessScreens.includes(requested as MenuKey)?requested as MenuKey:'calendar';
   const [sessionVersion,setSessionVersion]=useState(0);void sessionVersion;
   const [platformSupportRequest,setPlatformSupportRequest]=useState(0);
+  const [deliveryRevision,setDeliveryRevision]=useState(0);
+  const [deliverySaleId,setDeliverySaleId]=useState<string|undefined>();
   const [view,setView]=useState<MenuKey>(initialView),[search,setSearch]=useState(''),[notice,setNotice]=useState(''),[error,setError]=useState(''),[onboarding,setOnboarding]=useState(requested==='onboarding'),[checkout,setCheckout]=useState('');
   useEffect(()=>{const capture=(event:Event)=>setCheckout((event as CustomEvent<string>).detail);window.addEventListener('petcore-qa-checkout',capture);return()=>window.removeEventListener('petcore-qa-checkout',capture);},[]);
   const go=(target:MenuKey)=>{setView(target);setSearch('');};
   const resource:Resource|null=['tutors','pets','professionals','services'].includes(view)?view as Resource:null;
   if(requested==='login')return <AuthScreen onDone={()=>localScreen('agenda')} onReadLegal={()=>setNotice('Documentos não publicados nesta prévia local.')}/>;
   if(requested==='public-booking')return <PublicBookingPage token={qaPublicToken}/>;
+  if(requested==='public-delivery')return <PublicDeliveryPage token={qaPublicDeliveryToken}/>;
   const shellSession:Session=view==='platform'?{...session,user:{...session.user,role:'platform'}}:session;
   return <AppShell session={shellSession} view={view} go={go} onSearch={(target,query)=>{setView(target);setSearch(query);}} company={()=>{}} logout={()=>localScreen('login')} onOpenPlatformSupport={()=>{go('platform');setPlatformSupportRequest(value=>value+1);}}>
     {error&&<div className="alert error" role="alert">{error}</div>}
     {notice&&<div className="alert success" role="status">{notice}</div>}
     {checkout&&<aside className="alert success" role="status">Prévia local: destino do pagamento capturado, sem abrir o provedor: <span style={{overflowWrap:'anywhere'}}>{checkout}</span></aside>}
     {onboarding&&<PlanOnboardingDialog onDone={()=>{setOnboarding(false);setView('subscription');}} onLogout={()=>localScreen('login')}/>}
-    {requested==='public-booking-settings'?<PublicBookingSettings setMessage={setNotice} setError={setError}/>:requested==='public-booking-inbox'?<PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/>:requested==='public-booking-combined'?<><PublicBookingSettings setMessage={setNotice} setError={setError}/><PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/></>:view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError} supportRequest={platformSupportRequest}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'||requested==='taxi-form'} canTaxiDog searchQuery={search} onSaved={()=>setSearch('')}/>:view==='taxi-dog'?<TaxiDogPage setMessage={setNotice} setError={setError} onSetup={go} canSetup={()=>true}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError} onSettingsSaved={()=>setSessionVersion(value=>value+1)}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
+    {requested==='public-delivery-settings'?<PublicDeliverySettings setMessage={setNotice} setError={setError} writable={qaPublicDeliverySettings.subscription_writable}/>:requested==='public-delivery-inbox'?<PublicDeliveryInbox setMessage={setNotice} setError={setError} writable={qaPublicDeliverySettings.subscription_writable} isAdmin onChanged={()=>setDeliveryRevision(value=>value+1)}/>:requested==='public-booking-settings'?<PublicBookingSettings setMessage={setNotice} setError={setError}/>:requested==='public-booking-inbox'?<PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/>:requested==='public-booking-combined'?<><PublicBookingSettings setMessage={setNotice} setError={setError}/><PublicBookingInbox setMessage={setNotice} setError={setError} onChanged={()=>{}} writable/></>:view==='overview'?<Overview go={go} can={()=>true} isAdmin onNew={()=>{setView('calendar');localScreen('form');}}/>:resource?<DataPage resource={resource} setMessage={setNotice} setError={setError} initialSearch={search} onSetup={target=>go(target)} canSetup={()=>true}/>:view==='subscription'?<SubscriptionPage setMessage={setNotice} setError={setError}/>:view==='platform'?<PlatformOperations setMessage={setNotice} setError={setError} supportRequest={platformSupportRequest}/>:view==='calendar'?<CalendarPage setMessage={setNotice} setError={setError} initialNew={requested==='form'||requested==='taxi-form'} canTaxiDog searchQuery={search} onSaved={()=>setSearch('')}/>:view==='taxi-dog'?<TaxiDogPage setMessage={setNotice} setError={setError} onSetup={go} canSetup={()=>true}/>:view==='deliveries'?<DeliveryPage key={deliveryRevision} setMessage={setNotice} setError={setError} onSetup={go} onOpenFinance={saleId=>{setDeliverySaleId(saleId);go('finance');}} publicSettings={<PublicDeliverySettings setMessage={setNotice} setError={setError} writable={qaPublicDeliverySettings.subscription_writable}/>} publicRequests={<PublicDeliveryInbox setMessage={setNotice} setError={setError} writable={qaPublicDeliverySettings.subscription_writable} isAdmin onChanged={()=>setDeliveryRevision(value=>value+1)}/>}/>:view==='crm'?<CrmPage setMessage={setNotice} setError={setError}/>:view==='finance'?<FinancePage setMessage={setNotice} setError={setError} initialSaleId={deliverySaleId}/>:view==='inventory'?<InventoryPage setMessage={setNotice} setError={setError}/>:view==='reports'?<ReportsPage setMessage={setNotice} setError={setError}/>:view==='waitlist'?<WaitlistPage setMessage={setNotice} setError={setError}/>:view==='team'?<TeamPage setMessage={setNotice} setError={setError} onSettingsSaved={()=>setSessionVersion(value=>value+1)}/>:view==='privacy'?<PrivacyPage setMessage={setNotice} setError={setError}/>:view==='support'?<SupportPage setMessage={setNotice} setError={setError}/>:<div className="panel"><p>Esta tela não faz parte da prévia local.</p><button type="button" className="ghost-btn" onClick={()=>go('overview')}>Voltar para Hoje</button></div>}
   </AppShell>;
 }
 
