@@ -20,6 +20,7 @@ import {startSupportEmailWorker} from './supportEmailService.js';
 import {publicBookingRouter} from './publicBookingRoutes.js';
 import waitlistRoutes from './waitlistRoutes.js';
 import deliveryRoutes from './deliveryRoutes.js';
+import transportDriverRoutes from './transportDriverRoutes.js';
 import {publicDeliveryRouter} from './publicDeliveryRoutes.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
@@ -60,6 +61,7 @@ export function createApp(){
  app.use('/api/taxi-dog',taxiDogRoutes);
  app.use('/api/calendar/waitlist',waitlistRoutes);
  app.use('/api/deliveries',deliveryRoutes);
+ app.use('/api/transport-drivers',transportDriverRoutes);
  app.use('/api',dataRoutes);
  app.use('/api',calendarRoutes);
  app.use('/api',fileRoutes);
