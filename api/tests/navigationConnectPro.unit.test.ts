@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createNavigationConnectPro,navigationLaunchUrl,readProTrip,NavigationConnectError} from '../src/navigationConnectPro.js';
+import {createNavigationConnectPro,navigationLaunchUrl,navigationMode,readProTrip,NavigationConnectError} from '../src/navigationConnectPro.js';
 const id='12345678-1234-4123-8123-123456789abc', now=Date.parse('2026-11-23T18:00:00Z');
 const name='projects/123456/trips/'+id;
 const point={latitude:-23.5,longitude:-46.5};
@@ -55,4 +55,22 @@ test('provider error never propagates credentials or response body',async()=>{
  const {client,calls}=mock({secret:'fixture-secret'},403);
  await assert.rejects(client.getTrip(id,now),{message:'Navigation Connect: unavailable',status:403});
  assert.equal(calls.length,1);
+});
+
+test('motorcycle routes use the official external modes without tracking tokens',()=>{
+ assert.equal(navigationMode('motorcycle'),'external_only');
+ assert.equal(navigationMode('car'),'connect_pro');
+ const maps=new URL(navigationLaunchUrl('google_maps',point,undefined,'motorcycle'));
+ const waze=new URL(navigationLaunchUrl('waze',point,undefined,'motorcycle'));
+ assert.equal(maps.searchParams.get('travelmode'),'two-wheeler');
+ assert.equal(waze.searchParams.get('vehicle_type'),'motorcycle');
+ assert.equal(maps.searchParams.has('action_token'),false);
+ assert.equal(waze.searchParams.has('external_trip_token'),false);
+ for(const app of ['google_maps','waze'] as const)
+  assert.throws(()=>navigationLaunchUrl(app,point,'fixture-token','motorcycle'),{code:'invalid_input'});
+});
+test('motorcycle never calls the Pro provider',async()=>{
+ const {client,calls}=mock({});
+ await assert.rejects(client.createTrip(id,now,'motorcycle'),{code:'invalid_input'});
+ assert.equal(calls.length,0);
 });
