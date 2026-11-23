@@ -4,7 +4,7 @@ Substitui o plano anterior de captura de GPS pelo próprio PetCore. Google Maps/
 
 ## Implementação parcial
 - api/src/navigationConnectPro.ts: adaptador REST CreateTrip/GetTrip com OAuth injetável, config padrão Pro, URLs oficiais e normalização de localização, distância e ETA. Sem chamadas automáticas, sem dependências adicionais, sem captura local.
-- api/tests/navigationConnectPro.unit.test.ts: seis testes com HTTP simulado; ainda não executados.
+- api/tests/navigationConnectPro.unit.test.ts: oito testes com HTTP simulado; ainda não executados.
 - Dados com mais de 150 s são ocultados; nenhum trajeto restante ou tráfego é solicitado.
 - Não montar endpoint público diretamente sobre o adaptador. Falta a camada de autorização transacional, persistência de identificadores, limite de criação de viagens, associação do motorista e destinos confirmados, revogação local, e a interface.
 - Para evitar custos, iniciar com REST pull coordenado por viagem (não por visitante), sem Pub/Sub e sem opções Enterprise. Definir teto mensal global antes da ativação. Não enviar dados reais antes da revisão jurídica e das políticas do provedor.
@@ -31,3 +31,16 @@ Testar OAuth, aplicativo verificado, consentimento negado, perda de rede, encerr
 - https://developers.google.com/maps/documentation/navigation/connect/usage-and-billing
 - https://developers.google.com/maps/documentation/navigation/connect/policies
 Preview sem cobrança da API; preços previstos pós-GA: Pro franquia global 5.000 viagens/mês e US$5/1.000 na primeira faixa excedente. Viagens são cobradas ao primeiro payload, não por consulta. Mapas e outros serviços podem ser cobrados separadamente. Não considerar a gratuidade garantida.
+
+## Decisão aprovada — carro e motocicleta
+
+- Carro: Navigation Connect Pro, quando o recurso for habilitado e configurado, com alternativa de navegação externa sem token.
+- Moto: navegação externa exclusivamente. Google Maps usa travelmode=two-wheeler, Waze usa vehicle_type=motorcycle. Não criar viagens Pro nem anexar tokens a links de motocicleta. O adaptador rejeita explicitamente essas operações.
+- A interface futura deve selecionar o veículo da viagem antes de solicitar uma sessão; não assumir carro para entregadores. O servidor deve validar o veículo registrado, não confiar apenas em parâmetros enviados pelo navegador.
+- Para motoboy, o cliente acompanha os status operacionais do PetCore; compartilhamento nativo do aplicativo de navegação é manual e depende da disponibilidade no aparelho. Não prometer mapa/ETA integrado, nem aceitar URLs arbitrárias sem validação. Não coletar localização pelo PetCore.
+- Para Táxi Dog, manter o transporte de pets adequado e as regras de custódia existentes; não introduzir transporte de animais por motocicleta.
+- Testes reais no Android e interface ainda pendentes; nada foi ativado na Hostinger.
+
+Referências oficiais de URLs:
+- https://developers.google.com/maps/documentation/urls/get-started
+- https://developers.google.com/waze/deeplinks/
