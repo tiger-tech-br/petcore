@@ -69,14 +69,15 @@
     "previousVersionPreserved": "1.0.2"
   },
   "webAssets": {
-    "javascript": "index-Djx981ZA.js",
+    "javascript": "index-99c19bxo.js",
     "stylesheet": "index-CQtJXJBt.css"
   },
   "ui": {
     "fixture": "web/tracking-qa.html",
     "fictitiousDataOnly": true,
-    "visualInspectionCompleted": false,
-    "blocker": "First IAB call failed: Computer Use native pipe is unavailable: Computer Use native pipe connection timed out"
+    "visualInspectionCompleted": true,
+    "blocker": null,
+    "followupEvidence": "GPS-UI-20261128.json"
   },
   "database": {
     "migration": "025_transport_tracking.sql",
@@ -92,7 +93,7 @@
     "lastConfirmedDate": "2026-11-22",
     "domain": "https://petcore.tigertech.dev.br",
     "hostingerConnectorAvailable": false,
-    "browserAccessUnavailable": true
+    "browserAccessUnavailable": false
   },
   "behavior": {
     "explicitDriverStart": true,
@@ -193,7 +194,7 @@
     },
     {
       "path": "web/src/AppShell.tsx",
-      "sha256": "02f25a28ee786307571de32c6aaabb7565ac4a9b1cdb58b8c4697ba5864f0a30"
+      "sha256": "112164d1ba2dafd723df8447c9ed040b5ec3f5253435783b4b1acef031682e22"
     },
     {
       "path": "web/src/TeamPage.tsx",

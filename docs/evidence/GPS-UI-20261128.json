@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-28",
+  "environment": "local fictitious fixture /tracking-qa.html",
+  "realLocation": false,
+  "actualMessageOrPayment": false,
+  "viewports": [
+    {
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 375
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "scrollWidth": 1351
+    }
+  ],
+  "driver": {
+    "headingPx": 28,
+    "jobHeadingPx": 21,
+    "actionFontPx": 16,
+    "actionHeightPx": 48,
+    "bottomNavigation": {
+      "fixed": true,
+      "bottom": 844,
+      "height": 76,
+      "columns": 2,
+      "selected": "Viagens",
+      "buttonWidths": [
+        175.5,
+        175.5
+      ]
+    }
+  },
+  "public": {
+    "mapLoaded": true,
+    "attributionVisible": true,
+    "stalePositionClearlyLabelled": true,
+    "endedLinkShowsUnavailable": true,
+    "paragraphFontMinimumPx": 16,
+    "horizontalOverflow": false
+  },
+  "panel": {
+    "fictitiousShareGenerated": true,
+    "qrCanvas": {
+      "width": 320,
+      "height": 320
+    },
+    "horizontalOverflow": false
+  },
+  "settings": {
+    "labelFontPx": 17,
+    "horizontalOverflow": false
+  },
+  "physicalApkGpsTest": false
+}
