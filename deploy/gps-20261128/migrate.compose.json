@@ -1,0 +1,96 @@
+{
+  "name": "petcore-gps-migrate-20261128",
+  "services": {
+    "migrate": {
+      "image": "petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10",
+      "pull_policy": "never",
+      "user": "0:0",
+      "init": true,
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "healthcheck": {
+        "disable": true
+      },
+      "cpus": 0.75,
+      "mem_limit": "2g",
+      "pids_limit": 128,
+      "stop_grace_period": "45s",
+      "tmpfs": [
+        "/tmp:rw,nosuid,nodev,size=1536m,mode=1777"
+      ],
+      "entrypoint": [
+        "node"
+      ],
+      "command": [
+        "-e",
+        "// Additive migration only. No database create/drop/restore or private-file writes.\nconst fs=require('node:fs'),crypto=require('node:crypto'),cp=require('node:child_process');\nconst {Pool}=require('/app/node_modules/pg');\nconst hash=value=>crypto.createHash('sha256').update(value).digest('hex');\nconst fail=code=>{throw Object.assign(Error(code),{code});};\nasync function main(){\n const revision=process.env.SOURCE_REVISION,backupId=process.env.EXPECTED_BACKUP_ID,backupHash=process.env.EXPECTED_BACKUP_SHA256;\n if(!/^[a-f0-9]{40}$/.test(revision||'')||!/^[a-f0-9-]{36}$/.test(backupId||'')||!/^[a-f0-9]{64}$/.test(backupHash||''))fail('GPS_MIGRATION_PIN_REQUIRED');\n const s=fs.lstatSync('/private/operator.json');if(process.getuid()!==0||!s.isFile()||s.isSymbolicLink()||s.uid!==0||(s.mode&0o777)!==0o600||s.size>65536)fail('GPS_MIGRATION_OPERATOR_FILE_INVALID');\n const state=JSON.parse(fs.readFileSync('/private/operator.json','utf8'));\n if(typeof state.PG_OWNER_PASSWORD!=='string'||state.PG_OWNER_PASSWORD.length<20||state.PG_OWNER_PASSWORD.includes('\\0'))fail('GPS_MIGRATION_OWNER_PASSWORD_INVALID');\n const marker=JSON.parse(fs.readFileSync('/release/PETCORE-RELEASE.json','utf8'));\n if(marker.format!=='petcore.gps.release.v1'||marker.revision!==revision||!marker.unrelated016Absent||marker.volume!=='petcore_gps_20261128')fail('GPS_MIGRATION_RELEASE_MISMATCH');\n const expected=JSON.parse(process.env.MIGRATION_CHECKSUMS||'{}'),files=fs.readdirSync('/app/api/sql').filter(name=>/^\\d+_[a-zA-Z0-9_]+\\.sql$/.test(name)).sort();\n if(files.length!==24||files.some(name=>name.startsWith('016_'))||JSON.stringify(files)!==JSON.stringify(Object.keys(expected).sort())||files.some(name=>hash(fs.readFileSync('/app/api/sql/'+name))!==expected[name]||marker.migrationChecksums[name]!==expected[name]))fail('GPS_MIGRATION_SOURCE_CHECKSUM_MISMATCH');\n if(fs.existsSync('/app/.env')||hash(fs.readFileSync('/app/api/scripts/migrate.mjs'))!==marker.files['api/scripts/migrate.mjs'])fail('GPS_MIGRATION_RUNNER_MISMATCH');\n const url=new URL('postgresql://petcore_schema_owner@petcore-db:5432/petcore');url.password=state.PG_OWNER_PASSWORD;url.searchParams.set('sslmode','verify-full');url.searchParams.set('sslrootcert','/run/petcore-ca/ca.crt');\n const db=new Pool({connectionString:url.href,max:1,connectionTimeoutMillis:15000,statement_timeout:60000});db.on('error',()=>{});\n const history=async()=>(await db.query('SELECT filename,checksum FROM schema_migrations ORDER BY filename')).rows;\n const tableCount=async()=>(await db.query(\"SELECT count(*)::int AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relkind IN ('r','p') AND n.nspname='public'\")).rows[0].n;\n function checkHistory(rows,n){if(rows.length!==n||rows.some((row,index)=>row.filename!==files[index]||row.checksum!==expected[row.filename]))fail('GPS_MIGRATION_HISTORY_MISMATCH');}\n try{\n  const identity=(await db.query(\"SELECT current_user,current_database(),(SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()) AS tls\")).rows[0];\n  if(identity.current_user!=='petcore_schema_owner'||identity.current_database!=='petcore'||!identity.tls)fail('GPS_MIGRATION_CONNECTION_INVALID');\n  const proof=(await db.query(\"SELECT sha256 FROM backup_runs WHERE id=$1 AND state='uploaded' AND retention_scope='active' AND finished_at>now()-interval '6 hours'\",[backupId])).rows[0];if(proof?.sha256!==backupHash)fail('GPS_MIGRATION_RECENT_BACKUP_REQUIRED');\n  checkHistory(await history(),23);if(await tableCount()!==58)fail('GPS_MIGRATION_BEFORE_TABLE_COUNT_MISMATCH');\n  const defaults=(await db.query(\"SELECT d.defaclobjtype AS kind,a.privilege_type AS privilege FROM pg_default_acl d JOIN pg_namespace n ON n.oid=d.defaclnamespace JOIN pg_roles owner ON owner.oid=d.defaclrole CROSS JOIN LATERAL aclexplode(d.defaclacl) a JOIN pg_roles grantee ON grantee.oid=a.grantee WHERE n.nspname='public' AND owner.rolname='petcore_schema_owner' AND grantee.rolname='petcore_runtime'\")).rows;\n  for(const [kind,privileges]of [['r',['SELECT','INSERT','UPDATE','DELETE']],['S',['USAGE','SELECT']]])for(const privilege of privileges)if(!defaults.some(row=>row.kind===kind&&row.privilege===privilege))fail('GPS_MIGRATION_DEFAULT_PRIVILEGES_MISSING');\n  const runtime=(await db.query(\"SELECT rolsuper,rolcreatedb,rolcreaterole,rolreplication,rolbypassrls,has_schema_privilege('petcore_runtime','public','CREATE') AS schema_create FROM pg_roles WHERE rolname='petcore_runtime'\")).rows[0];if(!runtime||Object.values(runtime).some(Boolean))fail('GPS_MIGRATION_RUNTIME_ROLE_UNSAFE');\n  const env={PATH:process.env.PATH,NODE_ENV:'production',NODE_EXTRA_CA_CERTS:'/run/petcore-ca/ca.crt',DATABASE_SSL:'true',DATABASE_URL:url.href,DATABASE_DIRECT_URL:url.href};\n  const child=cp.spawnSync(process.execPath,['/app/api/scripts/migrate.mjs'],{cwd:'/app',env,encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:1024*1024,timeout:15*60*1000});\n  if(child.error||child.status!==0)fail('GPS_MIGRATION_RUNNER_FAILED');\n  checkHistory(await history(),24);if(await tableCount()!==59)fail('GPS_MIGRATION_AFTER_TABLE_COUNT_MISMATCH');\n  const table=(await db.query(\"SELECT tableowner,has_table_privilege('petcore_runtime','public.transport_tracking_sessions','SELECT') AS can_select,has_table_privilege('petcore_runtime','public.transport_tracking_sessions','INSERT') AS can_insert,has_table_privilege('petcore_runtime','public.transport_tracking_sessions','UPDATE') AS can_update,has_table_privilege('petcore_runtime','public.transport_tracking_sessions','DELETE') AS can_delete FROM pg_tables WHERE schemaname='public' AND tablename='transport_tracking_sessions'\")).rows[0];\n  if(table?.tableowner!=='petcore_schema_owner'||!table.can_select||!table.can_insert||!table.can_update||!table.can_delete)fail('GPS_MIGRATION_NEW_TABLE_PRIVILEGES_INVALID');\n  console.log(JSON.stringify({ok:true,event:'petcore_gps_migration_verified',revision,migrations:24,tables:59,applied:'025_transport_tracking.sql',checksum:expected['025_transport_tracking.sql'],backupId,backupSha256:backupHash,verifiedTLS:true,defaultPrivilegesVerified:true,runtimeCRUD:{SELECT:true,INSERT:true,UPDATE:true,DELETE:true},unrelated016Absent:true}));\n }finally{await db.end();}\n}\nmain().catch(error=>{console.error(JSON.stringify({ok:false,code:/^GPS_MIGRATION_[A-Z_]+$/.test(error.code||'')?error.code:'GPS_MIGRATION_FAILED'}));process.exitCode=1;});\n"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "NODE_EXTRA_CA_CERTS": "/run/petcore-ca/ca.crt",
+        "SOURCE_REVISION": "09dbaf55e9afd4045e3992b6bb4f47b02bf0ee22",
+        "EXPECTED_BACKUP_ID": "${GPS_BACKUP_ID:?Provide the verified backup ID}",
+        "EXPECTED_BACKUP_SHA256": "${GPS_BACKUP_SHA256:?Provide the verified backup SHA256}",
+        "MIGRATION_CHECKSUMS": "{\"001_core.sql\":\"fa7b76211479da76d883832112555ab146d2b36e391c1d5afa44ef2fd3661e4c\",\"002_notifications.sql\":\"c1a7c4a60ad23fe1207c57bd9607906f47f0be2df11a0de0edce652d25436460\",\"003_reminder_delivery.sql\":\"f168cd3de7024aa4bc392bb772e94d80cb3a386f295621a7f51574f7e22bc731\",\"004_tutor_email_reminders_opt_in.sql\":\"3673c0a04899dbf669da0ee883c4af1c9d9f0b90aaae728759e630639386f633\",\"005_crm.sql\":\"560e30c79cd1f5dfa5b7be1ba3c7d4bde5c9be0f4d078a7158fe707ff8795992\",\"006_business.sql\":\"354a979095a2f93426b9f9f99fde189b20111189af6d562ca4e1a94a02e458bb\",\"007_privacy.sql\":\"16ce70a07440a1ad7c20bb04b0cfa1ac65c1e988bf86fd6ef9e37a0e16386504\",\"008_commercial.sql\":\"d80492e82ded141ff72c9ec4a09b5f40f805b389d7cdb8eac2647b801f4966e6\",\"009_upload_cleanup.sql\":\"74691874a0299ca1b9e42ff8cde1e09b9ef3b01d0dcc0a272a84f2daef1eb199\",\"010_contact.sql\":\"3dfe7595f01a97ff1d627a1635af11d5fbec564e743740e854b4e707b96dd649\",\"011_operator_identity.sql\":\"352492d9058dc481e365bfb577f8ebb8253270e00c8b4bd37e2dc3928140b839\",\"012_petcore_payment_links.sql\":\"c44d8f5434ec4d3747a980d8aa4adb91219c98435e2591c0b36edc99dcbd925f\",\"013_reminder_consent_order.sql\":\"92bbc1c94274586e5e8e9b1ea5c44909ee0b0617bdffdbc5c75b9a551ded33a5\",\"014_subscription_recurrence_cancellation.sql\":\"75aad740cabe48808afd35ad0f9fe409eea106d159dfb65e608c730906dc6dfe\",\"015_taxi_dog.sql\":\"26067dd10d6264a39f9e15fa44d0051c71253d4e77c76247457c3627a2d7804b\",\"017_support_email_notifications.sql\":\"92556dfa09fe573375ecb265139d36b37152f6c4fb7ddf7d3a0df09d028dddab\",\"018_backup_retention.sql\":\"d62d821bde6c9250bbcc9d1e4cd7f62a044b5f7732fcfb284ff7dd32dc49e8ad\",\"019_launch_policy_drafts.sql\":\"0e0f0555ffbe150c1fd74c7b5488070e7c71fa11b5e21686c5c4de5f8e32b5bc\",\"020_backup_legacy_scope.sql\":\"bdf19081df2b221b5d40dc9a6c3956056f8b39c7f210f5fd584f6942deae1f46\",\"021_public_booking.sql\":\"788720734064a096b106851fc2ad3f5633fe2ea96baed134f76bd578d290a44d\",\"022_shop_operation_profile.sql\":\"f9c6e29c8b56fd7ec06796c9b5fa85e18ca415801f9982fd609eea59c5c7ac5e\",\"023_delivery_orders.sql\":\"c7b4ed54d97bd9ca5d15d45bfe1070789599292034ac60a57eda56e6e7128dae\",\"024_public_delivery.sql\":\"bfc8690775a03b4d8d280b0aa32dfff8f2015a7ce44fee767378de9cea16ca34\",\"025_transport_tracking.sql\":\"67bb041007e2709cd07788f3c2f02d9b0dfb618db74db6adce13834e7e676228\"}"
+      },
+      "networks": [
+        "service"
+      ],
+      "volumes": [
+        "private:/private:ro",
+        "ca:/run/petcore-ca:ro",
+        "release:/release:ro",
+        {
+          "type": "volume",
+          "source": "release",
+          "target": "/app/api",
+          "read_only": true,
+          "volume": {
+            "subpath": "source/api"
+          }
+        },
+        {
+          "type": "volume",
+          "source": "release",
+          "target": "/app/node_modules",
+          "read_only": true,
+          "volume": {
+            "subpath": "source/node_modules"
+          }
+        }
+      ]
+    }
+  },
+  "volumes": {
+    "private": {
+      "external": true,
+      "name": "petcore_private_20261120b"
+    },
+    "ca": {
+      "external": true,
+      "name": "petcore_public_ca_20261120b"
+    },
+    "release": {
+      "external": true,
+      "name": "petcore_gps_20261128"
+    }
+  },
+  "networks": {
+    "service": {
+      "external": true,
+      "name": "petcore-validation_service"
+    }
+  }
+}

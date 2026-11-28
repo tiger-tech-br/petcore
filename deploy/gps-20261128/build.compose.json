@@ -1,0 +1,56 @@
+{
+  "name": "petcore-gps-build-20261128",
+  "services": {
+    "build": {
+      "image": "petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10",
+      "pull_policy": "never",
+      "user": "0:0",
+      "init": true,
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "healthcheck": {
+        "disable": true
+      },
+      "cpus": 0.75,
+      "mem_limit": "2g",
+      "pids_limit": 128,
+      "stop_grace_period": "45s",
+      "tmpfs": [
+        "/tmp:rw,nosuid,nodev,size=1536m,mode=1777"
+      ],
+      "entrypoint": [
+        "node"
+      ],
+      "command": [
+        "-e",
+        "// Public source only. This one-shot builder never mounts private configuration.\nconst fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),cp=require('node:child_process');\nconst hash=value=>crypto.createHash('sha256').update(value).digest('hex');\nconst fail=code=>{throw Object.assign(Error(code),{code});};\nconst expected=JSON.parse(process.env.MIGRATION_CHECKSUMS||'{}');\nfunction command(program,args,cwd){const child=cp.spawnSync(program,args,{cwd,env:{PATH:process.env.PATH,HOME:'/tmp',NODE_ENV:'development',npm_config_cache:'/tmp/npm-cache',npm_config_audit:'false',npm_config_fund:'false',npm_config_update_notifier:'false'},encoding:'utf8',maxBuffer:2*1024*1024,timeout:20*60*1000});if(child.status!==0||child.error)fail('GPS_BUILD_COMMAND_FAILED');return child.stdout;}\nasync function main(){\n const revision=process.env.SOURCE_REVISION,archiveHash=process.env.SOURCE_ARCHIVE_SHA256;\n if(!/^[a-f0-9]{40}$/.test(revision||'')||!/^[a-f0-9]{64}$/.test(archiveHash||''))fail('GPS_BUILD_PIN_REQUIRED');\n if(!process.version.startsWith('v22.')||Object.keys(expected).length!==24)fail('GPS_BUILD_PREREQUISITE_INVALID');\n if(fs.readdirSync('/release').length)fail('GPS_BUILD_VOLUME_OCCUPIED');\n fs.writeFileSync('/release/BUILD-RESERVED.json',JSON.stringify({revision,archiveSha256:archiveHash,startedAt:new Date().toISOString()}),{flag:'wx',mode:0o444});\n const response=await fetch('https://codeload.github.com/tiger-tech-br/petcore/tar.gz/'+revision,{redirect:'error',signal:AbortSignal.timeout(180000)});\n if(!response.ok)fail('GPS_BUILD_ARCHIVE_DOWNLOAD_FAILED');\n const chunks=[];let bytes=0;for await(const chunk of response.body){bytes+=chunk.length;if(bytes>64*1024*1024)fail('GPS_BUILD_ARCHIVE_TOO_LARGE');chunks.push(chunk);}\n const archive=Buffer.concat(chunks);if(hash(archive)!==archiveHash)fail('GPS_BUILD_ARCHIVE_HASH_MISMATCH');\n fs.writeFileSync('/tmp/source.tar.gz',archive,{flag:'wx',mode:0o600});\n const names=command('tar',['-tzf','/tmp/source.tar.gz']).trim().split('\\n');\n const prefix='petcore-'+revision+'/';\n if(names.some(name=>!name.startsWith(prefix)||name.includes('\\\\')||name.split('/').includes('..')||(/(^|\\/)\\.env(?:\\.|$)/.test(name)&&!name.endsWith('/.env.example'))||name.startsWith(prefix+'deploy/private/')))fail('GPS_BUILD_ARCHIVE_PATH_INVALID');\n if(command('tar',['-tvzf','/tmp/source.tar.gz']).trim().split('\\n').some(line=>!/^[-d]/.test(line)))fail('GPS_BUILD_ARCHIVE_LINK_REFUSED');\n fs.mkdirSync('/release/source',{mode:0o755});\n command('tar',['-xzf','/tmp/source.tar.gz','-C','/release/source','--strip-components=1','--no-same-owner','--no-same-permissions']);\n const source='/release/source',sql=source+'/api/sql';\n const migrations=fs.readdirSync(sql).filter(name=>/^\\d+_[a-zA-Z0-9_]+\\.sql$/.test(name)).sort();\n if(migrations.length!==24||migrations.some(name=>name.startsWith('016_'))||JSON.stringify(migrations)!==JSON.stringify(Object.keys(expected).sort())||migrations.some(name=>hash(fs.readFileSync(sql+'/'+name))!==expected[name]))fail('GPS_BUILD_MIGRATION_SOURCE_MISMATCH');\n if(fs.existsSync(source+'/.env')||fs.existsSync(source+'/deploy/private'))fail('GPS_BUILD_PRIVATE_FILE_PRESENT');\n command('npm',['ci','--include=dev','--no-audit','--no-fund'],source);\n command('npm',['run','build','--workspace','api'],source);\n command('npm',['run','build','--workspace','web'],source);\n command('npm',['prune','--omit=dev','--no-audit','--no-fund'],source);\n for(const file of ['api/dist/server.js','api/scripts/migrate.mjs','web/dist/index.html','node_modules/pg/package.json'])if(!fs.statSync(source+'/'+file).isFile())fail('GPS_BUILD_OUTPUT_MISSING');\n const manifest={format:'petcore.gps.release.v1',revision,archiveSha256:archiveHash,baseImage:'petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10',volume:'petcore_gps_20261128',migrationChecksums:expected,unrelated016Absent:true,builtAt:new Date().toISOString(),files:Object.fromEntries(['api/dist/server.js','api/scripts/migrate.mjs','web/dist/index.html','package-lock.json'].map(file=>[file,hash(fs.readFileSync(source+'/'+file))]))};\n fs.writeFileSync('/release/PETCORE-RELEASE.json',JSON.stringify(manifest),{flag:'wx',mode:0o444});\n console.log(JSON.stringify({ok:true,event:'petcore_gps_release_built',revision,archiveSha256:archiveHash,manifestSha256:hash(JSON.stringify(manifest)),migrations:24,unrelated016Absent:true}));\n}\nmain().catch(error=>{console.error(JSON.stringify({ok:false,code:/^GPS_BUILD_[A-Z_]+$/.test(error.code||'')?error.code:'GPS_BUILD_FAILED'}));process.exitCode=1;});\n"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "SOURCE_REVISION": "09dbaf55e9afd4045e3992b6bb4f47b02bf0ee22",
+        "SOURCE_ARCHIVE_SHA256": "d5c42c20bfd0e57a997e3d14a73084cca2ef5cf50a0aa5faa7d34d0559b35a45",
+        "MIGRATION_CHECKSUMS": "{\"001_core.sql\":\"fa7b76211479da76d883832112555ab146d2b36e391c1d5afa44ef2fd3661e4c\",\"002_notifications.sql\":\"c1a7c4a60ad23fe1207c57bd9607906f47f0be2df11a0de0edce652d25436460\",\"003_reminder_delivery.sql\":\"f168cd3de7024aa4bc392bb772e94d80cb3a386f295621a7f51574f7e22bc731\",\"004_tutor_email_reminders_opt_in.sql\":\"3673c0a04899dbf669da0ee883c4af1c9d9f0b90aaae728759e630639386f633\",\"005_crm.sql\":\"560e30c79cd1f5dfa5b7be1ba3c7d4bde5c9be0f4d078a7158fe707ff8795992\",\"006_business.sql\":\"354a979095a2f93426b9f9f99fde189b20111189af6d562ca4e1a94a02e458bb\",\"007_privacy.sql\":\"16ce70a07440a1ad7c20bb04b0cfa1ac65c1e988bf86fd6ef9e37a0e16386504\",\"008_commercial.sql\":\"d80492e82ded141ff72c9ec4a09b5f40f805b389d7cdb8eac2647b801f4966e6\",\"009_upload_cleanup.sql\":\"74691874a0299ca1b9e42ff8cde1e09b9ef3b01d0dcc0a272a84f2daef1eb199\",\"010_contact.sql\":\"3dfe7595f01a97ff1d627a1635af11d5fbec564e743740e854b4e707b96dd649\",\"011_operator_identity.sql\":\"352492d9058dc481e365bfb577f8ebb8253270e00c8b4bd37e2dc3928140b839\",\"012_petcore_payment_links.sql\":\"c44d8f5434ec4d3747a980d8aa4adb91219c98435e2591c0b36edc99dcbd925f\",\"013_reminder_consent_order.sql\":\"92bbc1c94274586e5e8e9b1ea5c44909ee0b0617bdffdbc5c75b9a551ded33a5\",\"014_subscription_recurrence_cancellation.sql\":\"75aad740cabe48808afd35ad0f9fe409eea106d159dfb65e608c730906dc6dfe\",\"015_taxi_dog.sql\":\"26067dd10d6264a39f9e15fa44d0051c71253d4e77c76247457c3627a2d7804b\",\"017_support_email_notifications.sql\":\"92556dfa09fe573375ecb265139d36b37152f6c4fb7ddf7d3a0df09d028dddab\",\"018_backup_retention.sql\":\"d62d821bde6c9250bbcc9d1e4cd7f62a044b5f7732fcfb284ff7dd32dc49e8ad\",\"019_launch_policy_drafts.sql\":\"0e0f0555ffbe150c1fd74c7b5488070e7c71fa11b5e21686c5c4de5f8e32b5bc\",\"020_backup_legacy_scope.sql\":\"bdf19081df2b221b5d40dc9a6c3956056f8b39c7f210f5fd584f6942deae1f46\",\"021_public_booking.sql\":\"788720734064a096b106851fc2ad3f5633fe2ea96baed134f76bd578d290a44d\",\"022_shop_operation_profile.sql\":\"f9c6e29c8b56fd7ec06796c9b5fa85e18ca415801f9982fd609eea59c5c7ac5e\",\"023_delivery_orders.sql\":\"c7b4ed54d97bd9ca5d15d45bfe1070789599292034ac60a57eda56e6e7128dae\",\"024_public_delivery.sql\":\"bfc8690775a03b4d8d280b0aa32dfff8f2015a7ce44fee767378de9cea16ca34\",\"025_transport_tracking.sql\":\"67bb041007e2709cd07788f3c2f02d9b0dfb618db74db6adce13834e7e676228\"}"
+      },
+      "volumes": [
+        "release:/release"
+      ]
+    }
+  },
+  "volumes": {
+    "release": {
+      "name": "petcore_gps_20261128"
+    }
+  }
+}

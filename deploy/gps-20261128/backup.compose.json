@@ -1,0 +1,92 @@
+{
+  "name": "petcore-gps-backup-20261128",
+  "services": {
+    "backup": {
+      "image": "petcore-runtime:acde9dded16f71403d2a152284144d3019b10d10",
+      "pull_policy": "never",
+      "user": "1000:1000",
+      "init": true,
+      "read_only": true,
+      "cap_drop": [
+        "ALL"
+      ],
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "restart": "no",
+      "healthcheck": {
+        "disable": true
+      },
+      "cpus": 0.75,
+      "mem_limit": "2g",
+      "pids_limit": 128,
+      "stop_grace_period": "45s",
+      "tmpfs": [
+        "/tmp:rw,nosuid,nodev,size=1536m,mode=1777"
+      ],
+      "entrypoint": [
+        "node"
+      ],
+      "command": [
+        "-e",
+        "// Use the existing release and private backup configuration; never send email.\nconst fs=require('node:fs'),cp=require('node:child_process'),crypto=require('node:crypto');\nconst {Pool}=require('/app/node_modules/pg');\nconst fail=code=>{throw Object.assign(Error(code),{code});};\nfunction privateJSON(file){const s=fs.lstatSync(file);if(!s.isFile()||s.isSymbolicLink()||s.uid!==1000||(s.mode&0o077)||s.size>65536)fail('GPS_BACKUP_PRIVATE_FILE_INVALID');return JSON.parse(fs.readFileSync(file,'utf8'));}\nasync function main(){\n if(process.getuid()!==1000||fs.existsSync('/app/.env'))fail('GPS_BACKUP_PROCESS_INVALID');\n const runtime=privateJSON('/private/app/runtime.json'),backup=privateJSON('/private/jobs/backup.json');\n const oldFiles=['api/dist/server.js','api/scripts/backup-cycle.mjs','api/scripts/backup.mjs','package-lock.json'];\n const previousSource={volume:'petcore_delivery_ed8a7940_20261122',files:Object.fromEntries(oldFiles.map(file=>[file,crypto.createHash('sha256').update(fs.readFileSync('/previous/source/'+file)).digest('hex')]))};\n if(fs.existsSync('/previous/PETCORE-RELEASE.json')){const text=fs.readFileSync('/previous/PETCORE-RELEASE.json','utf8'),marker=JSON.parse(text);previousSource.markerSha256=crypto.createHash('sha256').update(text).digest('hex');if(/^[a-f0-9]{40}$/.test(marker.revision||''))previousSource.revision=marker.revision;}\n const source=new URL(runtime.DATABASE_URL),configured=new URL(backup.DATABASE_URL);\n if(source.hostname!=='petcore-db'||source.pathname!=='/petcore'||source.port!=='5432'||source.username!=='petcore_runtime'||source.href!==configured.href)fail('GPS_BACKUP_DATABASE_MISMATCH');\n source.searchParams.set('sslmode','verify-full');source.searchParams.set('sslrootcert','/run/petcore-ca/ca.crt');\n const allowed=/^(OBJECT_STORAGE_[A-Z_]+|BACKUP_STORAGE_[A-Z_]+|BACKUP_ENCRYPTION_KEY|BACKUP_KEY_ID)$/;\n const env={PATH:process.env.PATH,NODE_ENV:'production',NODE_EXTRA_CA_CERTS:'/run/petcore-ca/ca.crt',DATABASE_SSL:'true',DATABASE_URL:source.href,PG_DUMP_PATH:'/usr/lib/postgresql/18/bin/pg_dump',PG_RESTORE_PATH:'/usr/lib/postgresql/18/bin/pg_restore',BACKUP_RETENTION_ENABLED:'false',BACKUP_RETENTION_CONFIRM_DELETE:'NO',BACKUP_RETENTION_DAYS:'30'};\n for(const [name,value]of Object.entries({...runtime,...backup}))if(allowed.test(name)){if(typeof value!=='string'||value.includes('\\0'))fail('GPS_BACKUP_CONFIG_INVALID');env[name]=value;}\n const db=new Pool({connectionString:source.href,max:1,connectionTimeoutMillis:15000});db.on('error',()=>{});\n try{\n  if(!(await db.query('SELECT ssl FROM pg_stat_ssl WHERE pid=pg_backend_pid()')).rows[0]?.ssl)fail('GPS_BACKUP_TLS_REQUIRED');\n  const before=(await db.query('SELECT id,state,sha256,size_bytes FROM backup_runs ORDER BY id')).rows;\n  const child=cp.spawnSync(process.execPath,['/app/api/scripts/backup-cycle.mjs'],{cwd:'/app',env,encoding:'utf8',stdio:['ignore','pipe','pipe'],maxBuffer:2*1024*1024,timeout:90*60*1000});\n  const output=String(child.stdout||'').trim().split('\\n').map(line=>{try{return JSON.parse(line);}catch{return null;}});\n  const created=output.filter(row=>row?.event==='backup_created'),retention=output.find(row=>row?.event==='backup_retention');\n  if(child.error||child.status!==0||created.length!==1||!created[0].ok||!retention?.ok||retention.mode!=='dry-run'||retention.expired!==0)fail('GPS_BACKUP_CYCLE_FAILED');\n  const proof=created[0];if(!/^[a-f0-9-]{36}$/.test(proof.backupId||'')||!/^[a-f0-9]{64}$/.test(proof.sha256||'')||!proof.objectsIncluded||!Number.isSafeInteger(proof.sizeBytes)||proof.sizeBytes<1)fail('GPS_BACKUP_RESULT_INVALID');\n  const after=(await db.query('SELECT id,state,sha256,size_bytes FROM backup_runs ORDER BY id')).rows;\n  if(before.some(old=>JSON.stringify(after.find(row=>row.id===old.id))!==JSON.stringify(old)))fail('GPS_BACKUP_PREVIOUS_RECORD_CHANGED');\n  const row=(await db.query(\"SELECT sha256,size_bytes FROM backup_runs WHERE id=$1 AND state='uploaded' AND retention_scope='active' AND finished_at IS NOT NULL\",[proof.backupId])).rows[0];\n  if(!row||row.sha256!==proof.sha256||Number(row.size_bytes)!==proof.sizeBytes)fail('GPS_BACKUP_RECORD_MISMATCH');\n  console.log(JSON.stringify({ok:true,event:'petcore_gps_pre_migration_backup',backupId:proof.backupId,sha256:proof.sha256,sizeBytes:proof.sizeBytes,objectsIncluded:true,retentionDryRun:true,previousRecordsPreserved:true,restorationVerified:false,previousSource}));\n }finally{await db.end();}\n}\nmain().catch(error=>{console.error(JSON.stringify({ok:false,code:/^GPS_BACKUP_[A-Z_]+$/.test(error.code||'')?error.code:'GPS_BACKUP_FAILED'}));process.exitCode=1;});\n"
+      ],
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-size": "5m",
+          "max-file": "2"
+        }
+      },
+      "environment": {
+        "NODE_EXTRA_CA_CERTS": "/run/petcore-ca/ca.crt"
+      },
+      "networks": [
+        "service"
+      ],
+      "volumes": [
+        "private:/private:ro",
+        "ca:/run/petcore-ca:ro",
+        "release:/previous:ro",
+        {
+          "type": "volume",
+          "source": "release",
+          "target": "/app/api",
+          "read_only": true,
+          "volume": {
+            "subpath": "source/api"
+          }
+        },
+        {
+          "type": "volume",
+          "source": "release",
+          "target": "/app/node_modules",
+          "read_only": true,
+          "volume": {
+            "subpath": "source/node_modules"
+          }
+        }
+      ]
+    }
+  },
+  "volumes": {
+    "private": {
+      "external": true,
+      "name": "petcore_private_20261120b"
+    },
+    "ca": {
+      "external": true,
+      "name": "petcore_public_ca_20261120b"
+    },
+    "release": {
+      "external": true,
+      "name": "petcore_delivery_ed8a7940_20261122"
+    }
+  },
+  "networks": {
+    "service": {
+      "external": true,
+      "name": "petcore-validation_service"
+    }
+  }
+}
