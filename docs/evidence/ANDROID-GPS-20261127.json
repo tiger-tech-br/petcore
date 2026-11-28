@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-27",
+  "apk": {
+    "applicationId": "br.dev.tigertech.petcore",
+    "version": "1.0.3",
+    "versionCode": 4,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "bytes": 1765062,
+    "sha256": "5c7673a451a2161defb9050022c6192a75942bec572eefcb2eb556d8912f3118",
+    "certificateSha256": "740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1",
+    "signed": true,
+    "debuggable": false,
+    "requiresInternet": true,
+    "builtAt": "2026-11-28T00:20:39.176Z"
+  },
+  "signerUnchanged": true,
+  "unitSuites": [
+    {
+      "name": "br.dev.tigertech.petcore.ExportPolicyTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "br.dev.tigertech.petcore.TrackingPolicyTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "name": "br.dev.tigertech.petcore.UrlPolicyTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "build": {
+    "testDebugUnitTest": "passed",
+    "lintRelease": "passed",
+    "assembleRelease": "passed"
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 10
+  },
+  "physicalDeviceTested": false,
+  "backgroundLocationOnDeviceValidated": false,
+  "trackingImplementation": {
+    "cookieSessionExposedToBridge": false,
+    "publicOrigin": "https://petcore.tigertech.dev.br",
+    "intervalSeconds": 15,
+    "service": "TrackingService",
+    "bridge": "PetCoreTracking",
+    "sourceFrozenBeforeFinalBuild": true,
+    "startsOnlyWithExplicitNativeConfirmation": true,
+    "credentialsStoredOnDisk": false,
+    "maxCredentialHours": 12,
+    "stopActionInNotification": true,
+    "backgroundPermissionRequested": false,
+    "foregroundServiceType": "location"
+  }
+}

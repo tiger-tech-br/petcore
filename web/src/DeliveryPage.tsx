@@ -1,7 +1,8 @@
 import {useEffect,useState,type FormEvent,type ReactNode} from 'react';
-import {ArrowLeft,Check,CheckCircle2,MapPin,Package,Plus,RefreshCw,Search,Truck,X} from 'lucide-react';
+import {ArrowLeft,Check,CheckCircle2,LocateFixed,MapPin,Package,Plus,RefreshCw,Search,Truck,X} from 'lucide-react';
 import {money,today} from './api';
 import FormDialog from './FormDialog';
+import TrackingPanel from './TrackingPanel';
 import {Empty,PageHeader} from './ui';
 import {BusinessPagination,businessDate,integerValue,parseCents,reasonText,useBusinessCommand,useBusinessQuery,type PageResult} from './businessUi';
 import './styles/_delivery.scss';
@@ -20,7 +21,7 @@ type Delivery={
 type Line={key:string;product_id:string;quantity:string};
 type Draft={tutor_id:string;phone:string;address:string;reference:string;notes:string;fee:string;due_date:string};
 type Dialog='new'|'detail'|'dispatch'|'deliver'|'cancel'|null;
-type Props={setMessage:(value:string)=>void;setError:(value:string)=>void;onOpenFinance?:(saleId:string)=>void;onSetup?:(target:'tutors'|'inventory')=>void;publicRequests?:ReactNode;publicSettings?:ReactNode};
+type Props={setMessage:(value:string)=>void;setError:(value:string)=>void;onOpenFinance?:(saleId:string)=>void;onSetup?:(target:'tutors'|'inventory')=>void;publicRequests?:ReactNode;publicSettings?:ReactNode;canTracking?:boolean};
 const statusLabels:Record<DeliveryStatus,string>={preparing:'Preparando',out_for_delivery:'Saiu para entrega',delivered:'Entregue',cancelled:'Cancelado'};
 const newLine=():Line=>({key:crypto.randomUUID(),product_id:'',quantity:'1'});
 const newDraft=():Draft=>({tutor_id:'',phone:'',address:'',reference:'',notes:'',fee:'0,00',due_date:today()});
@@ -28,11 +29,12 @@ function DeliveryStatusTag({status}:{status:DeliveryStatus}){
   return <span className={`delivery-status delivery-status--${status}`}>{statusLabels[status]??status}</span>;
 }
 
-export default function DeliveryPage({setMessage,setError,onOpenFinance,onSetup,publicRequests,publicSettings}:Props){
+export default function DeliveryPage({setMessage,setError,onOpenFinance,onSetup,publicRequests,publicSettings,canTracking=false}:Props){
   const [area,setArea]=useState<'deliveries'|'requests'>('deliveries');
   const [status,setStatus]=useState('active'),[search,setSearch]=useState(''),[query,setQuery]=useState(''),[page,setPage]=useState(1);
   const [dialog,setDialog]=useState<Dialog>(null),[selected,setSelected]=useState<Delivery|null>(null),[draft,setDraft]=useState<Draft>(newDraft),[lines,setLines]=useState<Line[]>(()=>[newLine()]);
   const [busy,setBusy]=useState(false),[error,setLocalError]=useState(''),[reason,setReason]=useState('');
+  const [trackingOrder,setTrackingOrder]=useState<string|null>(null);
   const params=new URLSearchParams({status,q:query,page:String(page),page_size:'20'});
   const list=useBusinessQuery<PageResult<Delivery>>(`/deliveries?${params}`,setError);
   const options=useBusinessQuery<Options>('/deliveries/options',setError);
@@ -137,7 +139,7 @@ export default function DeliveryPage({setMessage,setError,onOpenFinance,onSetup,
           {live.notes&&<section className="delivery-detail-section"><h3>Observações</h3><p className="delivery-preserve">{live.notes}</p></section>}
           {live.delivered_at&&<p className="delivery-hint">Entrega concluída em {businessDate(live.delivered_at,timezone,true)}.</p>}
           {live.cancelled_at&&<p className="delivery-hint">Cancelado em {businessDate(live.cancelled_at,timezone,true)}.{live.cancellation_reason&&` Motivo: ${live.cancellation_reason}`}</p>}
-          <div className="delivery-detail-actions">{live.status==='preparing'&&<button type="button" className="primary-btn" onClick={()=>step('dispatch')}><Truck size={20}/>Registrar saída</button>}{live.status==='out_for_delivery'&&<button type="button" className="primary-btn" onClick={()=>step('deliver')}><CheckCircle2 size={20}/>Marcar como entregue</button>}{['preparing','out_for_delivery'].includes(live.status)&&<button type="button" className="danger-btn" onClick={()=>step('cancel')}>Cancelar pedido</button>}</div>
+          {canTracking&&<button type="button" className="ghost-btn" onClick={()=>{const id=live.id;close();setTrackingOrder(id);}}><LocateFixed size={19}/>Motorista, localização e rota</button>}<div className="delivery-detail-actions">{live.status==='preparing'&&<button type="button" className="primary-btn" onClick={()=>step('dispatch')}><Truck size={20}/>Registrar saída</button>}{live.status==='out_for_delivery'&&<button type="button" className="primary-btn" onClick={()=>step('deliver')}><CheckCircle2 size={20}/>Marcar como entregue</button>}{['preparing','out_for_delivery'].includes(live.status)&&<button type="button" className="danger-btn" onClick={()=>step('cancel')}>Cancelar pedido</button>}</div>
           <div className="delivery-form-actions"><button type="button" className="ghost-btn" onClick={close}>Fechar pedido</button></div>
         </>:live&&<form className="delivery-form" onSubmit={changeStatus}>
           <button type="button" className="text-link delivery-back" disabled={busy} onClick={()=>step('detail')}><ArrowLeft size={18}/>Voltar ao pedido</button>
@@ -147,5 +149,6 @@ export default function DeliveryPage({setMessage,setError,onOpenFinance,onSetup,
         </form>}
       </div>
     </FormDialog>}
+    {canTracking&&trackingOrder&&<TrackingPanel kind="delivery" jobId={trackingOrder} canAssign onClose={()=>{setTrackingOrder(null);refresh();}} setMessage={setMessage} setError={setError}/>}
   </div>;
 }

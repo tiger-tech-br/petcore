@@ -9,6 +9,9 @@ import DataPage, {type Resource} from './DataPage';
 import CalendarPage from './CalendarPage';
 import WaitlistPage from './WaitlistPage';
 import DeliveryPage from './DeliveryPage';
+import DriverTrackingPage from './DriverTrackingPage';
+import PublicTrackingPage from './PublicTrackingPage';
+import {stopAllTracking} from './trackingCapture';
 import PublicDeliveryPage from './PublicDeliveryPage';
 import PublicDeliverySettings from './PublicDeliverySettings';
 import PublicDeliveryInbox from './PublicDeliveryInbox';
@@ -65,8 +68,9 @@ function App(){
  }catch{setSession(null);}finally{setChecking(false);}}
  useEffect(()=>{void refresh();},[]);
  useEffect(()=>{const changed=()=>setLegalView(location.pathname==='/privacy'?'privacy':location.pathname==='/terms'?'terms':null);window.addEventListener('popstate',changed);return()=>window.removeEventListener('popstate',changed);},[]);
- async function company(id:string){try{await api('/auth/select-company','POST',{tenantId:id});await refresh();navigate('overview');}catch(e){setError((e as Error).message);}}
- async function logout(){try{await api('/auth/logout','POST');setSession(null);navigate('overview');}catch(e){setError((e as Error).message);}}
+ async function company(id:string){try{await stopAllTracking();await api('/auth/select-company','POST',{tenantId:id});await refresh();navigate('overview');}catch(e){setError((e as Error).message);}}
+ async function logout(){try{await stopAllTracking();await api('/auth/logout','POST');setSession(null);navigate('overview');}catch(e){setError((e as Error).message);}}
+ useEffect(()=>{const user=session?.user;if(user?.role==='employee'&&user.permissions.includes('transport_driver')&&!user.permissions.some(p=>['appointments','taxi_dog','finance','tutors','pets','inventory','team','crm'].includes(p))&&view==='overview')setView('driver');},[session,view]);
  if(legalView)return <LegalScreen kind={legalView} onBack={closeLegal}/>;
  if(checking)return <div className="full-center"><PawPrint/><p>Conectando ao PetCore...</p></div>;
  if(!session)return <AuthScreen onDone={refresh} onReadLegal={readLegal}/>;
@@ -83,9 +87,10 @@ function App(){
    {(view==='tutors'||view==='pets')&&<div className="resource-tabs" aria-label="Cadastros">{permitted('tutors')&&<button className={view==='tutors'?'selected':''} onClick={()=>navigate('tutors')}><UsersRound size={17}/>Clientes</button>}{permitted('pets')&&<button className={view==='pets'?'selected':''} onClick={()=>navigate('pets')}><PawPrint size={17}/>Pets</button>}</div>}
    {(['tutors','pets','professionals','services'] as MenuKey[]).includes(view)&&permitted(view)&&<DataPage key={view+'-'+user.tenantId+'-'+searchQuery} resource={view as Resource} initialSearch={searchQuery} initialNew={newClient} onFormOpened={()=>setNewClient(false)} onBook={permitted('appointments')?bookForClient:undefined} currentUser={{id:user.id,name:user.name}} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
    {view==='calendar'&&permitted('appointments')&&<>{(user.role==='admin'||user.permissions.includes('agenda:all'))&&<PublicBookingInbox key={'inbox-'+user.tenantId} setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} onChanged={()=>setCalendarRevision(value=>value+1)}/>}<CalendarPage key={user.tenantId+'-'+calendarRevision} initialNew={newBooking} initialSelection={bookingPreset} searchQuery={searchQuery} setMessage={setMessage} setError={setError} canSetup={permitted} canTaxiDog={session.features?.taxi_dog===true&&permitted('taxi_dog')} onSetup={navigate} onSaved={()=>{setSearchQuery('');setNewBooking(false);setBookingPreset(undefined);}}/></>}
-   {view==='taxi-dog'&&permitted('taxi_dog')&&<TaxiDogPage key={user.tenantId} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate}/>}
+   {view==='driver'&&session.features?.tracking===true&&permitted('transport_driver')&&<DriverTrackingPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
+   {view==='taxi-dog'&&permitted('taxi_dog')&&<TaxiDogPage key={user.tenantId} setMessage={setMessage} setError={setError} canSetup={permitted} onSetup={navigate} canTracking={session.features?.tracking===true}/>}
    {view==='waitlist'&&permitted('waitlist')&&<WaitlistPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
-   {view==='deliveries'&&session.features?.delivery===true&&permitted('finance')&&<DeliveryPage key={user.tenantId+'-'+deliveryRevision} setMessage={setMessage} setError={setError} onSetup={navigate} onOpenFinance={id=>{navigate('finance');setFinanceSaleId(id);}} publicSettings={user.role==='admin'?<PublicDeliverySettings setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true}/>:undefined} publicRequests={<PublicDeliveryInbox setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} isAdmin={user.role==='admin'} onChanged={()=>setDeliveryRevision(value=>value+1)}/>}/>}
+   {view==='deliveries'&&session.features?.delivery===true&&permitted('finance')&&<DeliveryPage key={user.tenantId+'-'+deliveryRevision} setMessage={setMessage} setError={setError} canTracking={session.features?.tracking===true} onSetup={navigate} onOpenFinance={id=>{navigate('finance');setFinanceSaleId(id);}} publicSettings={user.role==='admin'?<PublicDeliverySettings setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true}/>:undefined} publicRequests={<PublicDeliveryInbox setMessage={setMessage} setError={setError} writable={session.subscription?.writable===true} isAdmin={user.role==='admin'} onChanged={()=>setDeliveryRevision(value=>value+1)}/>}/>}
    {view==='crm'&&permitted('crm')&&<CrmPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='inventory'&&permitted('inventory')&&<InventoryPage key={user.tenantId} setMessage={setMessage} setError={setError}/>}
    {view==='finance'&&permitted('finance')&&<FinancePage key={user.tenantId} initialSaleId={financeSaleId} setMessage={setMessage} setError={setError}/>}
@@ -100,4 +105,5 @@ function App(){
 
 const publicBookingToken=/^\/agendar\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
 const publicDeliveryToken=/^\/loja\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
-createRoot(document.getElementById('root')!).render(<React.StrictMode>{publicBookingToken?<PublicBookingPage token={publicBookingToken}/>:publicDeliveryToken?<PublicDeliveryPage token={publicDeliveryToken}/>:<App/>}</React.StrictMode>);
+const publicTrackingToken=/^\/acompanhar\/([a-f0-9]{48})\/?$/.exec(location.pathname)?.[1];
+createRoot(document.getElementById('root')!).render(<React.StrictMode>{publicTrackingToken?<PublicTrackingPage token={publicTrackingToken}/>:publicBookingToken?<PublicBookingPage token={publicBookingToken}/>:publicDeliveryToken?<PublicDeliveryPage token={publicDeliveryToken}/>:<App/>}</React.StrictMode>);

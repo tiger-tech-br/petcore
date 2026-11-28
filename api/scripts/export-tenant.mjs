@@ -55,17 +55,18 @@ export const tenantExportDatasets=[
  data('subscription_payments','id,plan_id,amount_cents,provider,provider_reference,period_start,period_end,received_at,recorded_at,recorded_by,voided_at,voided_by,void_reason'),
  data('support_tickets','id,created_by,subject,category,status,created_at,updated_at'),
  data('support_messages','id,ticket_id,actor_user_id,from_platform,body,created_at'),
- data('taxi_drivers','id,name,phone,active,created_at,updated_at'),
+ data('taxi_drivers','id,name,phone,active,user_id,created_at,updated_at'),
  data('taxi_bookings','id,appointment_id,service_id,service_name,price_cents,mode,address,reference,notes,cancelled_at,created_by,created_at,updated_at'),
  data('taxi_trips','id,booking_id,leg,driver_id,starts_at,ends_at,status,created_at,updated_at'),
  data('public_booking_settings','enabled,notice,updated_by,updated_at','tenant_id'),
  data('public_booking_requests','id,receipt,status,tutor_name,tutor_phone,tutor_email,pet_name,pet_species,pet_size,pet_breed,starts_at,ends_at,appointment_id,reviewed_by,reviewed_at,rejection_reason,created_at,updated_at'),
  data('public_booking_request_services','request_id,service_id,position,name,price_cents,duration_minutes','request_id,position'),
- data('business_delivery_orders','id,sale_id,status,address,phone,reference,notes,cancellation_reason,created_by,updated_by,created_at,updated_at,out_for_delivery_at,delivered_at,cancelled_at'),
+ data('business_delivery_orders','id,sale_id,driver_id,status,address,phone,reference,notes,cancellation_reason,created_by,updated_by,created_at,updated_at,out_for_delivery_at,delivered_at,cancelled_at'),
  data('business_delivery_events','id,delivery_id,old_status,new_status,reason,actor_user_id,created_at'),
  data('public_delivery_settings','enabled,coverage_note,notice,delivery_fee_cents,updated_by,updated_at','tenant_id'),
  data('public_delivery_requests','id,receipt,status,customer_name,phone,address,reference,notes,subtotal_cents,quoted_delivery_fee_cents,delivery_order_id,reviewed_by,reviewed_at,rejection_reason,created_at,updated_at'),
  data('public_delivery_request_items','request_id,product_id,position,name,unit,quantity,unit_price_cents','request_id,position'),
+ data('transport_tracking_sessions','id,kind,taxi_trip_id,delivery_id,driver_id,user_id,started_at,expires_at,stopped_at,stop_reason,latitude,longitude,accuracy,captured_at,received_at,sequence,public_expires_at'),
  {name:'team',table:'memberships',columns:[],sql:'SELECT u.id AS user_id,u.name,u.email,m.role,m.permissions,m.active,u.created_at FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=$1 ORDER BY m.user_id'},
  {name:'terms_acceptances',table:null,columns:[],sql:'SELECT a.user_id,a.version,a.accepted_at FROM terms_acceptances a JOIN memberships m ON m.user_id=a.user_id WHERE m.tenant_id=$1 ORDER BY a.user_id,a.accepted_at'},
 ];
@@ -81,6 +82,7 @@ const reviewedHiddenColumns={
  subscription_payments:['idempotency_key'],audit_events:['metadata'],
  public_booking_settings:['public_token'],public_booking_requests:['payload_hash','idempotency_key'],
  public_delivery_settings:['public_token'],public_delivery_requests:['payload_hash','idempotency_key'],
+ transport_tracking_sessions:['upload_token_hash','public_token_hash','session_version','auth_session_id'],
 };
 const quote=value=>{if(!/^[a-z_][a-z0-9_]*$/.test(value))throw failure('TENANT_EXPORT_IDENTIFIER_INVALID');return '"'+value+'"';};
 
@@ -109,7 +111,7 @@ export async function assertTenantExportSchema(db){
  const columns=await db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=ANY($1::text[]) ORDER BY table_name,ordinal_position",[[...tenantExportDatasets.map(item=>item.table).filter(Boolean),'tenants','users','terms_acceptances']]);
  const reviewed=new Map(tenantExportDatasets.filter(item=>item.table).map(item=>[item.table,new Set(['tenant_id',...item.columns,...reviewedHiddenColumns[item.table]??[]])]));
  reviewed.set('memberships',new Set(['tenant_id','user_id','role','permissions','active']));
- reviewed.set('tenants',new Set(['id','name','timezone','late_tolerance_minutes','reminder_minutes_before','active','created_at','taxi_dog_enabled','operation_mode','delivery_enabled']));
+ reviewed.set('tenants',new Set(['id','name','timezone','late_tolerance_minutes','reminder_minutes_before','active','created_at','taxi_dog_enabled','operation_mode','delivery_enabled','tracking_enabled','shop_address','shop_latitude','shop_longitude']));
  reviewed.set('users',new Set(['id','name','email','password_hash','session_version','is_platform_owner','created_at']));
  reviewed.set('terms_acceptances',new Set(['user_id','version','accepted_at']));
  if(columns.rows.some(row=>!reviewed.get(row.table_name)?.has(row.column_name)))throw failure('TENANT_EXPORT_SCHEMA_REVIEW_REQUIRED');
@@ -164,7 +166,7 @@ export async function exportTenant(args=process.argv.slice(2),dependencies={}){
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');transaction=true;
   await client.query("SET LOCAL statement_timeout='30s'");await client.query("SET LOCAL idle_in_transaction_session_timeout='35min'");
   const operator=await client.query('SELECT id FROM users WHERE id=$1 AND is_platform_owner=true',[options.operator]);if(operator.rowCount!==1)throw failure('TENANT_EXPORT_PLATFORM_OPERATOR_REQUIRED');
-  const company=await client.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,active,created_at,taxi_dog_enabled,operation_mode,delivery_enabled FROM tenants WHERE id=$1',[options.tenant]);if(company.rowCount!==1)throw failure('TENANT_EXPORT_COMPANY_NOT_FOUND');
+  const company=await client.query('SELECT id,name,timezone,late_tolerance_minutes,reminder_minutes_before,active,created_at,taxi_dog_enabled,operation_mode,delivery_enabled,tracking_enabled,shop_address,shop_latitude,shop_longitude FROM tenants WHERE id=$1',[options.tenant]);if(company.rowCount!==1)throw failure('TENANT_EXPORT_COMPANY_NOT_FOUND');
   if(options.reference.startsWith('support:')){
    const ticket=await client.query('SELECT id FROM support_tickets WHERE tenant_id=$1 AND id=$2',[options.tenant,options.reference.slice(8)]);if(ticket.rowCount!==1)throw failure('TENANT_EXPORT_REFERENCE_COMPANY_MISMATCH');
   }

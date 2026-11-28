@@ -3,7 +3,7 @@ import {z} from 'zod';
 import {auth,ensure,permit,pool,tenant,tx} from './core.js';
 import {requireSubscriptionWrite} from './commercialService.js';
 import {recordAudit} from './audit.js';
-import {getTaxiBooking,lockTaxiAppointment,saveTaxiBooking,taxiDraft,taxiOptions} from './taxiDogService.js';
+import {changeTaxiTripStatus,getTaxiBooking,lockTaxiAppointment,saveTaxiBooking,taxiDraft,taxiOptions} from './taxiDogService.js';
 
 const router=Router();router.use(auth,requireSubscriptionWrite,permit('taxi_dog'));
 const driverInput=z.object({name:z.string().trim().min(2).max(160),phone:z.string().trim().max(40).default(''),active:z.boolean().default(true)}).strict();
@@ -27,7 +27,7 @@ router.patch('/drivers/:id',async(req,res)=>{
  const row=await tx(async db=>{
   const existing=await db.query('SELECT id,name,phone,active FROM taxi_drivers WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(existing.rowCount,404,'Motorista não encontrado.');
   const merged={...existing.rows[0],...input};
-  if(merged.active===false){const pending=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND driver_id=$2 AND status IN ('scheduled','en_route','with_pet') LIMIT 1",[company,id]);ensure(!pending.rowCount,409,'Reatribua ou finalize os transportes pendentes antes de desativar o motorista.');}
+  if(merged.active===false){const pending=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND driver_id=$2 AND status IN ('scheduled','en_route','with_pet') UNION ALL SELECT 1 FROM business_delivery_orders WHERE tenant_id=$1 AND driver_id=$2 AND status IN ('preparing','out_for_delivery') LIMIT 1",[company,id]);ensure(!pending.rowCount,409,'Reatribua ou finalize os transportes pendentes antes de desativar o motorista.');}
   const result=await db.query('UPDATE taxi_drivers SET name=$3,phone=$4,active=$5,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING id,name,phone,active,created_at,updated_at',[company,id,merged.name,merged.phone,merged.active]);
   await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'taxi.driver.update',entityType:'taxi_driver',entityId:id,metadata:{active:merged.active}});return result.rows[0];
  });res.json(row);
@@ -72,39 +72,6 @@ router.get('/trips',async(req,res)=>{
 });
 router.patch('/trips/:id/status',async(req,res)=>{
  const id=z.uuid().parse(req.params.id),company=tenant(req),input=z.object({status:states,expected_status:states}).strict().parse(req.body);
- const row=await tx(async db=>{
-  const target=await db.query(`SELECT b.appointment_id FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id WHERE t.tenant_id=$1 AND t.id=$2`,[company,id]);
-  ensure(target.rowCount,404,'Transporte não encontrado.');
-  const appointment=await lockTaxiAppointment(db,company,target.rows[0].appointment_id);
-  const booking=await db.query('SELECT id,mode,cancelled_at FROM taxi_bookings WHERE tenant_id=$1 AND appointment_id=$2 FOR UPDATE',[company,appointment.id]);
-  ensure(booking.rowCount&&!booking.rows[0].cancelled_at,409,'A reserva de transporte foi cancelada.');
-  const driver=await db.query('SELECT driver_id,leg FROM taxi_trips WHERE tenant_id=$1 AND id=$2',[company,id]);
-  ensure(booking.rows[0].mode==='round_trip'||driver.rows[0].leg===booking.rows[0].mode,409,'Este trecho pertence a um planejamento anterior. Atualize a lista de transportes.');
-  await db.query('SELECT id FROM taxi_drivers WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,driver.rows[0].driver_id]);
-  const before=await db.query('SELECT * FROM taxi_trips WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);const trip=before.rows[0];
-  ensure(trip.status===input.expected_status,409,'A situação deste transporte mudou. Atualize a tela antes de continuar.');
-  const transitions:Record<string,string[]>=trip.leg==='pickup'?{scheduled:['en_route','cancelled'],en_route:['with_pet','cancelled'],with_pet:['completed'],completed:[],cancelled:[]}:{scheduled:['with_pet','cancelled'],with_pet:['completed'],en_route:[],completed:[],cancelled:[]};
-  ensure(transitions[trip.status]?.includes(input.status),409,'Mudança de situação de transporte não permitida.');
-  if(['en_route','with_pet'].includes(input.status)){
-   const busy=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND driver_id=$2 AND id<>$3 AND status IN ('en_route','with_pet') LIMIT 1",[company,trip.driver_id,id]);
-   ensure(!busy.rowCount,409,'Este motorista ainda está em outro transporte. Finalize a viagem anterior antes de iniciar outra.');
-  }
-  if(input.status==='with_pet'&&trip.leg==='dropoff'){
-   const pickup=await db.query("SELECT status FROM taxi_trips WHERE tenant_id=$1 AND booking_id=$2 AND leg='pickup' AND $3::text IN ('pickup','round_trip')",[company,trip.booking_id,booking.rows[0].mode]);
-   const arrival=appointment.status==='cancelled'?await db.query("SELECT EXISTS(SELECT 1 FROM appointment_events WHERE tenant_id=$1 AND appointment_id=$2 AND kind='in_progress') AS recorded",[company,appointment.id]):null;
-   const returningAfterCancellation=appointment.status==='cancelled'&&(!pickup.rowCount||pickup.rows[0].status==='completed'||(pickup.rows[0].status==='cancelled'&&arrival?.rows[0].recorded));
-   ensure(appointment.status==='done'||returningAfterCancellation,409,'Conclua o atendimento antes de iniciar a entrega do pet. Se o atendimento foi cancelado, confirme a chegada do pet para organizar seu retorno.');
-   ensure(!pickup.rowCount||['completed','cancelled'].includes(pickup.rows[0].status),409,'Conclua a busca antes de iniciar a entrega.');
-  }
-  const result=await db.query('UPDATE taxi_trips SET status=$3,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING id,booking_id,leg,driver_id,starts_at,ends_at,status,updated_at',[company,id,input.status]);
-  if(input.status==='cancelled'){
-   const allCancelled=await db.query(`UPDATE taxi_bookings b SET cancelled_at=now(),updated_at=now()
-    WHERE b.tenant_id=$1 AND b.id=$2 AND b.cancelled_at IS NULL
-     AND NOT EXISTS(SELECT 1 FROM taxi_trips t WHERE t.tenant_id=b.tenant_id AND t.booking_id=b.id AND (b.mode='round_trip' OR t.leg=b.mode) AND t.status<>'cancelled') RETURNING id`,[company,trip.booking_id]);
-   if(allCancelled.rowCount)await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'taxi.booking.cancel',entityType:'taxi_booking',entityId:trip.booking_id,metadata:{appointmentId:appointment.id}});
-  }
-  await recordAudit(db,{tenantId:company,userId:req.access!.userId,action:'taxi.trip.status',entityType:'taxi_trip',entityId:id,metadata:{from:trip.status,to:input.status,appointmentId:appointment.id}});
-  return result.rows[0];
- });res.json(row);
+ const row=await tx(db=>changeTaxiTripStatus(db,company,id,input,req.access!.userId));res.json(row);
 });
 export default router;

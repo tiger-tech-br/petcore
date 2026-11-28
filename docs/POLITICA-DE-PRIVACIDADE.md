@@ -1,5 +1,7 @@
 # Política de Privacidade do PetCore — versão para revisão final
 
+> Atualização técnica de 27/11/2026 para revisão: GPS e fornecedores de mapas estão em preparação local, ainda sem publicação na VPS. Este rascunho não declara ativação ou aprovação jurídica.
+
 Revisão preparada em 13/11/2026, com infraestrutura atualizada após o corte de 20/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o aviso publicado.
 
 ## 1. Responsável e contato
@@ -14,7 +16,7 @@ A Tiger Tech decide as finalidades dos dados necessários às contas, contratos,
 |---|---|
 | Acesso e equipe | Nome, e-mail, vínculos, permissões, hash de senha e sessão |
 | Gestão do pet shop | Contatos dos tutores; informações e fotos dos pets; profissionais, serviços, horários, atendimentos, observações e registros de relacionamento |
-| Táxi Dog opcional | Endereço, complemento, orientações, motorista e etapas manuais de busca/entrega. A versão atual não coleta GPS ou localização contínua |
+| Táxi Dog opcional | Endereço, complemento, orientações, motorista e etapas de busca/entrega. O acompanhamento opcional em preparação é descrito abaixo |
 | Financeiro e assinatura | Vendas, despesas e recebimentos registrados pela equipe; contratante, plano, referências de pagamento e períodos confirmados |
 | Atendimento | Solicitações, autoria, verificação proporcional de identidade e providências |
 | Segurança | Identificadores técnicos, tentativas de acesso e operações relevantes |
@@ -80,3 +82,9 @@ O cookie de sessão é necessário ao acesso. Ele não constitui autorização p
 As condições comerciais de prazo, reembolso, exportação e backups foram aprovadas pelo responsável em 13/11/2026. Antes da publicação, confirmar a execução das rotinas descritas, o inventário de transferências e a aprovação do texto completo. [APROVACAO_JURIDICA_E_OPERACIONAL]
 
 Referências: [LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html), [ANPD — transferências](https://www.gov.br/anpd/pt-br/assuntos/assuntos-internacionais/transferencia-internacional-de-dados), [Resend — armazenamento e contratos](https://resend.com/security), [PagBank recorrente](https://developer.pagbank.com.br/docs/pagamentos-recorrentes).
+
+## Acompanhamento opcional — adendo em preparação
+
+Localização opcional durante transportes: quando ativada pelo pet shop e iniciada explicitamente pelo motorista, trata a última latitude, longitude, precisão e horário para acompanhamento da viagem pela equipe autorizada e pelo cliente com link temporário. Não acompanha fora do serviço nem guarda histórico de percurso. A sessão dura no máximo 12 horas; encerrar revoga o acesso e limpa a posição. Metadados encerrados são removidos após 24 horas pela manutenção. O pet shop deve informar o motorista e avaliar a base legal adequada à relação concreta; a permissão do aparelho e a ação de iniciar não substituem essa avaliação.
+
+Mapas opcionais: o OpenStreetMap recebe as solicitações das imagens de mapa e a região aproximada exibida, com os dados técnicos da conexão; o caminho do link de acompanhamento não é enviado como Referer aos tiles. A rota é aberta externamente no Google Maps, que recebe o destino e aplica suas próprias condições. Não há API paga de rotas contratada ou garantia de disponibilidade desses serviços. Esses fluxos e seus instrumentos precisam integrar a conferência de fornecedores e transferências antes da publicação.

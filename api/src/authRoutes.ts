@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { pool, tx, normEmail, sha, token, hashPassword, error, ensure, auth, tenant, platform, permit } from './core.js';
 import {settings,subscription} from './commercialService.js';
 import {recordAudit} from './audit.js';
+import {stopUserTracking,stopSessionTracking} from './trackingService.js';
 const router=Router();
 const credentials=z.object({email:z.email().max(255),password:z.string().min(8).max(200)});
 const passRule=z.string().min(12).max(200);
@@ -29,23 +30,23 @@ router.post('/login',throttle,async(req,res)=>{
  }
  res.json({ok:true});
 });
-router.post('/logout',async(req,res)=>{await new Promise<void>((resolve,reject)=>req.session.destroy(e=>e?reject(e):resolve()));res.clearCookie('petcore.sid',{path:'/'});res.json({ok:true});});
+router.post('/logout',async(req,res)=>{if(req.session.userId)await stopSessionTracking(pool,req.sessionID);await new Promise<void>((resolve,reject)=>req.session.destroy(e=>e?reject(e):resolve()));res.clearCookie('petcore.sid',{path:'/'});res.json({ok:true});});
 router.get('/me',auth,async(req,res)=>{
  const a=req.access!;const memberships=await pool.query(`SELECT t.id,t.name,m.role FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.user_id=$1 AND m.active=true AND t.active=true ORDER BY t.name`,[a.userId]);
  const config=await settings();
  const acceptance=config.published?await pool.query('SELECT 1 FROM terms_acceptances WHERE user_id=$1 AND version=$2',[a.userId,config.legal_version]):{rowCount:1};
- const features=a.tenantId?(await pool.query('SELECT taxi_dog_enabled,delivery_enabled,operation_mode FROM tenants WHERE id=$1',[a.tenantId])).rows[0]:null;
+ const features=a.tenantId?(await pool.query('SELECT taxi_dog_enabled,delivery_enabled,tracking_enabled,operation_mode FROM tenants WHERE id=$1',[a.tenantId])).rows[0]:null;
  res.json({user:{id:a.userId,name:a.name,role:a.role,permissions:a.permissions,scopeProfessionalId:a.scopeProfessionalId,tenantId:a.tenantId,companyName:a.companyName},companies:memberships.rows,
-  features:{taxi_dog:features?.taxi_dog_enabled??false,delivery:features?.delivery_enabled===true&&features?.operation_mode!=='essential',operation_mode:features?.operation_mode??'complete',retail:features?.operation_mode!=='essential'},legal:{required:config.published&&!acceptance.rowCount,version:config.legal_version},subscription:a.tenantId?await subscription(a.tenantId):null});
+  features:{tracking:features?.tracking_enabled===true,taxi_dog:features?.taxi_dog_enabled??false,delivery:features?.delivery_enabled===true&&features?.operation_mode!=='essential',operation_mode:features?.operation_mode??'complete',retail:features?.operation_mode!=='essential'},legal:{required:config.published&&!acceptance.rowCount,version:config.legal_version},subscription:a.tenantId?await subscription(a.tenantId):null});
 });
 router.post('/select-company',auth,async(req,res)=>{
  const id=z.uuid().parse(req.body.tenantId);
  const a=req.access!;const m=await pool.query('SELECT 1 FROM memberships m JOIN tenants t ON t.id=m.tenant_id WHERE m.tenant_id=$1 AND m.user_id=$2 AND m.active=true AND t.active=true',[id,a.userId]);
- ensure(m.rowCount,403,'Você não tem acesso a esta empresa.');req.session.tenantId=id;res.json({ok:true});
+ ensure(m.rowCount,403,'Você não tem acesso a esta empresa.');await stopSessionTracking(pool,req.sessionID);req.session.tenantId=id;res.json({ok:true});
 });
 router.post('/return-platform',auth,async(req,res)=>{
  const a=req.access!;const owner=await pool.query('SELECT 1 FROM users WHERE id=$1 AND is_platform_owner=true',[a.userId]);ensure(owner.rowCount,403,'Sem acesso.');
- delete req.session.tenantId;res.json({ok:true});
+ await stopSessionTracking(pool,req.sessionID);delete req.session.tenantId;res.json({ok:true});
 });
 router.get('/platform/companies',auth,platform,async(_req,res)=>{
  const result=await pool.query('SELECT t.*,count(m.user_id)::int AS member_count FROM tenants t LEFT JOIN memberships m ON m.tenant_id=t.id GROUP BY t.id ORDER BY t.name');res.json(result.rows);
@@ -129,6 +130,7 @@ router.post('/password/reset',async(req,res)=>{
   const user=await c.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[owner.rows[0].user_id]);ensure(user.rowCount,410,'Token inválido ou expirado.');
   const r=await c.query(`SELECT id FROM password_resets WHERE token_hash=$1 AND user_id=$2 AND used_at IS NULL AND expires_at>clock_timestamp() FOR UPDATE`,[sha(raw),owner.rows[0].user_id]);ensure(r.rowCount,410,'Token inválido ou expirado.');
   await c.query('UPDATE users SET password_hash=$1,session_version=session_version+1 WHERE id=$2',[await hashPassword(password),owner.rows[0].user_id]);
+  await stopUserTracking(c,owner.rows[0].user_id);
   await c.query('UPDATE password_resets SET used_at=clock_timestamp() WHERE user_id=$1 AND used_at IS NULL',[owner.rows[0].user_id]);
  });res.json({ok:true});
 });

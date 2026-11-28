@@ -1,5 +1,21 @@
 # PetCore para Android
 
+## GPS nativo — APK 1.0.3 gerado em 27/11/2026
+
+O arquivo `releases/PetCore-1.0.3.apk`, código **4**, tem **1.765.062 bytes**. SHA-256: `5c7673a451a2161defb9050022c6192a75942bec572eefcb2eb556d8912f3118`. A assinatura v2/v3 foi verificada e usa o mesmo certificado das versões anteriores: `740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1`. Os testes Java passaram em **12 casos**, sem falhas, e `lintRelease` terminou com **zero erros e 10 avisos**. O ciclo final de `assembleRelease` também passou após o congelamento dos fontes. Evidência: [ANDROID-GPS-20261127.json](evidence/ANDROID-GPS-20261127.json).
+
+A geração local do APK não comprova a publicação das APIs de GPS no servidor. Instale somente para validar a versão compatível com o código que for publicado. As seções de APK 1.0.2 e anteriores abaixo são históricas.
+
+A camada Android passa a oferecer localização durante uma viagem pela ponte separada `PetCoreTracking`, sem alterar a ponte de exportação `PetCoreNative`. O motorista toca em iniciar, confirma uma explicação nativa e autoriza localização e notificações. O serviço de localização fica em primeiro plano, com notificação persistente e ação **Parar compartilhamento**. Não há pedido de `ACCESS_BACKGROUND_LOCATION` nem captura automática no login. GPS/rede são recursos opcionais do aparelho: as demais funções do PetCore continuam disponíveis sem eles.
+
+O serviço usa somente uma credencial de viagem, em memória, com validade máxima de 12 horas. Não recebe cookies da sessão, não grava coordenadas ou credenciais em arquivos e não aceita URLs fora da origem HTTPS exata do PetCore. Os endereços de envio, verificação e parada têm a mesma identificação de sessão, sem query, fragmento ou credenciais na URL. Redirecionamentos são recusados. A API revalida a viagem e o acesso a cada posição e verificação; o serviço verifica a autorização mesmo enquanto aguarda um sinal GPS.
+
+Amostras precisam ser recentes, ter coordenadas finitas e precisão informada. A captura e os envios são limitados a intervalos de 15 segundos. Negação/revogação de permissões, expiração, resposta de autorização encerrada, botão de parada, encerramento do aplicativo ou troca de conta/empresa encerram a captura. Abrir o Maps ou bloquear a tela não aciona uma parada apenas por ocultar a Activity. O serviço não reinicia após morte do processo. Uma parada sem rede encerra a captura local imediatamente e tenta revogar a sessão no servidor; o recebimento dessa tentativa depende da conexão, e a página precisa identificar posições antigas como desatualizadas.
+
+**Validação em aparelho ainda pendente.** Compilar e assinar não comprova continuidade do GPS com tela apagada, outro aplicativo aberto, restrições de bateria, localização aproximada ou perda de rede. Esses pontos deverão ser conferidos com a versão instalada e uma viagem fictícia, sem acompanhar pessoas reais por teste automático.
+
+Referências oficiais verificadas: [serviço em primeiro plano](https://developer.android.com/develop/background-work/services/fgs/launch), [permissões de localização em contexto](https://developer.android.com/develop/sensors-and-location/location/permissions/runtime) e [notificações](https://developer.android.com/develop/ui/compose/notifications/notification-permission).
+
 O APK **1.0.2**, código **3**, foi gerado em **15/11/2026** e acessa `https://petcore.tigertech.dev.br`. No mesmo dia, o responsável confirmou instalação, abertura, login, abertura/fechamento de agendamento e exportação de relatório no celular. Usa o mesmo pacote e certificado da versão anterior. O endereço ainda é a homologação isolada Hostinger; login e dados dependem da internet. Em **19/11**, a aplicação remota foi atualizada para `acde9dde` e conferida saudável, mantendo fotos, e-mails e rotinas desligados. Essa publicação não gerou outro APK, não transferiu dados do Railway e não conclui a comercialização. Continuação registrada em [REVISAO-20261119.md](REVISAO-20261119.md).
 
 ## APK 1.0.2 — gerado em 15/11/2026

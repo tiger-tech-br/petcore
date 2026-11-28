@@ -234,7 +234,7 @@ r.get('/team',permit('team'),async(req,res)=>{
 });
 r.patch('/team/:id',async(req,res)=>{
  ensure(req.access?.role==='admin',403,'Somente o administrador pode alterar permissões.');
- const id=z.uuid().parse(req.params.id);const data=z.object({permissions:z.array(z.enum(['appointments','agenda:all','tutors','pets','crm','inventory','waitlist','services','professionals','team','finance','taxi_dog'])),active:z.boolean()}).parse(req.body);
+ const id=z.uuid().parse(req.params.id);const data=z.object({permissions:z.array(z.enum(['appointments','agenda:all','tutors','pets','crm','inventory','waitlist','services','professionals','team','finance','taxi_dog','transport_driver'])),active:z.boolean()}).parse(req.body);
  const row=await pool.query("UPDATE memberships SET permissions=$3,active=$4 WHERE tenant_id=$1 AND user_id=$2 AND role='employee' RETURNING user_id",[tenant(req),id,data.permissions,data.active]);
  ensure(row.rowCount,404,'Funcionário não encontrado.');res.json({ok:true});
 });

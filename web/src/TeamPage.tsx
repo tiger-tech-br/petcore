@@ -4,10 +4,11 @@ import {api} from './api';
 import FormDialog from './FormDialog';
 import {Empty,PageHeader} from './ui';
 import PublicBookingSettings from './PublicBookingSettings';
+import TransportSettingsPanel from './TransportSettingsPanel';
 import './styles/_shop-settings.scss';
 
 type Props={setMessage:(value:string)=>void;setError:(value:string)=>void;onSettingsSaved?:()=>void|Promise<void>;isAdmin?:boolean};
-const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['crm','CRM e relacionamento com clientes'],['waitlist','Lista de espera'],['taxi_dog','Táxi Dog: endereços, motoristas, buscas e entregas'],['services','Serviços'],['professionals','Profissionais'],['inventory','Produtos e estoque'],['finance','Financeiro, vendas, caixa e relatórios']];
+const permissions=[['appointments','Atendimentos'],['agenda:all','Agenda de todos os profissionais'],['tutors','Clientes'],['pets','Pets'],['crm','CRM e relacionamento com clientes'],['waitlist','Lista de espera'],['taxi_dog','Táxi Dog: endereços, motoristas, buscas e entregas'],['transport_driver','Área do motorista: somente suas viagens e localização'],['services','Serviços'],['professionals','Profissionais'],['inventory','Produtos e estoque'],['finance','Financeiro, vendas, caixa e relatórios']];
 
 export default function TeamPage({setMessage,setError,onSettingsSaved,isAdmin=true}:Props) {
   const [rows,setRows]=useState<any[]>([]),[loading,setLoading]=useState(true),[dialog,setDialog]=useState<'invite'|'permissions'|'settings'|null>(null);
@@ -31,6 +32,7 @@ export default function TeamPage({setMessage,setError,onSettingsSaved,isAdmin=tr
   return <div className="shop-settings-page">
     <PageHeader eyebrow="SEU PET SHOP" title="Meu pet shop" subtitle="Escolha como você trabalha e compartilhe o agendamento com seus clientes." action={isAdmin?<button className="primary-btn" onClick={()=>setDialog('settings')}><Settings2 size={19}/>Preferências do pet shop</button>:undefined}/>
     {isAdmin&&<PublicBookingSettings setMessage={setMessage} setError={setError}/>}
+    {isAdmin&&<TransportSettingsPanel setMessage={setMessage} setError={setError} onSaved={onSettingsSaved}/>}
     <section className="panel shop-team-panel"><details><summary><UsersRound size={23}/><span>Pessoas com acesso</span><span className="shop-settings-optional">{loading?'Carregando...':`${rows.length} ${rows.length===1?'conta':'contas'}`}</span></summary><div className="shop-team-content"><p>Se você atende sozinho, use sua própria conta. Convide outra pessoa quando precisar dividir o trabalho.</p>{loading?<Empty label="Carregando contas..."/>:rows.length?rows.map(item=><div key={item.id} className="team-row"><strong>{item.name}</strong><small>{item.email} · {item.role==='admin'?'Responsável pelo pet shop':'Acesso da equipe'}</small>{item.role==='employee'&&<><span className={`status ${item.active?'confirmed':'cancelled'}`}>{item.active?'Conta ativa':'Conta inativa'}</span>{isAdmin&&<div className="action-row"><button className="ghost-btn" onClick={()=>openPermissions(item)} aria-label={`Editar permissões de ${item.name}`}>Editar acesso</button></div>}</>}</div>):<Empty label="Nenhuma conta encontrada."/>}{isAdmin&&<button type="button" className="ghost-btn" onClick={openInvite}><Mail size={18}/>Convidar outra pessoa</button>}</div></details></section>
     {dialog==='settings'&&<SettingsDialog onClose={()=>setDialog(null)} setMessage={setMessage} setPageError={setError} onSaved={onSettingsSaved}/>}
     {dialog==='invite'&&<FormDialog title={invite?'Convite do funcionário':'Convidar funcionário'} description="Cada funcionário usa uma conta individual." busy={busy} error={error} notice={notice} onClose={()=>setDialog(null)}>

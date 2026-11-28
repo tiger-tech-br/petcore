@@ -1,5 +1,10 @@
 # PetCore — preparação comercial
 
+## Atualização de 27/11 — GPS preparado localmente
+
+O acompanhamento de motoristas para Táxi Dog e entregas está implementado localmente, com mapas OpenStreetMap, rotas abertas no Google Maps, área do motorista e link/QR temporários para o cliente. Não foi publicado na Hostinger; a migration 025 permanece apenas no banco isolado de testes. O APK 1.0.3/código 4 foi gerado e assinado com a mesma chave; precisa de teste físico de GPS. Passaram 278 integrações, 40 testes web e 12 Java; a prévia visual foi bloqueada pelo canal nativo indisponível. Consulte [o guia de acompanhamento](TRACKING.md) e as evidências recentes. A última publicação comprovada continua sendo b6ababb505caf8af76592a0a5127c8d58ae4cbe3.
+
+
 ## Atualização de 22/11 — entregas e catálogo publicados
 
 A revisão `b6ababb505caf8af76592a0a5127c8d58ae4cbe3` foi publicada em https://petcore.tigertech.dev.br. Entregas opcionais recebem pedidos internos de WhatsApp/telefone e solicitações do catálogo público com link e QR próprios. O cliente escolhe produtos marcados para o catálogo; confirmar o pedido cria uma única comanda e baixa de estoque. As etapas são Preparando, Saiu para entrega, Entregue e Cancelado. Taxa fixa ou a combinar; recebimento registrado no Financeiro, sem cobrança on-line automática. Não há GPS/rotas nesta revisão; a ampliação para produtos e Táxi Dog está no prompt específico.

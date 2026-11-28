@@ -1,5 +1,7 @@
 # Acordo de tratamento de dados do PetCore — versão para contratação
 
+> Atualização técnica de 27/11/2026 para revisão: GPS e fornecedores de mapas estão em preparação local, ainda sem publicação na VPS. Este rascunho não declara ativação ou aprovação jurídica.
+
 Preparado em 13/11/2026, com infraestrutura atualizada após o corte de 20/11/2026, para revisão e assinatura em cada contratação. Não está publicado nem assinado. Atendimento em até um dia útil, reembolso proporcional, janela de exportação e backups de 30 dias foram aprovados pelo responsável. Os campos do futuro contratante só são preenchidos quando houver um pet shop real.
 
 ## Partes e funções
@@ -12,7 +14,7 @@ O pet shop determina as finalidades e a base legal dos registros de clientes, tu
 
 ## Objeto, titulares e dados
 
-O tratamento operacional atende à gestão interna do pet shop: cadastros, agenda, lista de espera, profissionais, contatos e tarefas de relacionamento, estoque e controles financeiros. Pode envolver nome e contato dos tutores; informações e fotos dos pets vinculadas a esses responsáveis; observações necessárias ao serviço; profissionais, vínculos e permissões; agendamentos; registros comerciais e de recebimentos; histórico de autorização de lembretes; solicitações de suporte e privacidade. O Táxi Dog opcional acrescenta endereços, orientações, motoristas e etapas manuais de busca/entrega, sem GPS contínuo. O estabelecimento executa os serviços e o transporte.
+O tratamento operacional atende à gestão interna do pet shop: cadastros, agenda, lista de espera, profissionais, contatos e tarefas de relacionamento, estoque e controles financeiros. Pode envolver nome e contato dos tutores; informações e fotos dos pets vinculadas a esses responsáveis; observações necessárias ao serviço; profissionais, vínculos e permissões; agendamentos; registros comerciais e de recebimentos; histórico de autorização de lembretes; solicitações de suporte e privacidade. O Táxi Dog e o delivery opcionais acrescentam endereços, orientações, motoristas e etapas de busca/entrega. O acompanhamento opcional em preparação é descrito abaixo. O estabelecimento executa os serviços e o transporte.
 
 Os titulares incluem tutores, clientes, profissionais e demais pessoas cujos dados necessários sejam inseridos legitimamente. O estabelecimento deve evitar dados excessivos, documentos pessoais sem finalidade, dados de saúde de pessoas ou de crianças em campos livres e qualquer senha ou dado completo de cartão. Um novo uso, categoria de dado ou integração exige avaliação e atualização das instruções antes da ativação.
 
@@ -61,3 +63,9 @@ Exclusões no banco ativo não implicam remoção instantânea de cópias de seg
 Antes da contratação, complete a identidade e o contato do pet shop, confira o mecanismo de cada transferência, as evidências de execução das rotinas e a aprovação do texto completo. A versão final e a concordância das partes devem ser comprováveis. Não se exige aqui uma aprovação individual da ANPD para todo mecanismo que já tenha cabimento legal, nem se inventa contrato de fornecedor ou certificação para concluir o registro.
 
 Referências: [LGPD, especialmente arts. 5º, 37 a 39 e 46 a 50](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html), [ANPD — perguntas frequentes](https://www.gov.br/anpd/pt-br/acesso-a-informacao/perguntas-frequentes) e [ANPD — comunicação de incidentes](https://www.gov.br/anpd/pt-br/canais_atendimento/agente-de-tratamento/comunicado-de-incidente-de-seguranca-cis).
+
+## Acompanhamento opcional — adendo em preparação
+
+Localização opcional durante transportes: quando ativada pelo pet shop e iniciada explicitamente pelo motorista, trata a última latitude, longitude, precisão e horário para acompanhamento da viagem pela equipe autorizada e pelo cliente com link temporário. Não acompanha fora do serviço nem guarda histórico de percurso. A sessão dura no máximo 12 horas; encerrar revoga o acesso e limpa a posição. Metadados encerrados são removidos após 24 horas pela manutenção. O pet shop deve informar o motorista e avaliar a base legal adequada à relação concreta; a permissão do aparelho e a ação de iniciar não substituem essa avaliação.
+
+Mapas opcionais: o OpenStreetMap recebe as solicitações das imagens de mapa e a região aproximada exibida, com os dados técnicos da conexão; o caminho do link de acompanhamento não é enviado como Referer aos tiles. A rota é aberta externamente no Google Maps, que recebe o destino e aplica suas próprias condições. Não há API paga de rotas contratada ou garantia de disponibilidade desses serviços. Esses fluxos e seus instrumentos precisam integrar a conferência de fornecedores e transferências antes da publicação.

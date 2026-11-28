@@ -1,6 +1,8 @@
 package br.dev.tigertech.petcore;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -58,6 +60,7 @@ import java.util.Collections;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.ArrayList;
 
 public final class MainActivity extends ComponentActivity {
     private static final int NAVY = Color.rgb(7, 20, 73), TEAL = Color.rgb(0, 156, 166);
@@ -77,6 +80,19 @@ public final class MainActivity extends ComponentActivity {
     private boolean exportBusy, writing, pageFailed, bridgeAvailable;
     private volatile boolean closed;
     private int generation;
+    private TrackingPolicy.Grant pendingTracking;
+    private JavaScriptReplyProxy trackingReply;
+    private AlertDialog trackingConfirmation;
+    private boolean resumed, trackingApproved, trackingPermissionRequest;
+    private final TrackingService.Observer trackingObserver = state -> ui.post(() -> trackingResponse(state));
+    private final ActivityResultLauncher<String[]> trackingPermissions = registerForActivityResult(
+        new ActivityResultContracts.RequestMultiplePermissions(), result -> {
+            trackingPermissionRequest = false;
+            if (pendingTracking == null || closed) return;
+            if (!TrackingService.locationAllowed(this)) { cancelTrackingStart("LOCATION_PERMISSION_DENIED"); return; }
+            if (!TrackingService.notificationsAllowed(this)) { cancelTrackingStart("NOTIFICATION_PERMISSION_REQUIRED"); return; }
+            maybeStartTracking();
+        });
 
     private final ActivityResultLauncher<String[]> choosePhoto = registerForActivityResult(
         new ActivityResultContracts.OpenDocument(), uri -> {
@@ -203,11 +219,15 @@ public final class MainActivity extends ComponentActivity {
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                String path = request.getUrl().getPath();
+                if (UrlPolicy.isAppUrl(url) && "POST".equals(request.getMethod()) && Arrays.asList("/api/auth/logout", "/api/auth/select-company", "/api/auth/return-platform").contains(path)) {
+                    TrackingService.requestStop(); ui.post(() -> cancelTrackingStart("SESSION_CHANGED"));
+                }
                 if (!"https".equalsIgnoreCase(request.getUrl().getScheme()) || (request.isForMainFrame() && !UrlPolicy.isAppUrl(url)))
                     return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
                 return null;
             }
-            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { clearPendingExport(true); pageFailed = false; showLoading(); }
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) { clearPendingExport(true); cancelTrackingStart("PAGE_CHANGED"); trackingReply = null; pageFailed = false; showLoading(); }
             @Override public void onPageFinished(WebView view, String url) { if (!closed && !pageFailed && UrlPolicy.isAppUrl(url)) { ui.removeCallbacks(loadTimeout); panel.setVisibility(View.GONE); } }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) { if (request.isForMainFrame()) showFailure("Não foi possível conectar", "Confira sua conexão e tente novamente. Seus dados continuam no PetCore."); }
             @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) { if (request.isForMainFrame()) showFailure("Seu painel está indisponível", "Tente novamente em alguns instantes ou abra pelo navegador."); }
@@ -230,6 +250,7 @@ public final class MainActivity extends ComponentActivity {
         web.setDownloadListener((url, agent, disposition, mime, length) -> toast("Use o botão Exportar do PetCore para escolher onde salvar o arquivo."));
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             WebViewCompat.addWebMessageListener(web, "PetCoreNative", Collections.singleton(UrlPolicy.ORIGIN), this::receiveExport);
+            WebViewCompat.addWebMessageListener(web, "PetCoreTracking", Collections.singleton(UrlPolicy.ORIGIN), this::receiveTracking);
             bridgeAvailable = true;
         }
     }
@@ -291,6 +312,81 @@ public final class MainActivity extends ComponentActivity {
         final String filename, mime; final byte[] bytes;
         PendingExport(String filename, String mime, byte[] bytes) { this.filename = filename; this.mime = mime; this.bytes = bytes; }
     }
+    private void receiveTracking(WebView view, WebMessageCompat message, Uri origin, boolean mainFrame, JavaScriptReplyProxy reply) {
+        if (closed || view != web || !mainFrame || !UrlPolicy.isTrustedOrigin(origin.toString()) || !UrlPolicy.isAppUrl(web.getUrl())) return;
+        trackingReply = reply;
+        try {
+            if (message.getType() != WebMessageCompat.TYPE_STRING || message.getData() == null || message.getData().length() > 4096) throw new IllegalArgumentException();
+            JSONObject input = new JSONObject(message.getData());
+            if (!(input.opt("type") instanceof String)) throw new IllegalArgumentException();
+            String type = input.getString("type");
+            if ("status".equals(type) && input.length() == 1) { trackingResponse(TrackingService.status()); return; }
+            if ("stop".equals(type) && (input.length() == 1 || input.length() == 2 && input.opt("session_id") instanceof String)) {
+                String expected = input.optString("session_id", "");
+                TrackingService.Status state = TrackingService.status();
+                String currentId = pendingTracking != null ? pendingTracking.sessionId : TrackingService.pendingSessionId();
+                if (currentId == null) currentId = state.sessionId;
+                if (!expected.isEmpty() && currentId != null && !expected.equals(currentId)) { trackingError("DIFFERENT_TRACKING_SESSION"); return; }
+                cancelTrackingStart("USER_STOP"); TrackingService.requestStop();
+                trackingResponse(new TrackingService.Status("stopped", state.sessionId, "USER_STOP", state.lastUploadAt)); return;
+            }
+            if (!"start".equals(type) || input.length() != 6 || !resumed || pendingTracking != null) { trackingError("TRACKING_START_NOT_AVAILABLE"); return; }
+            for (String field : new String[]{"session_id", "upload_url", "stop_url", "grant", "expires_at"}) if (!(input.opt(field) instanceof String)) throw new IllegalArgumentException();
+            TrackingService.Status existing = TrackingService.status();
+            TrackingPolicy.Grant request = TrackingPolicy.grant(input.getString("session_id"), input.getString("upload_url"), input.getString("stop_url"), input.getString("grant"), input.getString("expires_at"), System.currentTimeMillis());
+            if ("tracking".equals(existing.state)) {
+                if (request.sessionId.equals(existing.sessionId)) trackingResponse(existing);
+                else { TrackingService.revokeAsync(request); trackingError("TRACKING_ALREADY_ACTIVE"); }
+                return;
+            }
+            pendingTracking = request;
+            trackingApproved = false;
+            trackingResponse(new TrackingService.Status("starting", pendingTracking.sessionId, "CONFIRM_ON_DEVICE", null));
+            trackingConfirmation = new AlertDialog.Builder(this).setTitle("Compartilhar localização?")
+                .setMessage("Durante esta entrega, o pet shop e quem receber o link de acompanhamento poderão ver sua localização. Uma notificação ficará visível e você poderá parar a qualquer momento.")
+                .setNegativeButton("Agora não", (dialog, which) -> cancelTrackingStart("USER_CANCELLED"))
+                .setPositiveButton("Iniciar", (dialog, which) -> { trackingConfirmation = null; requestTrackingPermissions(); })
+                .setOnCancelListener(dialog -> cancelTrackingStart("USER_CANCELLED")).create();
+            trackingConfirmation.show();
+        } catch (IllegalArgumentException exception) { if (pendingTracking != null) cancelTrackingStart("INVALID_TRACKING_REQUEST"); else trackingError("INVALID_TRACKING_REQUEST"); }
+        catch (Exception ignored) { if (pendingTracking != null) cancelTrackingStart("INVALID_TRACKING_REQUEST"); else trackingError("INVALID_TRACKING_REQUEST"); }
+    }
+    private void requestTrackingPermissions() {
+        if (pendingTracking == null || !resumed || !UrlPolicy.isAppUrl(web.getUrl())) { cancelTrackingStart("APP_NOT_VISIBLE"); return; }
+        trackingApproved = true;
+        ArrayList<String> requested = new ArrayList<>();
+        if (!TrackingService.locationAllowed(this)) { requested.add(Manifest.permission.ACCESS_FINE_LOCATION); requested.add(Manifest.permission.ACCESS_COARSE_LOCATION); }
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) requested.add(Manifest.permission.POST_NOTIFICATIONS);
+        if (!requested.isEmpty()) { trackingPermissionRequest = true; trackingPermissions.launch(requested.toArray(new String[0])); }
+        else maybeStartTracking();
+    }
+    private void maybeStartTracking() {
+        if (closed || pendingTracking == null || !trackingApproved || !resumed || trackingPermissionRequest) return;
+        if (!UrlPolicy.isAppUrl(web.getUrl()) || !TrackingService.locationAllowed(this) || !TrackingService.notificationsAllowed(this)) { cancelTrackingStart("PERMISSION_REQUIRED"); return; }
+        TrackingPolicy.Grant request = pendingTracking;
+        if (request.expiresAt <= System.currentTimeMillis() + 10000) { cancelTrackingStart("GRANT_EXPIRED_OR_CLOCK_INVALID"); return; }
+        if (!TrackingService.prepare(request)) { cancelTrackingStart("TRACKING_ALREADY_ACTIVE"); return; }
+        pendingTracking = null; trackingApproved = false;
+        try { startForegroundService(new Intent(this, TrackingService.class).setAction(TrackingService.ACTION_START)); }
+        catch (RuntimeException ignored) { TrackingService.discardPending(); TrackingService.revokeAsync(request); trackingError("TRACKING_START_FAILED"); }
+    }
+    private void cancelTrackingStart(String code) {
+        TrackingPolicy.Grant request = pendingTracking; pendingTracking = null; trackingApproved = false; trackingPermissionRequest = false;
+        if (trackingConfirmation != null) { trackingConfirmation.dismiss(); trackingConfirmation = null; }
+        if (request != null) { TrackingService.revokeAsync(request); trackingError(code); }
+    }
+    private void trackingError(String code) { trackingResponse(new TrackingService.Status("error", null, code, null)); }
+    private void trackingResponse(TrackingService.Status state) {
+        if (closed || trackingReply == null || !UrlPolicy.isAppUrl(web.getUrl())) return;
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return;
+        try {
+            JSONObject result = new JSONObject().put("type", "trackingResult").put("state", state.state);
+            if (state.sessionId != null) result.put("session_id", state.sessionId);
+            if (state.code != null) result.put("code", state.code);
+            if (state.lastUploadAt != null) result.put("last_upload_at", state.lastUploadAt);
+            trackingReply.postMessage(result.toString());
+        } catch (Exception ignored) { /* The originating document may have closed. */ }
+    }
     private void receiveExport(WebView view, WebMessageCompat message, Uri origin, boolean mainFrame, JavaScriptReplyProxy reply) {
         if (closed || !mainFrame || !UrlPolicy.isTrustedOrigin(origin.toString())) return;
         if (exportBusy) { respond(reply, "error", "Conclua ou cancele a exportação aberta antes de iniciar outra."); return; }
@@ -336,12 +432,13 @@ public final class MainActivity extends ComponentActivity {
         if (notify) respond(reply, "cancelled", "A exportação foi cancelada ao sair da página.");
     }
     private void toast(String message) { if (!closed) Toast.makeText(this, message, Toast.LENGTH_LONG).show(); }
-    @Override protected void onPause() { CookieManager.getInstance().flush(); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); resumed = true; TrackingService.observe(trackingObserver); maybeStartTracking(); }
+    @Override protected void onPause() { resumed = false; CookieManager.getInstance().flush(); super.onPause(); }
     @Override protected void onDestroy() {
-        closed = true; clearPendingExport(false); ui.removeCallbacksAndMessages(null);
+        cancelTrackingStart("APP_CLOSED"); if (isFinishing()) TrackingService.requestStop(); TrackingService.unobserve(trackingObserver); closed = true; clearPendingExport(false); ui.removeCallbacksAndMessages(null);
         if (photoCallback != null) { photoCallback.onReceiveValue(null); photoCallback = null; }
         if (web != null) {
-            if (bridgeAvailable && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) WebViewCompat.removeWebMessageListener(web, "PetCoreNative");
+            if (bridgeAvailable && WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) { WebViewCompat.removeWebMessageListener(web, "PetCoreNative"); WebViewCompat.removeWebMessageListener(web, "PetCoreTracking"); }
             web.stopLoading(); web.setWebChromeClient(null); web.setWebViewClient(new WebViewClient()); web.destroy();
         }
         io.shutdown(); super.onDestroy();

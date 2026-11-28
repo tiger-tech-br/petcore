@@ -1,0 +1,311 @@
+{
+  "date": "2026-11-27",
+  "status": "locally_verified_not_deployed",
+  "scope": [
+    "taxi_dog",
+    "product_deliveries",
+    "driver_area",
+    "temporary_customer_tracking_links_and_qr"
+  ],
+  "maps": {
+    "map": "Leaflet 1.9.4 / OpenStreetMap public tiles",
+    "route": "external Google Maps directions URL",
+    "paidApi": false,
+    "inAppRoadRouteOrEta": false
+  },
+  "checks": {
+    "apiIntegration": {
+      "tests": 278,
+      "passed": 278,
+      "failed": 0,
+      "skipped": 0,
+      "includesGps": 23,
+      "includesGpsPrivacy": 6,
+      "database": "isolated PostgreSQL 18.7 loopback only",
+      "durationMs": 693391.2708
+    },
+    "apiUnit": {
+      "tests": 45,
+      "passed": 45,
+      "legalDraftTestsRechecked": 5,
+      "doNotAddRecheckCount": true
+    },
+    "webUnit": {
+      "tests": 40,
+      "passed": 40,
+      "includesTracking": 16
+    },
+    "androidUnit": {
+      "tests": 12,
+      "passed": 12
+    },
+    "apiBuild": true,
+    "webBuild": true,
+    "androidLint": {
+      "errors": 0,
+      "warnings": 10
+    },
+    "androidReleaseBuild": true
+  },
+  "android": {
+    "applicationId": "br.dev.tigertech.petcore",
+    "version": "1.0.3",
+    "versionCode": 4,
+    "minSdk": 26,
+    "targetSdk": 36,
+    "bytes": 1765062,
+    "sha256": "5c7673a451a2161defb9050022c6192a75942bec572eefcb2eb556d8912f3118",
+    "certificateSha256": "740981c64caecfdf13e9add38633c4828334137d15f0a4581c5879077dcb19c1",
+    "signed": true,
+    "debuggable": false,
+    "requiresInternet": true,
+    "builtAt": "2026-11-28T00:20:39.176Z",
+    "signatureSchemes": [
+      "v2",
+      "v3"
+    ],
+    "sameCertificateAsPrevious": true,
+    "physicalGpsTest": false,
+    "previousVersionPreserved": "1.0.2"
+  },
+  "webAssets": {
+    "javascript": "index-Djx981ZA.js",
+    "stylesheet": "index-CQtJXJBt.css"
+  },
+  "ui": {
+    "fixture": "web/tracking-qa.html",
+    "fictitiousDataOnly": true,
+    "visualInspectionCompleted": false,
+    "blocker": "First IAB call failed: Computer Use native pipe is unavailable: Computer Use native pipe connection timed out"
+  },
+  "database": {
+    "migration": "025_transport_tracking.sql",
+    "appliedToIsolatedTestDatabase": true,
+    "appliedToHostinger": false,
+    "migration016Excluded": true,
+    "newTable": "transport_tracking_sessions",
+    "runtimeGrantsStillRequireLiveVerification": true
+  },
+  "deployment": {
+    "changed": false,
+    "lastConfirmedRuntimeRevision": "b6ababb505caf8af76592a0a5127c8d58ae4cbe3",
+    "lastConfirmedDate": "2026-11-22",
+    "domain": "https://petcore.tigertech.dev.br",
+    "hostingerConnectorAvailable": false,
+    "browserAccessUnavailable": true
+  },
+  "behavior": {
+    "explicitDriverStart": true,
+    "onlyLatestPosition": true,
+    "maxSessionHours": 12,
+    "staleAfterSeconds": 90,
+    "retiredMetadataRetentionHours": 24,
+    "originatingLoginRequired": true,
+    "loginDeleteCascades": true,
+    "noActualGpsCapture": true,
+    "noEmailOrPayment": true
+  },
+  "legalDocumentsPublished": false,
+  "sourceFiles": [
+    {
+      "path": "api/sql/025_transport_tracking.sql",
+      "sha256": "67bb041007e2709cd07788f3c2f02d9b0dfb618db74db6adce13834e7e676228"
+    },
+    {
+      "path": "api/src/trackingService.ts",
+      "sha256": "c93458744906e240b73c8bd81b5d474083401682a1a03b899a1c3d61216222b5"
+    },
+    {
+      "path": "api/src/trackingRoutes.ts",
+      "sha256": "ead493549eff2042bed364f0719f6e51c31e289d9a58dca4989cff74a845bad3"
+    },
+    {
+      "path": "api/src/server.ts",
+      "sha256": "626d07eed54ca95d91400463addedae013302edcdd9530d8efdc2c7b997b4348"
+    },
+    {
+      "path": "api/src/authRoutes.ts",
+      "sha256": "44caa12d4ad537db84d148e4c6c7a2e972e47f4a3ef9b46f55a7cefe84c16d39"
+    },
+    {
+      "path": "api/src/dataRoutes.ts",
+      "sha256": "cedd9f33255b7b8f2d507029082f8bff11af7454979132a12dbb9fd8ee703efb"
+    },
+    {
+      "path": "api/src/businessService.ts",
+      "sha256": "226e73fe581c89544179971feed9ac7314c5a6c8c7f6d714ceaa382214bd6f06"
+    },
+    {
+      "path": "api/src/deliveryRoutes.ts",
+      "sha256": "31ba9cf9ad65cfd6f5b996e4b9396f3ea158833c70670f0f85a892bf3acfd6d4"
+    },
+    {
+      "path": "api/src/taxiDogRoutes.ts",
+      "sha256": "6e8ecc69a5c176c15d8780c32c1bfdb230f3f6c1ecd8671f8f60b0f78352009f"
+    },
+    {
+      "path": "api/src/taxiDogService.ts",
+      "sha256": "7a18731c854c2827e7fd3de3fff692fdfe1b25c3bff41a7136bab1adb421a4e2"
+    },
+    {
+      "path": "api/src/privacyService.ts",
+      "sha256": "5f2f8daa1abd10e06e8a84b775fa7906a06ec5b9008d16f210ac101fb9652840"
+    },
+    {
+      "path": "api/src/maintenance.ts",
+      "sha256": "82bcd2cd6b31ec75ee2f41e8bac43f6dc12bf4116a2f62cfefefbb977142e62a"
+    },
+    {
+      "path": "api/src/legalTemplates.ts",
+      "sha256": "ed254600dc4a8a893c6c94654c5c90adb2b329653ab52af5b15e6a903d82e3c0"
+    },
+    {
+      "path": "api/src/operatorLegalDrafts.ts",
+      "sha256": "ebe7e60169f962f839844b3f1360e2db8cc00d6067e48ecc64e84b822dc827b5"
+    },
+    {
+      "path": "api/scripts/export-tenant.mjs",
+      "sha256": "888dc40f21f74644d239b817fa58309558e95c1bea474d3dd2645eb784e57039"
+    },
+    {
+      "path": "api/tests/tracking.integration.test.ts",
+      "sha256": "5f1e98ef8466ed528cd3d6111e76718d94e1dbd56641e35eaab294ca011a5900"
+    },
+    {
+      "path": "api/tests/trackingPrivacy.integration.test.ts",
+      "sha256": "872362fa275cf8fb96e96675224c69648cda8c241026d25437d6ea26242c300b"
+    },
+    {
+      "path": "api/tests/legalTemplates.unit.test.ts",
+      "sha256": "8552169bdd04d63febee47424abbf2278c1a40949fc77a0bbb29ec6b5bb8437b"
+    },
+    {
+      "path": "api/package.json",
+      "sha256": "8ead8c98ae40c9b3712e3ca54f09b043287f80de4113a30387494e635c4b42aa"
+    },
+    {
+      "path": "web/src/api.ts",
+      "sha256": "44dc1aa6d746eac4f34f8c845bb36616edc6ddeedeae4efc83bcc4deeae40275"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "sha256": "9cd8b2e335262c841098b53ab72bfb657982aa534bd869d5e18826dd18302a62"
+    },
+    {
+      "path": "web/src/AppShell.tsx",
+      "sha256": "02f25a28ee786307571de32c6aaabb7565ac4a9b1cdb58b8c4697ba5864f0a30"
+    },
+    {
+      "path": "web/src/TeamPage.tsx",
+      "sha256": "cbe8da9e72b48d9d442d24946a2b4aacc9756a7c9f05db68093cd838b10e37df"
+    },
+    {
+      "path": "web/src/TaxiDogPage.tsx",
+      "sha256": "9e6ae7681745379217a85b2d53394fb9e9148b0c2f938be431f0abab1e17d7fd"
+    },
+    {
+      "path": "web/src/DeliveryPage.tsx",
+      "sha256": "5d898a3fd593c937da9a333494eb899826cbec132bee9df8844c7cd5a17d6aba"
+    },
+    {
+      "path": "web/src/trackingTypes.ts",
+      "sha256": "b51b55dea53b29577e29ee7da108f2be92adaf91462332f3f6151a29a0b4408a"
+    },
+    {
+      "path": "web/src/trackingCapture.ts",
+      "sha256": "94cef3eaa6ebde976432b0fbf8c7a95416a8f9fd5bdb3c163184900e0b1be02f"
+    },
+    {
+      "path": "web/src/TrackingLocationView.tsx",
+      "sha256": "9cdb9a64a5d70a95bce9c0b962a066be2405b496d8be52f4e6ec1ad03fde6759"
+    },
+    {
+      "path": "web/src/DriverTrackingPage.tsx",
+      "sha256": "6d51fd57f53c2f57bc0aa4aac7b47dc69bbde6d55fc3a8c1e837b40617c6fce5"
+    },
+    {
+      "path": "web/src/TrackingPanel.tsx",
+      "sha256": "a9c5ed29ab97d50e27340768ead95c45899a80d7c333a8a7f2113ea00a771062"
+    },
+    {
+      "path": "web/src/PublicTrackingPage.tsx",
+      "sha256": "1a29f4d27157cd59f45bc5081c2d4fc3d7dba4a7891b69c62a90a45fd378959a"
+    },
+    {
+      "path": "web/src/TransportSettingsPanel.tsx",
+      "sha256": "4f001e24abc882efa42d58d22be10e6f79edab5f9439adf8ca58ea92fe33d1f5"
+    },
+    {
+      "path": "web/src/TrackingActivityBar.tsx",
+      "sha256": "092781368f4e6f60c45a31f624b35c8bfe1fddbbd5bf25356a49c3b38a64abd9"
+    },
+    {
+      "path": "web/src/styles/_tracking.scss",
+      "sha256": "0a28666e5d1ef7ca1879c037bdc003b90b4b6d0673a5d32cc1d8c5a010c7f919"
+    },
+    {
+      "path": "web/tests/tracking.unit.test.ts",
+      "sha256": "3d1e01c06c15bff0c01ceb2e1d6b4b9a6b1be6592eb806dad9032f39adcd8fd1"
+    },
+    {
+      "path": "web/tests/trackingCapture.unit.test.ts",
+      "sha256": "e2da54b36d609ac22f69bd951526785087575d359fd796b22b733c32de272927"
+    },
+    {
+      "path": "web/tracking-qa.html",
+      "sha256": "7ac7b0a116e9ea3d815c493fd3dc8bf985fa17a859f3e9d41c845114b9acfc3d"
+    },
+    {
+      "path": "web/tests/tracking-qa.tsx",
+      "sha256": "87ec1530c6a640d014f8bb76170d3985d95556df44013bcb8894e0b8334d588c"
+    },
+    {
+      "path": "web/package.json",
+      "sha256": "9d68f8e6a0cd24b412a4cca8a8bde20e52c0aedd8a8cecd6124f4baeb80f7a66"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5cab3cda78c8bac4e16682f1f1d151600d0cd0bbed19e7b9cb410017b6b0968e"
+    },
+    {
+      "path": "android/app/build.gradle",
+      "sha256": "ec36d23a86ce01c61da05501c12db77c900fb3312a302b91062925474f2d2f60"
+    },
+    {
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "sha256": "6cfdeb30e4e42a481cbf0316945f22c5150469f6ba3f10bead67fadb68e7f250"
+    },
+    {
+      "path": "android/app/src/main/java/br/dev/tigertech/petcore/MainActivity.java",
+      "sha256": "798b31decd2fb0c3e2ba3969e982663628936055cc7ac1ac4c952c8a0abf8361"
+    },
+    {
+      "path": "android/app/src/main/java/br/dev/tigertech/petcore/UrlPolicy.java",
+      "sha256": "b87e45553441062d484f36f9c89c33f3bdef588d2245a767ca5ca246c2a2cb65"
+    },
+    {
+      "path": "android/app/src/main/java/br/dev/tigertech/petcore/TrackingService.java",
+      "sha256": "913a1d8b3f066c434c2553c0351af0f63703f7c34605b764e3126150ec5ff62a"
+    },
+    {
+      "path": "android/app/src/main/java/br/dev/tigertech/petcore/TrackingHttp.java",
+      "sha256": "d7d988bfebe286a0e37931e8f10ee3b352a4e76ca9d3e00bc20a21cf2e8abdb9"
+    },
+    {
+      "path": "android/app/src/main/java/br/dev/tigertech/petcore/TrackingPolicy.java",
+      "sha256": "7acd73506c0480a79c42caafa88ffe1ea744bc6df47a5884460c398d5ac09660"
+    },
+    {
+      "path": "android/app/src/main/res/drawable/ic_tracking_notification.xml",
+      "sha256": "9030d848f70554cc66958cc1c2215e1b4dfeeb6df8c760fda6190e7d57e3ff5e"
+    },
+    {
+      "path": "android/app/src/test/java/br/dev/tigertech/petcore/UrlPolicyTest.java",
+      "sha256": "66ff356523145823c02623c353600723aa9694fbd97079c76984c3d3a4b206b4"
+    },
+    {
+      "path": "android/app/src/test/java/br/dev/tigertech/petcore/TrackingPolicyTest.java",
+      "sha256": "6a8afb3fbc68fed5942a9190f3fe1935f3ce942b725202bc402df2997d0e3912"
+    }
+  ]
+}

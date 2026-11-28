@@ -1,4 +1,18 @@
-# Continuação do PetCore — estado atual em 22/11/2026
+# Continuação do PetCore — estado atual em 27/11/2026
+
+## GPS — implementação local em 27/11, publicação pendente
+
+Foi desenvolvido acompanhamento para **Táxi Dog e entregas de produtos**, no mesmo PetCore. O responsável aprovou OpenStreetMap no mapa e um botão para abrir a rota no Google Maps, sem contratar API paga. O mapa interno mostra a última posição; **não calcula rota pelas ruas, distância ou previsão de chegada**. A navegação acontece no Google Maps.
+
+Configurações → Localização e motoristas permite ativar o recurso, informar o endereço do pet shop e vincular um motorista a uma conta da mesma empresa. A permissão transport_driver dá acesso a **Minhas viagens**, restrito aos serviços atribuídos. O motorista inicia explicitamente e pode parar. A equipe acompanha na viagem/entrega e gera link e QR temporários /acompanhar/<token> para o cliente, sem revelar endereço, telefone ou outros pedidos na página pública.
+
+No navegador a captura termina quando a página fica oculta. O APK **1.0.3/código 4** foi gerado e assinado com o mesmo certificado das versões anteriores. Inclui serviço de localização e notificação para uso com tela apagada; o 1.0.2 não possui essa capacidade. Arquivo: releases/PetCore-1.0.3.apk, 1.765.062 bytes, SHA-256 5c7673a451a2161defb9050022c6192a75942bec572eefcb2eb556d8912f3118. **Não declarar teste físico de GPS ou publicação concluída.** Consulte docs/TRACKING.md, docs/ANDROID.md e as evidências antes de orientar a instalação.
+
+Cada sessão dura no máximo 12 horas, guarda somente a última posição e marca dados com mais de 90 segundos como desatualizados. Encerrar/cancelar o serviço, retirar a atribuição ou revogar o acesso invalida o acompanhamento. A manutenção limpa posições e credenciais vencidas e remove metadados encerrados após 24 horas. A exportação do tutor não inclui GPS do motorista. Esses controles não publicam os documentos jurídicos.
+
+A migration nova é **025_transport_tracking.sql**, aplicada somente no PostgreSQL local isolado. **Ainda não foi aplicada na Hostinger.** A rodada completa final passou em **278 integrações**, incluindo **29 casos específicos** (23 GPS e 6 privacidade). Também passaram 45 testes de unidade API, 40 web e 12 Java; os cinco testes de rascunhos foram repetidos após atualização, sem somá-los novamente. API e web compilaram. Android teve lint sem erros e 10 avisos, build e assinatura v2/v3 válidos. Não somar rodadas anteriores. A prévia visual foi bloqueada pelo timeout do canal nativo na primeira chamada IAB; não houve inspeção visual concluída. Falta reconectar a Hostinger, publicar e conferir a interface, além do teste físico de GPS. Não contorne o bloqueio nem anuncie GPS ativo em produção.
+
+O último runtime publicado comprovado continua sendo b6ababb505caf8af76592a0a5127c8d58ae4cbe3, de 22/11, descrito abaixo. As descrições históricas sem GPS referem-se a ele.
 
 ## Atualização de 22/11 — entregas e catálogo publicados
 
@@ -15,7 +29,7 @@ O PetCore está em https://petcore.tigertech.dev.br, na VPS Hostinger 2162451. A
 
 Última revisão publicada comprovada: b6ababb505caf8af76592a0a5127c8d58ae4cbe3, em 22/11. Aplicação e agendadores usam o volume petcore_delivery_ed8a7940_20261122 em montagens somente de leitura, com a imagem base acde9dde. As migrations 023/024, entregas e catálogo foram publicados e conferidos. O teste HTTPS removeu os registros temporários. Consulte docs/evidence/DELIVERY-RELEASE-20261122.json; a implantação anterior bc1b48dc continua documentada como histórico.
 
-O banco da revisão publicada acima tem 53 tabelas e 21 migrations: 001–015 e 017–022. A preparação do delivery acrescenta 023/024, ainda sujeitas à validação e aplicação controlada. A migration 016 pertence a trabalho separado e NÃO foi aplicada; não a execute, modifique ou publique. Não mexa no arquivo NUL. A pasta local tem várias mudanças autorizadas antigas; não descarte alterações nem faça publicação indiscriminada.
+O banco da revisão publicada acima tem 58 tabelas e 23 migrations: 001–015 e 017–024. A preparação local de GPS acrescenta 025 e uma tabela, ainda sujeitas à aplicação controlada na VPS. A migration 016 pertence a trabalho separado e NÃO foi aplicada; não a execute, modifique ou publique. Não mexa no arquivo NUL. A pasta local tem várias mudanças autorizadas antigas; não descarte alterações nem faça publicação indiscriminada.
 
 ## Simplificação feita
 
@@ -47,7 +61,7 @@ Solicitar pelo formulário não autoriza publicidade ou lembretes por e-mail. Os
 
 ## Site, APK e apresentação
 
-Site e APK usam a mesma interface remota em https://petcore.tigertech.dev.br. O APK atual é 1.0.2/código 3 e já teve instalação, login, formulário e exportação aceitos no aparelho pelo responsável. Estas mudanças são do web: nenhum APK novo foi gerado. Fechar e reabrir o aplicativo carrega a página atualizada após a publicação.
+Site e APK usam a mesma interface remota em https://petcore.tigertech.dev.br. A última versão aceita no aparelho é 1.0.2/código 3 (instalação, login, formulário e exportação). A publicação web de 22/11 não exigiu APK novo. Em 27/11 foi gerado **1.0.3/código 4**, assinado com o mesmo certificado, para a capacidade GPS nativa. Ele pode ser instalado sobre a versão anterior; o GPS só aparecerá depois da publicação da interface/API. Ainda não foi testado no aparelho. Fechar e reabrir carrega a interface publicada.
 
 O QR publicado é desenhado em **canvas**, compatível com o APK 1.0.2 sem alterar a camada nativa. Não volte a usar imagem com `src="data:..."` dentro do APK: o WebView bloqueia esse tipo de recurso. O navegador mantém o download PNG; no APK esse download fica oculto, pois a ponte de exportação aceita CSV/JSON, não PNG. O link continua disponível para copiar; Compartilhar usa a função do navegador quando disponível e recorre à cópia. Não libere esquemas inseguros nem gere outro APK apenas para atualizar esses recursos remotos. Ainda não houve novo ensaio físico específico do QR e do encaixe no aparelho após essa publicação.
 
@@ -65,7 +79,7 @@ Dados de entregas entram na exportação do titular e da empresa. Uma entrega at
 
 Preserve a identidade azul-marinho/turquesa e o mesmo cachorro inteiro no login. Mantenha letras legíveis, espaçamento, ausência de rolagem lateral e ações dos formulários visíveis. Hoje/Agenda/Clientes/Mais é navegação fixa no celular/APK. Não crie um rodapé adicional. Preserve a posição atual dos avisos de sucesso/erro; apenas limpe um erro quando a operação tiver sido resolvida.
 
-Táxi Dog já possui planejamento de busca/entrega e motoristas, com ativação opcional por pet shop. GPS e rotas em tempo real NÃO foram implementados. Não anuncie esses recursos; o plano futuro está no prompt específico.
+Táxi Dog já possui planejamento de busca/entrega e motoristas, com ativação opcional por pet shop. O GPS novo está implementado localmente, conforme a atualização de 27/11 no início deste arquivo; ainda não foi publicado. Não anuncie como disponível antes da implantação e das conferências.
 
 ## Comercial e privacidade: limites reais
 
@@ -87,6 +101,6 @@ Em 21/11, a revisão bc1b48dc passou 61 testes de integração no banco isolado 
 
 A implantação das migrations 023/024 e da revisão b6ababb505caf8af76592a0a5127c8d58ae4cbe3 foi concluída na Hostinger. Resultados reais e limites estão em docs/evidence/DELIVERY-RELEASE-20261122.json: 247 integrações, 45 unidades API, 24 web e 12 verificações HTTPS, com limpeza dos dados temporários. A interface foi conferida com dados fictícios a 390px, sem overflow lateral. Reabrir o APK 1.0.2 carrega esta interface; o novo fluxo não foi testado fisicamente no aparelho.
 
-O responsável pediu rotas, GPS e acompanhamento do cliente como próxima etapa tanto para produtos quanto Táxi Dog. Esses recursos não estão implementados; use PROMPT-GPS-TAXI-DOG.md, atualizado para Hostinger e para ambos os transportes.
+Para continuar o GPS já desenvolvido, use PROMPT-GPS-TAXI-DOG.md e docs/TRACKING.md. Preserve os testes, conclua as verificações pendentes e publique a revisão exata; não recrie o módulo nem presuma acesso administrativo disponível.
 
 Use docs/GUIA-RAPIDO-PETSHOP.md para explicar o uso ao dono do pet shop. Confira docs/COMMERCIAL-READINESS.md e docs/HOSTINGER.md para pendências e operação. Corrija falhas demonstradas e teste o que mudou; não dê como concluída uma publicação ou ação apenas enfileirada.

@@ -8,7 +8,13 @@ test('rascunhos refletem as decisões comerciais sem fingir publicação ou tran
  assert.match(draft.terms,/reembolso voluntário proporcional/);
  assert.match(draft.terms,/30 dias corridos para exportação assistida/);
  assert.match(draft.privacy,/backups é de 30 dias/);
- assert.match(draft.privacy,/não coleta GPS/);
+ assert.match(draft.privacy,/iniciada explicitamente pelo motorista/);
+  assert.match(draft.privacy,/nem guarda histórico de percurso/i);
+  assert.match(draft.privacy,/12 horas/);
+  assert.match(draft.privacy,/24 horas/);
+  assert.match(draft.privacy,/OpenStreetMap/);
+  assert.match(draft.privacy,/Google Maps/);
+  assert.doesNotMatch(draft.privacy,/A versão atual não coleta GPS/);
  assert.match(draft.privacy,/MECANISMO_TRANSFERENCIAS_VALIDADO/);
  for(const text of Object.values(draft)){
   assert.match(text,/APROVACAO_JURIDICA_E_OPERACIONAL/);

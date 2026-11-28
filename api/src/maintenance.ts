@@ -28,6 +28,20 @@ export async function runMaintenanceOnce(options:{prune?:boolean;files?:boolean}
    WHERE CASE WHEN status='pending' THEN created_at ELSE COALESCE(reviewed_at,created_at) END < now()-interval '30 days'
    ORDER BY id LIMIT 1000 FOR UPDATE SKIP LOCKED
   ) DELETE FROM public_delivery_requests r USING expired WHERE r.id=expired.id`)).rowCount??0;
+  // A fix is never a route history: retire the last point and both grants as
+  // soon as the sharing lease ends, then remove its metadata after 24 hours.
+  counts.expiredTrackingSessions=(await db.query(`WITH expired AS (
+   SELECT id FROM transport_tracking_sessions WHERE (expires_at<=now() OR stopped_at IS NOT NULL)
+    AND (latitude IS NOT NULL OR longitude IS NOT NULL OR accuracy IS NOT NULL OR captured_at IS NOT NULL OR received_at IS NOT NULL
+     OR upload_token_hash IS NOT NULL OR public_token_hash IS NOT NULL OR public_expires_at IS NOT NULL OR stopped_at IS NULL)
+   ORDER BY expires_at,id LIMIT 1000 FOR UPDATE SKIP LOCKED
+  ) UPDATE transport_tracking_sessions s SET stopped_at=COALESCE(s.stopped_at,s.expires_at),stop_reason=COALESCE(s.stop_reason,'expired'),
+   latitude=NULL,longitude=NULL,accuracy=NULL,captured_at=NULL,received_at=NULL,
+   upload_token_hash=NULL,public_token_hash=NULL,public_expires_at=NULL FROM expired WHERE s.id=expired.id`)).rowCount??0;
+  counts.retiredTrackingSessions=(await db.query(`WITH retired AS (
+   SELECT id FROM transport_tracking_sessions WHERE COALESCE(stopped_at,expires_at)<now()-interval '24 hours'
+   ORDER BY COALESCE(stopped_at,expires_at),id LIMIT 1000 FOR UPDATE SKIP LOCKED
+  ) DELETE FROM transport_tracking_sessions s USING retired WHERE s.id=retired.id`)).rowCount??0;
  });
  let files:Record<string,unknown>={enabled:false};
  if(options.files!==false){

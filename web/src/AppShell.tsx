@@ -5,19 +5,22 @@ import GlobalSearch from './GlobalSearch';
 import {api, dateTime, type Session} from './api';
 import {listenNativeBack} from './nativeAndroid';
 import {PlatformSupportBell} from './PlatformSupportAlerts';
+import TrackingActivityBar from './TrackingActivityBar';
 import './styles/_daily-ux.scss';
 
-export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'deliveries'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
+export type MenuKey = 'overview'|'calendar'|'tutors'|'pets'|'crm'|'professionals'|'services'|'waitlist'|'taxi-dog'|'deliveries'|'driver'|'inventory'|'finance'|'reports'|'privacy'|'subscription'|'support'|'team'|'platform';
 type Props = {session:Session;view:MenuKey;go:(view:MenuKey)=>void;onSearch:(view:MenuKey,query:string)=>void;company:(id:string)=>void;logout:()=>void;onOpenPlatformSupport?:()=>void;children:ReactNode};
 
 export default function AppShell({session,view,go,onSearch,company,logout,onOpenPlatformSupport,children}:Props) {
   const [drawer,setDrawer] = useState(false);
   const {user,companies} = session;
   const can=(p?:string)=>p==='inventory'&&session.features?.retail===false?false:!p||user.role==='admin'||user.permissions.includes(p);
-  const role=user.role==='platform'?'Plataforma':user.role==='admin'?'Administrador':'Funcionário';
+  const driverOnly=user.role==='employee'&&user.permissions.includes('transport_driver')&&!user.permissions.some(p=>['appointments','taxi_dog','finance','tutors','pets','inventory','team','crm'].includes(p));
+  const role=user.role==='platform'?'Plataforma':user.role==='admin'?'Administrador':driverOnly?'Motorista':'Funcionário';
   useEffect(()=>listenNativeBack(()=>{if(!drawer)return false;setDrawer(false);return true;},true),[drawer]);
   const nav = [
-    {key:'overview',label:'Hoje',icon:Home,show:true,group:'Dia a dia'},
+    {key:'overview',label:'Hoje',icon:Home,show:!driverOnly,group:'Dia a dia'},
+    {key:'driver',label:'Minhas viagens',icon:Truck,show:session.features?.tracking===true&&can('transport_driver'),group:'Dia a dia'},
     {key:'calendar',label:'Agenda',icon:CalendarDays,show:can('appointments'),group:'Dia a dia'},
     {key:can('tutors')?'tutors':'pets',label:'Clientes e pets',icon:PawPrint,show:can('tutors')||can('pets'),group:'Dia a dia'},
     {key:'waitlist',label:'Lista de espera',icon:CalendarClock,show:can('waitlist'),group:'Dia a dia'},
@@ -32,7 +35,7 @@ export default function AppShell({session,view,go,onSearch,company,logout,onOpen
   ];
   const navGroups=['Dia a dia','Gestão','Preparação'].map(label=>({label,items:nav.filter(item=>item.show&&item.group===label)})).filter(group=>group.items.length>0);
   useEffect(()=>{if(!drawer)return;const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setDrawer(false);};document.addEventListener('keydown',close);return()=>document.removeEventListener('keydown',close);},[drawer]);
-  function navigate(key:MenuKey){go(key);setDrawer(false);}
+  function navigate(key:MenuKey){go(driverOnly&&key==='overview'?'driver':key);setDrawer(false);}
   function pending(){navigate('overview');setTimeout(()=>document.getElementById('pending-panel')?.scrollIntoView({behavior:'smooth',block:'center'}),100);}
   return <div className="app-shell">
     {drawer&&<button className="shade" onClick={()=>setDrawer(false)} aria-label="Fechar menu"/>}
@@ -48,9 +51,9 @@ export default function AppShell({session,view,go,onSearch,company,logout,onOpen
         {user.role!=='platform'&&<GlobalSearch key={user.tenantId} can={can} onNavigate={(target,query)=>{setDrawer(false);onSearch(target,query);}}/>}
         <div className="top-actions">{user.role==='platform'?<PlatformSupportBell onOpen={()=>onOpenPlatformSupport?onOpenPlatformSupport():navigate('platform')}/>:can('appointments')?<NotificationCenter key={`${user.id}:${user.tenantId??''}`} view={view} onPending={pending}/>:<button className="icon-button notification-button" aria-label="Ver pendências do dia" title="Ver pendências do dia" onClick={pending}><Bell size={23}/></button>}<details className="profile-menu"><summary><span className="avatar-small"><UserRound size={23}/></span><span className="profile-name"><strong>{user.name}</strong><small>{role}</small></span><ChevronDown size={15}/></summary><div className="profile-dropdown"><strong>{user.name}</strong><small>{role}</small><button onClick={logout}><LogOut size={16}/>Sair da conta</button></div></details><button className="icon-button mobile-menu-button" aria-label="Abrir menu" aria-expanded={drawer} onClick={()=>setDrawer(true)}><Menu size={24}/></button></div>
       </header>
-      <div className="content-wrap">{children}</div>
+      <div className="content-wrap"><TrackingActivityBar/>{children}</div>
     </main>
-    {user.role!=='platform'&&<nav className="mobile-bottom-nav" aria-label="Navegação no celular"><button className={view==='overview'?'active':''} onClick={()=>navigate('overview')}><Home size={23}/><span>Hoje</span></button>{can('appointments')&&<button className={view==='calendar'?'active':''} onClick={()=>navigate('calendar')}><CalendarDays size={23}/><span>Agenda</span></button>}{(can('tutors')||can('pets'))&&<button className={view==='tutors'||view==='pets'?'active':''} onClick={()=>navigate(can('tutors')?'tutors':'pets')}><PawPrint size={23}/><span>Clientes</span></button>}<button onClick={()=>setDrawer(true)} aria-expanded={drawer}><MoreHorizontal size={25}/><span>Mais</span></button></nav>}
+    {user.role!=='platform'&&<nav className="mobile-bottom-nav" aria-label="Navegação no celular"><button className={view==='overview'?'active':''} onClick={()=>navigate('overview')}><Home size={23}/><span>{driverOnly?'Viagens':'Hoje'}</span></button>{can('appointments')&&<button className={view==='calendar'?'active':''} onClick={()=>navigate('calendar')}><CalendarDays size={23}/><span>Agenda</span></button>}{(can('tutors')||can('pets'))&&<button className={view==='tutors'||view==='pets'?'active':''} onClick={()=>navigate(can('tutors')?'tutors':'pets')}><PawPrint size={23}/><span>Clientes</span></button>}<button onClick={()=>setDrawer(true)} aria-expanded={drawer}><MoreHorizontal size={25}/><span>Mais</span></button></nav>}
   </div>;
 }
 

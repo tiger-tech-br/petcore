@@ -1,5 +1,7 @@
 # Termos de Uso do PetCore — versão para revisão final
 
+> Atualização técnica de 27/11/2026 para revisão: GPS e fornecedores de mapas estão em preparação local, ainda sem publicação na VPS. Este rascunho não declara ativação ou aprovação jurídica.
+
 Revisão preparada em 13/11/2026. A vigência e a versão serão apresentadas no sistema após publicação autorizada. Este arquivo ainda não é o contrato publicado.
 
 ## 1. Prestador
@@ -12,9 +14,9 @@ Quem contrata ou administra uma conta deve ter poderes para representar o pet sh
 
 O sistema reúne clientes e pets, agenda, lista de espera, profissionais e jornadas, serviços, equipe e permissões, CRM, estoque, vendas e recebimentos registrados, despesas, caixa, relatórios, suporte e controles de privacidade.
 
-O Táxi Dog é opcional: registra endereço, motorista e etapas manuais de busca/entrega ligadas ao atendimento, com taxa na comanda. Não oferece GPS ou localização contínua. O estabelecimento responde pela execução do transporte e dos serviços aos seus clientes.
+O Táxi Dog é opcional: registra endereço, motorista e etapas de busca/entrega ligadas ao atendimento, com taxa na comanda. As entregas de produtos recebem pedidos internos e pelo catálogo público, sujeitos à confirmação do pet shop. O acompanhamento de localização em preparação é opcional, inicia por ação do motorista durante o serviço e pode ser encerrado. O mapa interno mostra a última posição; a navegação abre no Google Maps externo, sem distância ou previsão de chegada calculadas pelo PetCore. O estabelecimento responde pela execução dos serviços e do transporte.
 
-O Financeiro reflete os registros da equipe; não consulta bancos nem comprova sozinho o pagamento no provedor. O serviço não inclui loja virtual, entrega de produtos ao público ou emissão fiscal e não substitui obrigações contábeis e jurídicas. O APK acessa o mesmo serviço pela internet; não mantém operação independente offline.
+O Financeiro reflete os registros da equipe; não consulta bancos nem comprova sozinho o pagamento no provedor. O catálogo público recebe pedidos de entrega sujeitos à confirmação, sem cobrança on-line. O serviço não inclui emissão fiscal e não substitui obrigações contábeis e jurídicas. O APK acessa o mesmo serviço pela internet; não mantém operação independente offline.
 
 Cada pessoa deve usar conta individual. O administrador concede e revoga permissões. São proibidos acessos a outras empresas, tentativas de contornar a segurança e utilização ilícita. Não envie senhas, cartão completo ou dados pessoais excessivos pelos campos livres e chamados.
 
@@ -77,3 +79,9 @@ São preservadas as responsabilidades legais e os direitos de terceiros. Não h�
 As condições comerciais acima foram aprovadas em 13/11/2026. A publicação do texto completo depende da conferência dos procedimentos e da aprovação final. [APROVACAO_JURIDICA_E_OPERACIONAL]
 
 Referências: [CDC](https://www2.camara.leg.br/legin/fed/lei/1990/lei-8078-11-setembro-1990-365086-normaatualizada-pl.html), [Decreto 7.962/2013](https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/decreto/d7962.htm), [PagBank recorrente](https://developer.pagbank.com.br/docs/pagamentos-recorrentes), [LGPD](https://www2.camara.leg.br/legin/fed/lei/2018/lei-13709-14-agosto-2018-787077-normaatualizada-pl.html).
+
+## Acompanhamento opcional — adendo em preparação
+
+Localização opcional durante transportes: quando ativada pelo pet shop e iniciada explicitamente pelo motorista, trata a última latitude, longitude, precisão e horário para acompanhamento da viagem pela equipe autorizada e pelo cliente com link temporário. Não acompanha fora do serviço nem guarda histórico de percurso. A sessão dura no máximo 12 horas; encerrar revoga o acesso e limpa a posição. Metadados encerrados são removidos após 24 horas pela manutenção. O pet shop deve informar o motorista e avaliar a base legal adequada à relação concreta; a permissão do aparelho e a ação de iniciar não substituem essa avaliação.
+
+Mapas opcionais: o OpenStreetMap recebe as solicitações das imagens de mapa e a região aproximada exibida, com os dados técnicos da conexão; o caminho do link de acompanhamento não é enviado como Referer aos tiles. A rota é aberta externamente no Google Maps, que recebe o destino e aplica suas próprias condições. Não há API paga de rotas contratada ou garantia de disponibilidade desses serviços. Esses fluxos e seus instrumentos precisam integrar a conferência de fornecedores e transferências antes da publicação.

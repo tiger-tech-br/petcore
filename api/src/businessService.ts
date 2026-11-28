@@ -4,6 +4,7 @@ import type {Request} from 'express';
 import {z} from 'zod';
 import {ensure,error,pool,tenant,tx,type Db} from './core.js';
 import {recordAudit} from './audit.js';
+import {stopJobTracking} from './trackingService.js';
 
 export const cents=z.number().int().min(0).max(1000000000);
 export const paymentMethod=z.enum(['pix','cash','credit_card','debit_card','other']);
@@ -192,6 +193,8 @@ export async function createSale(db:PoolClient,company:string,user:string,input:
 /** A refund is recorded through the existing ledger and stock routines. */
 export async function cancelSale(db:PoolClient,company:string,user:string,id:string,reason:string){
   const locked=await db.query('SELECT id FROM business_sales WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(locked.rowCount,404,'Comanda não encontrada.');
+  const trackedDeliveries=await db.query('SELECT id FROM business_delivery_orders WHERE tenant_id=$1 AND sale_id=$2',[company,id]);
+  for(const delivery of trackedDeliveries.rows)await stopJobTracking(db,company,'delivery',delivery.id,'financial_cancellation');
   const record=await sale(db,company,id);if(record.status==='cancelled')return {id};
   const payments=await db.query("SELECT payment_method,SUM(CASE WHEN kind='sale_payment' THEN amount_cents ELSE -amount_cents END)::float8 AS amount FROM business_ledger WHERE tenant_id=$1 AND sale_id=$2 GROUP BY payment_method ORDER BY payment_method",[company,id]);
   for(const payment of payments.rows)if(payment.amount>0)await appendLedger(db,company,user,{saleId:id,kind:'sale_refund',amount:payment.amount,method:payment.payment_method});

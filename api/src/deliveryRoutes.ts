@@ -1,3 +1,4 @@
+import {stopJobTracking} from './trackingService.js';
 import {Router} from 'express';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
@@ -77,11 +78,22 @@ r.post('/:id/status',permit('finance'),async(req,res)=>{
  const id=z.uuid().parse(req.params.id),input=z.object({status:z.enum(['out_for_delivery','delivered','cancelled']),reason:cleanText(0,1000,true).default(''),idempotency_key:idempotency}).strict()
   .refine(value=>value.status!=='cancelled'||value.reason.length>=3,'Informe o motivo do cancelamento.').parse(req.body);
  const ref=await mutate(req,input.idempotency_key,'business.delivery.status',{id,...input},async(db,company,user)=>{
-  const row=await db.query('SELECT id,sale_id,status FROM business_delivery_orders WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(row.rowCount,404,'Entrega não encontrada.');
-  const order=row.rows[0];if(order.status===input.status)return{id};
+  return changeDeliveryStatus(db,company,id,input,user);
+ });res.json(await deliveryResult(pool,tenant(req),ref.id!));
+});
+
+export default r;
+
+export async function changeDeliveryStatus(db:PoolClient,company:string,id:string,input:{status:string;reason:string;expected_status?:string},user:string){
+  const row=await db.query('SELECT id,sale_id,status,driver_id FROM business_delivery_orders WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,id]);ensure(row.rowCount,404,'Entrega não encontrada.');
+  const order=row.rows[0];if(input.expected_status)ensure(order.status===input.expected_status,409,'A situação desta entrega mudou. Atualize a tela antes de continuar.');if(order.status===input.status)return{id};
   ensure(!['delivered','cancelled'].includes(order.status),409,'Esta entrega já foi encerrada.');
   if(input.status==='cancelled'){
    await cancelSale(db,company,user,order.sale_id,input.reason);return{id};
+  }
+  if(input.status==='out_for_delivery'&&order.driver_id){
+   await db.query('SELECT id FROM taxi_drivers WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,order.driver_id]);
+   const busy=await db.query("SELECT 1 FROM taxi_trips WHERE tenant_id=$1 AND driver_id=$2 AND status IN ('en_route','with_pet') UNION ALL SELECT 1 FROM business_delivery_orders WHERE tenant_id=$1 AND driver_id=$2 AND id<>$3 AND status='out_for_delivery' LIMIT 1",[company,order.driver_id,id]);ensure(!busy.rowCount,409,'Este motorista ainda está em outro transporte. Finalize a viagem anterior antes de iniciar outra.');
   }
   const expected=input.status==='out_for_delivery'?'preparing':'out_for_delivery';ensure(order.status===expected,409,'Confirme a saída antes de registrar a entrega.');
   const sale=await db.query('SELECT status FROM business_sales WHERE tenant_id=$1 AND id=$2 FOR UPDATE',[company,order.sale_id]);ensure(sale.rows[0]?.status!=='cancelled',409,'Esta comanda foi cancelada.');
@@ -89,8 +101,7 @@ r.post('/:id/status',permit('finance'),async(req,res)=>{
    out_for_delivery_at=CASE WHEN $3='out_for_delivery' THEN now() ELSE out_for_delivery_at END,
    delivered_at=CASE WHEN $3='delivered' THEN now() ELSE delivered_at END WHERE tenant_id=$1 AND id=$2`,[company,id,input.status,user]);
   await db.query('INSERT INTO business_delivery_events(tenant_id,delivery_id,old_status,new_status,reason,actor_user_id) VALUES($1,$2,$3,$4,$5,$6)',[company,id,order.status,input.status,input.reason,user]);
+  if(input.status==='delivered')await stopJobTracking(db,company,'delivery',id);
   return{id};
- });res.json(await deliveryResult(pool,tenant(req),ref.id!));
-});
 
-export default r;
+}

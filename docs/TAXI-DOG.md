@@ -1,5 +1,10 @@
 # Táxi Dog no PetCore
 
+## Atualização de 27/11 — GPS preparado localmente
+
+O acompanhamento de motoristas para Táxi Dog e entregas está implementado localmente, com mapas OpenStreetMap, rotas abertas no Google Maps, área do motorista e link/QR temporários para o cliente. Não foi publicado na Hostinger; a migration 025 permanece apenas no banco isolado de testes. O APK 1.0.3/código 4 foi gerado e assinado com a mesma chave; precisa de teste físico de GPS. Passaram 278 integrações, 40 testes web e 12 Java; a prévia visual foi bloqueada pelo canal nativo indisponível. Consulte [o guia de acompanhamento](TRACKING.md) e as evidências recentes. A última publicação comprovada continua sendo b6ababb505caf8af76592a0a5127c8d58ae4cbe3.
+
+
 O transporte é um recurso opcional da mesma empresa no PetCore. A configuração começa desativada: nenhum pet shop recebe corridas, motoristas ou valores fictícios automaticamente. O módulo organiza o transporte de pets relacionado a um atendimento; não é uma loja virtual nem um sistema de entrega de produtos.
 
 ## Preparação

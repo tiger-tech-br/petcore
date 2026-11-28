@@ -21,6 +21,7 @@ import {publicBookingRouter} from './publicBookingRoutes.js';
 import waitlistRoutes from './waitlistRoutes.js';
 import deliveryRoutes from './deliveryRoutes.js';
 import {publicDeliveryRouter} from './publicDeliveryRoutes.js';
+import {trackingRouter} from './trackingRoutes.js';
 
 export function validateRuntimeConfiguration(env:NodeJS.ProcessEnv=process.env){
  if(env.NODE_ENV!=='production')return;
@@ -39,7 +40,7 @@ export function createApp(){
  // recebidos em cabeçalhos controlados pelo cliente.
  app.use((req,res,next)=>{req.requestId=randomUUID();res.set('X-Request-Id',req.requestId);next();});
  app.use('/api',(_req,res,next)=>{res.set('Cache-Control','no-store');next();});
- app.use(helmet({contentSecurityPolicy:prod?undefined:false}));
+ app.use(helmet({contentSecurityPolicy:prod?{directives:{imgSrc:["'self'",'data:','https://tile.openstreetmap.org']}}:false}));
  app.use(express.json({limit:'100kb'}));
  // O Docker verifica o processo HTTP sem abrir sessão nem acordar o banco.
  app.get('/api/live',(_req,res)=>{res.json({ok:true});});
@@ -53,6 +54,7 @@ export function createApp(){
  app.use('/api/public',publicCommercial);
  app.use('/api',publicBookingRouter);
  app.use('/api',publicDeliveryRouter);
+ app.use('/api',trackingRouter);
  app.use('/api/commercial',commercialRoutes);
  app.use('/api/privacy',privacyRoutes);
  app.use('/api/business',businessRoutes);

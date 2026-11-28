@@ -91,6 +91,8 @@ export async function exportSubject(company:string,requestId:string,user:string)
    FROM public_delivery_requests r JOIN business_delivery_orders d ON d.tenant_id=r.tenant_id AND d.id=r.delivery_order_id
    JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
    WHERE s.tenant_id=$1 AND s.tutor_id=$2 ORDER BY r.created_at,r.id`,[company,item.tutor_id]);
+  // Driver coordinates and tracking grants belong to a separate data subject.
+  // A tutor's delivery export intentionally contains no driver GPS session.
   await db.query("UPDATE privacy_requests SET status='in_progress',updated_at=now() WHERE tenant_id=$1 AND id=$2",[company,requestId]);
   await requestEvent(db,company,requestId,user,'exported','in_progress');
   await recordAudit(db,{tenantId:company,userId:user,action:'privacy.export',entityType:'privacy_request',entityId:requestId,metadata:{tutorId:item.tutor_id}});
@@ -181,6 +183,14 @@ export async function anonymizeSubject(company:string,requestId:string,user:stri
   await db.query(`DELETE FROM public_delivery_requests r USING business_delivery_orders d,business_sales s
    WHERE s.tenant_id=$1 AND s.tutor_id=$2 AND d.tenant_id=s.tenant_id AND d.sale_id=s.id
     AND r.tenant_id=d.tenant_id AND r.delivery_order_id=d.id`,[company,item.tutor_id]);
+  // Activity/custody checks above must pass before deleting location sessions.
+  // Match explicit source records only, never a phone, email or account name.
+  await db.query(`DELETE FROM transport_tracking_sessions tr WHERE tr.tenant_id=$1 AND (
+   EXISTS(SELECT 1 FROM business_delivery_orders d JOIN business_sales s ON s.tenant_id=d.tenant_id AND s.id=d.sale_id
+    WHERE tr.kind='delivery' AND d.tenant_id=tr.tenant_id AND d.id=tr.delivery_id AND s.tutor_id=$2)
+   OR EXISTS(SELECT 1 FROM taxi_trips t JOIN taxi_bookings b ON b.tenant_id=t.tenant_id AND b.id=t.booking_id
+    JOIN appointments a ON a.tenant_id=b.tenant_id AND a.id=b.appointment_id
+    WHERE tr.kind='taxi' AND t.tenant_id=tr.tenant_id AND t.id=tr.taxi_trip_id AND a.tutor_id=$2))`,[company,item.tutor_id]);
   await db.query("UPDATE crm_contacts SET summary='Conteúdo removido por solicitação de privacidade.' WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE crm_tasks SET title='Retorno encerrado por privacidade',notes='',status=CASE WHEN status='open' THEN 'cancelled' ELSE status END,updated_at=now() WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
   await db.query("UPDATE waitlist SET notes='',status=CASE WHEN status IN ('waiting','offered') THEN 'closed' ELSE status END WHERE tenant_id=$1 AND tutor_id=$2",[company,item.tutor_id]);
